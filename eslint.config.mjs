@@ -16,10 +16,10 @@ const eslintConfig = [
     rules: {
       "react/no-unescaped-entities": "off",
       "react/jsx-curly-brace-presence": ["error", { props: "never", children: "never" }],
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
       "@typescript-eslint/consistent-type-imports": ["warn", { prefer: "type-imports" }],
       "@typescript-eslint/no-explicit-any": "warn",
-      "no-console": ["warn", { allow: ["warn", "error"] }],
+      //"no-console": ["warn", { allow: ["warn", "error"] }],
     },
   },
 ];

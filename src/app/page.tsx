@@ -1,10 +1,28 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+
+/**
+ * Root page component that automatically redirects to the dashboard
+ * This ensures users always land on the dashboard when accessing the root URL
+ */
 export default function Home() {
+  const router = useRouter();
+
+  // Force immediate redirect on component mount
+  useEffect(() => {
+    console.log("Redirecting to dashboard...");
+    router.push("/dashboard");
+  }, [router]);
+
+  // This will be rendered briefly before redirection happens
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold">Welcome to your app</h1>
-      <p className="mt-4 text-xl text-muted-foreground">
-        This is a clean Next.js app with Tailwind CSS and shadcn/ui.
-      </p>
-    </main>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div className="text-center p-6">
+        <h1 className="text-2xl font-bold mb-2">Welcome to GES WorkBench</h1>
+        <p className="text-gray-600">Redirecting to dashboard...</p>
+      </div>
+    </div>
   );
 }

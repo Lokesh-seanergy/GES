@@ -4,20 +4,47 @@ import { useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
-
-const MOCK_CREDENTIALS = {
-  email: "test@example.com",
-  password: "password123"
-};
+import { auth } from "@/lib/firebase/config";
+import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { isMFAEnabled } from "@/lib/firebase/mfa";
+import MFAVerification from "@/components/auth/MFAVerification";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showMFA, setShowMFA] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   const { login } = useAuthStore();
   const router = useRouter();
+
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsLoading(true);
+      setError("");
+      const provider = new GoogleAuthProvider();
+      const result = await signInWithPopup(auth, provider);
+      const user = result.user;
+      
+      // Check if MFA is required
+      const mfaEnabled = await isMFAEnabled(user);
+      if (mfaEnabled) {
+        setCurrentUser(user);
+        setShowMFA(true);
+        return;
+      }
+
+      // If no MFA required, proceed with login
+      login(user.uid);
+      router.push("/ges-workbench/dashboard");
+    } catch (error: any) {
+      setError(error.message || "Failed to sign in with Google");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     if (!email && !password) {
@@ -46,27 +73,43 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await new Promise((res) => setTimeout(res, 1000)); // simulate API
-
-      if (email === MOCK_CREDENTIALS.email && password === MOCK_CREDENTIALS.password) {
-        login("mock-token");
-        router.push("/ges-workbench/dashboard");
-      } else {
-        setError("Invalid email or password");
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      // Check if MFA is required
+      const mfaEnabled = await isMFAEnabled(user);
+      if (mfaEnabled) {
+        setCurrentUser(user);
+        setShowMFA(true);
+        return;
       }
-    } catch {
-      setError("Something went wrong. Please try again.");
+
+      // If no MFA required, proceed with login
+      login(user.uid);
+      router.push("/ges-workbench/dashboard");
+    } catch (error: any) {
+      setError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleMicrosoftSignIn = () => {
-    login("mock-microsoft-token");
-    router.push("/ges-workbench/dashboard");
+  const handleMFAComplete = () => {
+    if (currentUser) {
+      login(currentUser.uid);
+      router.push("/ges-workbench/dashboard");
+    }
   };
 
-
+  if (showMFA && currentUser) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
+        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8 space-y-6">
+          <MFAVerification user={currentUser} onComplete={handleMFAComplete} />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">
@@ -84,15 +127,15 @@ export default function LoginPage() {
         {/* Social Sign In */}
         <div className="space-y-3">
           <button
-            onClick={handleMicrosoftSignIn}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition"
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+            className="w-full flex items-center justify-center gap-3 px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
-            <Image src="/ges-workbench/microsoft.png" alt="Microsoft" width={20} height={20} />
-            <span className="text-gray-700">Sign In With Microsoft</span>
+            <Image src="/ges-workbench/google.png" alt="Google" width={20} height={20} />
+            <span className="text-gray-700">
+              {isLoading ? "Signing in..." : "Sign In With Google"}
+            </span>
           </button>
-
-
-          
         </div>
 
         {/* Divider */}
@@ -128,17 +171,11 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md transition-colors"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 rounded-md transition-colors disabled:bg-blue-400"
           >
             {isLoading ? "Logging in..." : "Sign In With Email"}
           </button>
         </form>
-
-        <p className="text-center text-sm text-gray-500">
-          We’ll email you a magic code for a password-free sign in.
-        </p>
-
-       
       </div>
     </div>
   );

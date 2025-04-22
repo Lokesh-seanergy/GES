@@ -9,7 +9,7 @@ import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 
 import { isMFAEnabled } from "@/lib/firebase/mfa";
 import MFAVerification from "@/components/auth/MFAVerification";
 import PhoneAuth from "@/components/auth/PhoneAuth";
-import { 
+import {
   checkRateLimit, 
   getRemainingAttempts, 
   resetRateLimit, 
@@ -19,6 +19,7 @@ import {
   logSecurityEvent,
   RATE_LIMIT_WINDOW 
 } from "@/lib/auth/security";
+import Cookies from 'js-cookie';
 
 type AuthMethod = 'email' | 'phone' | 'social';
 

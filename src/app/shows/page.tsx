@@ -26,103 +26,38 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "@/lib/motion-stub";
 import { ArrowDownCircle } from "lucide-react";
 import { useNavigationStore } from "@/store/navigationStore";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+
+// Import types and data from centralized file
+import {
+  ShowData,
+  ProjectData,
+  FacilityData,
+  mockShows,
+  mockProjectData,
+  mockFacilityData,
+} from "@/lib/mockData"; // Updated import
 
 // Icons from Lucide React
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
-// Types
-interface ShowData {
-  showId: string;
-  showName: string;
-  occrId: string;
-  occrType: string;
-  marketType: string;
-  projectNumber: string;
-  cityOrg: string;
-  yrmo: string;
-}
+// REMOVE INLINE TYPES - They are now imported
+// interface ShowData { ... }
+// interface ProjectData { ... }
+// interface FacilityData { ... }
 
-interface ProjectData {
-  projectName: string;
-  projectNumber: string;
-  projectType: string;
-  status: string;
-  productionCity: string;
-  facilityId: string;
-}
-
-interface FacilityData {
-  facilityId: string;
-  facilityName: string;
-  hall: string;
-  location1: string;
-  location2: string;
-  areaCode: string;
-  phone: string;
-}
-
-// Mock data
-const mockShows: ShowData[] = [
-  {
-    showId: "AWS23",
-    showName: "AWS re:Invent 2024",
-    occrId: "AWS23-LV",
-    occrType: "Annual Conference",
-    marketType: "Cloud & Enterprise",
-    projectNumber: "P2024-001",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-11",
-  },
-  {
-    showId: "MSFT24",
-    showName: "Microsoft Build 2024",
-    occrId: "BUILD24-SEA",
-    occrType: "Developer Conference",
-    marketType: "Software Development",
-    projectNumber: "P2024-002",
-    cityOrg: "Seattle, WA",
-    yrmo: "2024-05",
-  },
-  {
-    showId: "GGL24",
-    showName: "Google I/O 2024",
-    occrId: "IO24-SF",
-    occrType: "Developer Conference",
-    marketType: "Technology",
-    projectNumber: "P2024-003",
-    cityOrg: "San Francisco, CA",
-    yrmo: "2024-05",
-  },
-  {
-    showId: "WWDC24",
-    showName: "Apple WWDC 2024",
-    occrId: "WWDC24-CUP",
-    occrType: "Developer Conference",
-    marketType: "Software & Hardware",
-    projectNumber: "P2024-004",
-    cityOrg: "Cupertino, CA",
-    yrmo: "2024-06",
-  },
-  {
-    showId: "CES24",
-    showName: "CES 2024",
-    occrId: "CES24-LV",
-    occrType: "Trade Show",
-    marketType: "Consumer Electronics",
-    projectNumber: "P2024-005",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-01",
-  },
-];
+// REMOVE INLINE MOCK DATA - It is now imported
+// const mockShows: ShowData[] = [ ... ];
 
 type SortField = keyof ShowData;
 type SortDirection = "asc" | "desc" | null;
 
 export default function ShowsPage() {
+  const router = useRouter();
   const { setActiveStep } = useNavigationStore();
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("showId");
@@ -133,37 +68,9 @@ export default function ShowsPage() {
     null
   );
 
-  // Mock project data
-  const mockProjectData: ProjectData = {
-    projectName: "Trade Show Setup 2024",
-    projectNumber: "P2024-001",
-    projectType: "Exhibition",
-    status: "Active",
-    productionCity: "Las Vegas",
-    facilityId: "LV001",
-  };
-
-  // Mock facility data
-  const mockFacilityData: FacilityData[] = [
-    {
-      facilityId: "F001",
-      facilityName: "Main Exhibition Hall",
-      hall: "Hall A",
-      location1: "North Wing",
-      location2: "Level 1",
-      areaCode: "702",
-      phone: "555-0101",
-    },
-    {
-      facilityId: "F002",
-      facilityName: "Conference Center",
-      hall: "Hall B",
-      location1: "South Wing",
-      location2: "Level 2",
-      areaCode: "702",
-      phone: "555-0102",
-    },
-  ];
+  // REMOVE INLINE MOCK DATA - It is now imported
+  // const mockProjectData: ProjectData = { ... };
+  // const mockFacilityData: FacilityData[] = [ ... ];
 
   // Handle sorting
   const handleSort = (field: SortField) => {
@@ -192,7 +99,7 @@ export default function ShowsPage() {
     return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
   };
 
-  // Filter and sort shows
+  // Filter and sort shows (using imported mockShows)
   const filteredAndSortedShows = [...mockShows]
     .filter((show) => {
       const searchFields = [
@@ -225,7 +132,7 @@ export default function ShowsPage() {
     setSelectedShow(show);
     setSelectedProject(null);
     setActiveStep("occurrence");
-    setActiveTab("projectInfo"); // Reset to default tab when selecting a new show
+    setActiveTab("projectInfo");
   };
 
   const handleProjectExpand = (project: ProjectData) => {
@@ -234,7 +141,7 @@ export default function ShowsPage() {
   };
 
   const handleChevronClick = (
-    e: React.MouseEvent,
+    e: React.MouseEvent<HTMLDivElement>,
     type: "show" | "project"
   ) => {
     e.stopPropagation();
@@ -353,6 +260,19 @@ export default function ShowsPage() {
     }
   };
 
+  // Add a function to handle navigating to the customers page
+  const handleNavigateToCustomers = () => {
+    if (selectedShow) {
+      // Construct the URL with query parameters
+      const queryParams = new URLSearchParams({
+        showName: selectedShow.showName,
+        occrId: selectedShow.occrId
+      }).toString();
+      
+      router.push(`/customers?${queryParams}`);
+    }
+  };
+
   return (
     <MainLayout
       breadcrumbs={getBreadcrumbs()}
@@ -361,56 +281,56 @@ export default function ShowsPage() {
       <div className="space-y-6 p-6">
         {/* Search Bar */}
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            type="text"
-            placeholder="Search by Show ID, Name, Occurrence ID..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
-          />
-        </div>
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                <Input
+                  type="text"
+                  placeholder="Search by Show ID, Name, Occurrence ID..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
 
         {/* Main Content */}
         <div className="space-y-6">
           {/* Shows Table */}
-          <Card>
-            <CardHeader>
+            <Card>
+              <CardHeader>
               <CardTitle>Show Information</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead
-                      onClick={() => handleSort("showId")}
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead
+                        onClick={() => handleSort("showId")}
                       className="cursor-pointer text-center font-bold text-gray-900"
-                    >
+                      >
                       <div className="flex items-center justify-center gap-2">
                         Show ID
                         <span className="ml-1">{getSortIcon("showId")}</span>
                       </div>
-                    </TableHead>
-                    <TableHead
-                      onClick={() => handleSort("showName")}
+                      </TableHead>
+                      <TableHead
+                        onClick={() => handleSort("showName")}
                       className="cursor-pointer text-center font-bold text-gray-900"
-                    >
+                      >
                       <div className="flex items-center justify-center gap-2">
                         Show Name
                         <span className="ml-1">{getSortIcon("showName")}</span>
                       </div>
-                    </TableHead>
-                    <TableHead
-                      onClick={() => handleSort("occrId")}
+                      </TableHead>
+                      <TableHead
+                        onClick={() => handleSort("occrId")}
                       className="cursor-pointer text-center font-bold text-gray-900"
-                    >
+                      >
                       <div className="flex items-center justify-center gap-2">
                         Occr ID
                         <span className="ml-1">{getSortIcon("occrId")}</span>
                       </div>
-                    </TableHead>
-                    <TableHead
-                      onClick={() => handleSort("occrType")}
+                      </TableHead>
+                      <TableHead
+                        onClick={() => handleSort("occrType")}
                       className="cursor-pointer text-center font-bold text-gray-900"
                     >
                       <div className="flex items-center justify-center gap-2">
@@ -457,15 +377,15 @@ export default function ShowsPage() {
                         YRMO
                         <span className="ml-1">{getSortIcon("yrmo")}</span>
                       </div>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredAndSortedShows.map((show) => (
-                    <TableRow
-                      key={show.showId}
-                      className={cn(
-                        "cursor-pointer hover:bg-gray-50",
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredAndSortedShows.map((show) => (
+                      <TableRow
+                        key={show.showId}
+                        className={cn(
+                          "cursor-pointer hover:bg-gray-50",
                         selectedShow?.showId === show.showId &&
                           "bg-blue-50 hover:bg-blue-50"
                       )}
@@ -481,13 +401,13 @@ export default function ShowsPage() {
                         {show.occrId}
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge
+                          <Badge
                           variant="secondary"
                           className="bg-[#0A0C10] text-white hover:bg-[#0A0C10]/90 px-4 py-1"
-                        >
-                          {show.occrType}
-                        </Badge>
-                      </TableCell>
+                          >
+                            {show.occrType}
+                          </Badge>
+                        </TableCell>
                       <TableCell className="text-center">
                         {show.marketType}
                       </TableCell>
@@ -498,12 +418,12 @@ export default function ShowsPage() {
                         {show.cityOrg}
                       </TableCell>
                       <TableCell className="text-center">{show.yrmo}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
 
           {/* Show Occurrences Section */}
           <AnimatePresence>
@@ -513,7 +433,7 @@ export default function ShowsPage() {
                 <div className="relative h-10 mb-6 mt-2">
                   <motion.div
                     className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform z-10"
-                    onClick={(e) => handleChevronClick(e, "show")}
+                    onClick={(e: React.MouseEvent<HTMLDivElement>) => handleChevronClick(e, "show")}
                     initial="initial"
                     animate="rotate"
                     variants={chevronVariants}
@@ -573,7 +493,7 @@ export default function ShowsPage() {
                             <CardTitle className="text-lg font-bold text-gray-900">
                               Show Occurrence
                             </CardTitle>
-                          </CardHeader>
+                </CardHeader>
                           <CardContent className="grid grid-cols-3 gap-6">
                             <div className="space-y-2">
                               <Label className="font-bold text-gray-900">
@@ -611,19 +531,19 @@ export default function ShowsPage() {
                               </Label>
                               <Input />
                             </div>
-                            <div className="space-y-2">
+                        <div className="space-y-2">
                               <Label className="font-bold text-gray-900">
                                 Pricing Loc
                               </Label>
                               <Input />
-                            </div>
-                            <div className="space-y-2">
+                        </div>
+                        <div className="space-y-2">
                               <Label className="font-bold text-gray-900">
                                 City Org
                               </Label>
                               <Input value={selectedShow.cityOrg} readOnly />
-                            </div>
-                            <div className="space-y-2">
+                        </div>
+                        <div className="space-y-2">
                               <Label className="font-bold text-gray-900">
                                 Occr Desc
                               </Label>
@@ -645,8 +565,8 @@ export default function ShowsPage() {
                                 Open
                               </Label>
                               <Input type="datetime-local" />
-                            </div>
-                            <div className="space-y-2">
+                        </div>
+                        <div className="space-y-2">
                               <Label className="font-bold text-gray-900">
                                 Close
                               </Label>
@@ -663,8 +583,12 @@ export default function ShowsPage() {
                                 Timezone
                               </Label>
                               <Input placeholder="Enter timezone" />
-                            </div>
-                            <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6 h-10 mt-8">
+                        </div>
+                            <Button 
+                              className="bg-blue-600 text-white hover:bg-blue-700 px-6 h-10 mt-8"
+                              onClick={handleNavigateToCustomers}
+                              disabled={!selectedShow}
+                            >
                               Customers
                             </Button>
                           </CardContent>
@@ -776,17 +700,17 @@ export default function ShowsPage() {
                                 <Select>
                                   <SelectTrigger className="w-[200px]">
                                     <SelectValue placeholder="Select dates" />
-                                  </SelectTrigger>
-                                  <SelectContent>
+                            </SelectTrigger>
+                            <SelectContent>
                                     <SelectItem value="option1">
                                       Option 1
-                                    </SelectItem>
+                              </SelectItem>
                                     <SelectItem value="option2">
                                       Option 2
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
                               <Table>
                                 <TableHeader>
                                   <TableRow>
@@ -995,25 +919,25 @@ export default function ShowsPage() {
                                 <div className="space-y-4">
                                   <Textarea className="min-h-[100px]" />
                                   <div className="space-y-4">
-                                    <div className="space-y-2">
+                        <div className="space-y-2">
                                       <Label className="font-bold text-gray-900">
                                         Specify Logo
                                       </Label>
                                       <Input />
-                                    </div>
-                                    <div className="space-y-2">
+                        </div>
+                        <div className="space-y-2">
                                       <Label className="font-bold text-gray-900">
                                         Send Exhibitor Survey
                                       </Label>
                                       <Input />
                                     </div>
                                   </div>
-                                </div>
-                              </div>
-                            </TabsContent>
-                          </Tabs>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
                     </CardContent>
                   </Card>
 
@@ -1028,7 +952,7 @@ export default function ShowsPage() {
                         <div className="relative h-10 my-6">
                           <motion.div
                             className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform z-10"
-                            onClick={(e) => handleChevronClick(e, "project")}
+                            onClick={(e: React.MouseEvent<HTMLDivElement>) => handleChevronClick(e, "project")}
                             initial="initial"
                             animate="rotate"
                             variants={chevronVariants}
@@ -1190,8 +1114,8 @@ export default function ShowsPage() {
                                   Vendor Info
                                 </Button>
                               </div>
-                            </CardContent>
-                          </Card>
+                </CardContent>
+              </Card>
                         </motion.div>
                       </div>
                     )}

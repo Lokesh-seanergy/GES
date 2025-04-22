@@ -1,10 +1,11 @@
 "use client";
 
-import React from "react";
-import { Bell, ChevronDown } from "lucide-react";
+import React, { useState } from "react";
+import { Bell, ChevronDown, LogOut } from "lucide-react";
 import { Roboto } from "next/font/google";
 import { SearchBar } from "../ui/SearchBar";
 import Image from "next/image";
+import { useAuthStore } from "@/store/authStore";
 
 // Configure the Roboto font with specific weights
 const roboto = Roboto({
@@ -14,6 +15,22 @@ const roboto = Roboto({
 });
 
 export default function Header() {
+  const { logout } = useAuthStore();
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  const handleLogout = () => {
+    try {
+      setIsProfileOpen(false);
+      logout();
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  };
+
+  const toggleProfile = () => {
+    setIsProfileOpen(!isProfileOpen);
+  };
+
   return (
     <header className="bg-white shadow-sm px-6 h-16 flex items-center justify-between">
       <div className="flex items-center">
@@ -39,23 +56,43 @@ export default function Header() {
           </span>
         </button>
 
-        {/* User Profile */}
-        <div className="flex items-center gap-2 border-l pl-4 ml-2">
-          <div className="h-8 w-8 rounded-full overflow-hidden relative">
-            <Image
-              src="/ges-workbench/profile.png" // Update this path to your actual image
-              alt="User profile"
-              fill
-              className="object-cover"
-            />
-          </div>
-          <div className="text-sm">
-            <p className="font-medium">Jesse Rose</p>
-            <p className="text-xs text-gray-500">Admin</p>
-          </div>
-          <button className="text-gray-500">
-            <ChevronDown size={16} />
+        {/* User Profile Dropdown */}
+        <div className="relative">
+          <button
+            onClick={toggleProfile}
+            className="flex items-center gap-2 border-l pl-4 ml-2"
+          >
+            <div className="h-8 w-8 rounded-full overflow-hidden relative">
+              <Image
+                src="/ges-workbench/profile.png"
+                alt="User profile"
+                fill
+                className="object-cover"
+              />
+            </div>
+            <div className="text-sm">
+              <p className="font-medium">Jesse Rose</p>
+              <p className="text-xs text-gray-500">Admin</p>
+            </div>
+            <ChevronDown size={16} className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
           </button>
+
+          {/* Dropdown Menu */}
+          {isProfileOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+              <div className="px-4 py-2 border-b border-gray-100">
+                <p className="text-sm font-medium text-gray-900">Jesse Rose</p>
+                <p className="text-xs text-gray-500">jesse@example.com</p>
+              </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              >
+                <LogOut size={16} />
+                <span>Logout</span>
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>

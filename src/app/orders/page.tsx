@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import {
   Table,
@@ -17,875 +18,16 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Modal } from "@/components/ui/modal";
+import { DatePicker } from "@/components/ui/date-picker";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Order, OrderItem } from "@/types/orders";
 import { Pencil } from "lucide-react";
-
-// Mock data
-const mockOrders: Order[] = [
-  {
-    orderId: "ORD-001",
-    showId: "AWS23",
-    occurrenceId: "AWS23-LV",
-    subTotal: 15000,
-    salesChannel: "Direct",
-    terms: "Net 30",
-    tax: 1500,
-    orderType: "New",
-    customerPO: "PO-12345",
-    cancelCharge: 0,
-    source: "Web",
-    project: "P2024-001",
-    orderDate: "2024-03-20",
-    boothInfo: "Booth #A12",
-    billingAddress: "123 Main St, New York, NY 10001",
-    total: 16500,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Booth Package A",
-        itemDescription: "Standard 10x10 Booth",
-        quantity: 1,
-        cancellationFee: 0,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 3000,
-        newPrice: 3000,
-        discount: 0,
-        extendedPrice: 3000,
-        userItemDescription: "Standard booth with basic setup",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-20",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-001",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "LED Screen",
-        itemDescription: "55-inch LED Display",
-        quantity: 2,
-        cancellationFee: 500,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 2000,
-        newPrice: 2000,
-        discount: 0,
-        extendedPrice: 4000,
-        userItemDescription: "High-resolution display for presentations",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-20",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-002",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Furniture Package",
-        itemDescription: "Basic Booth Furniture Set",
-        quantity: 1,
-        cancellationFee: 200,
-        quantityCancelled: 0,
-        uom: "SET",
-        kitPrice: 8000,
-        newPrice: 8000,
-        discount: 0,
-        extendedPrice: 8000,
-        userItemDescription: "Includes table, chairs, and storage",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-20",
-        status: "Confirmed",
-        itemType: "Furniture",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-003",
-        industryInformation: "Technology",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-002",
-    showId: "MSFT24",
-    occurrenceId: "BUILD24-SEA",
-    subTotal: 25000,
-    salesChannel: "Partner",
-    terms: "Net 45",
-    tax: 2500,
-    orderType: "New",
-    customerPO: "PO-23456",
-    cancelCharge: 0,
-    source: "Email",
-    project: "P2024-002",
-    orderDate: "2024-03-21",
-    boothInfo: "Booth #B15",
-    billingAddress: "456 Tech Ave, Seattle, WA 98101",
-    total: 27500,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Premium Booth Package",
-        itemDescription: "20x20 Premium Booth",
-        quantity: 1,
-        cancellationFee: 1000,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 12000,
-        newPrice: 12000,
-        discount: 0,
-        extendedPrice: 12000,
-        userItemDescription: "Premium booth with custom branding",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-21",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-004",
-        industryInformation: "Software",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "AV Package",
-        itemDescription: "Complete Audio-Visual Setup",
-        quantity: 1,
-        cancellationFee: 800,
-        quantityCancelled: 0,
-        uom: "SET",
-        kitPrice: 8000,
-        newPrice: 8000,
-        discount: 0,
-        extendedPrice: 8000,
-        userItemDescription: "Includes sound system and projectors",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-21",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-005",
-        industryInformation: "Software",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Networking Equipment",
-        itemDescription: "High-Speed Network Setup",
-        quantity: 1,
-        cancellationFee: 300,
-        quantityCancelled: 0,
-        uom: "SET",
-        kitPrice: 5000,
-        newPrice: 5000,
-        discount: 0,
-        extendedPrice: 5000,
-        userItemDescription: "Enterprise-grade networking equipment",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-21",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-006",
-        industryInformation: "Software",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-003",
-    showId: "GGL24",
-    occurrenceId: "IO24-SF",
-    subTotal: 18000,
-    salesChannel: "Direct",
-    terms: "Net 30",
-    tax: 1800,
-    orderType: "New",
-    customerPO: "PO-34567",
-    cancelCharge: 0,
-    source: "Web",
-    project: "P2024-003",
-    orderDate: "2024-03-22",
-    boothInfo: "Booth #C08",
-    billingAddress: "789 Innovation Way, San Francisco, CA 94105",
-    total: 19800,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Standard Booth Package",
-        itemDescription: "10x10 Standard Booth",
-        quantity: 1,
-        cancellationFee: 0,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 5000,
-        newPrice: 5000,
-        discount: 0,
-        extendedPrice: 5000,
-        userItemDescription: "Standard booth setup",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-22",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-007",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Display Monitors",
-        itemDescription: "32-inch 4K Monitors",
-        quantity: 3,
-        cancellationFee: 200,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 1000,
-        newPrice: 1000,
-        discount: 0,
-        extendedPrice: 3000,
-        userItemDescription: "High-resolution monitors for demos",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-22",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-008",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Demo Stations",
-        itemDescription: "Interactive Demo Stations",
-        quantity: 2,
-        cancellationFee: 400,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 5000,
-        newPrice: 5000,
-        discount: 0,
-        extendedPrice: 10000,
-        userItemDescription: "Interactive demo stations with touch screens",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-22",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-009",
-        industryInformation: "Technology",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-004",
-    showId: "WWDC24",
-    occurrenceId: "WWDC24-CUP",
-    subTotal: 30000,
-    salesChannel: "Direct",
-    terms: "Net 30",
-    tax: 3000,
-    orderType: "New",
-    customerPO: "PO-45678",
-    cancelCharge: 0,
-    source: "Web",
-    project: "P2024-004",
-    orderDate: "2024-03-23",
-    boothInfo: "Booth #D20",
-    billingAddress: "101 Apple Park Way, Cupertino, CA 95014",
-    total: 33000,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Deluxe Booth Package",
-        itemDescription: "30x30 Deluxe Booth",
-        quantity: 1,
-        cancellationFee: 1500,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 15000,
-        newPrice: 15000,
-        discount: 0,
-        extendedPrice: 15000,
-        userItemDescription: "Deluxe booth with premium features",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-23",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Deluxe",
-        documentNumber: "DOC-010",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Meeting Room Setup",
-        itemDescription: "Private Meeting Room",
-        quantity: 1,
-        cancellationFee: 1000,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 8000,
-        newPrice: 8000,
-        discount: 0,
-        extendedPrice: 8000,
-        userItemDescription: "Private meeting room with AV",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-23",
-        status: "Confirmed",
-        itemType: "Room",
-        ato: false,
-        lineType: "Deluxe",
-        documentNumber: "DOC-011",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Lounge Area",
-        itemDescription: "VIP Lounge Setup",
-        quantity: 1,
-        cancellationFee: 800,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 7000,
-        newPrice: 7000,
-        discount: 0,
-        extendedPrice: 7000,
-        userItemDescription: "VIP lounge with premium furniture",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-23",
-        status: "Confirmed",
-        itemType: "Furniture",
-        ato: false,
-        lineType: "Deluxe",
-        documentNumber: "DOC-012",
-        industryInformation: "Technology",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-005",
-    showId: "CES24",
-    occurrenceId: "CES24-LV",
-    subTotal: 22000,
-    salesChannel: "Partner",
-    terms: "Net 45",
-    tax: 2200,
-    orderType: "New",
-    customerPO: "PO-56789",
-    cancelCharge: 0,
-    source: "Email",
-    project: "P2024-005",
-    orderDate: "2024-03-24",
-    boothInfo: "Booth #E25",
-    billingAddress: "321 Tech Blvd, Las Vegas, NV 89109",
-    total: 24200,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Standard Booth Package",
-        itemDescription: "10x10 Standard Booth",
-        quantity: 1,
-        cancellationFee: 0,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 5000,
-        newPrice: 5000,
-        discount: 0,
-        extendedPrice: 5000,
-        userItemDescription: "Standard booth setup",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-24",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-013",
-        industryInformation: "Consumer Electronics",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Product Display Cases",
-        itemDescription: "Glass Display Cases",
-        quantity: 4,
-        cancellationFee: 200,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 2000,
-        newPrice: 2000,
-        discount: 0,
-        extendedPrice: 8000,
-        userItemDescription: "Premium glass display cases",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-24",
-        status: "Confirmed",
-        itemType: "Furniture",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-014",
-        industryInformation: "Consumer Electronics",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Lighting Package",
-        itemDescription: "Professional Lighting Setup",
-        quantity: 1,
-        cancellationFee: 300,
-        quantityCancelled: 0,
-        uom: "SET",
-        kitPrice: 9000,
-        newPrice: 9000,
-        discount: 0,
-        extendedPrice: 9000,
-        userItemDescription: "Professional lighting for product display",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-24",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-015",
-        industryInformation: "Consumer Electronics",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-006",
-    showId: "AWS23",
-    occurrenceId: "AWS23-LV",
-    subTotal: 35000,
-    salesChannel: "Direct",
-    terms: "Net 30",
-    tax: 3500,
-    orderType: "New",
-    customerPO: "PO-67890",
-    cancelCharge: 0,
-    source: "Web",
-    project: "P2024-006",
-    orderDate: "2024-03-25",
-    boothInfo: "Booth #F30",
-    billingAddress: "555 Cloud Ave, Las Vegas, NV 89109",
-    total: 38500,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Premium Booth Package",
-        itemDescription: "20x20 Premium Booth",
-        quantity: 1,
-        cancellationFee: 1000,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 12000,
-        newPrice: 12000,
-        discount: 0,
-        extendedPrice: 12000,
-        userItemDescription: "Premium booth with custom branding",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-25",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-016",
-        industryInformation: "Cloud Computing",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Server Rack",
-        itemDescription: "Enterprise Server Rack",
-        quantity: 2,
-        cancellationFee: 800,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 8000,
-        newPrice: 8000,
-        discount: 0,
-        extendedPrice: 16000,
-        userItemDescription: "Enterprise-grade server racks",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-25",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-017",
-        industryInformation: "Cloud Computing",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Network Infrastructure",
-        itemDescription: "Complete Network Setup",
-        quantity: 1,
-        cancellationFee: 600,
-        quantityCancelled: 0,
-        uom: "SET",
-        kitPrice: 7000,
-        newPrice: 7000,
-        discount: 0,
-        extendedPrice: 7000,
-        userItemDescription: "Complete network infrastructure setup",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-25",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-018",
-        industryInformation: "Cloud Computing",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-007",
-    showId: "MSFT24",
-    occurrenceId: "BUILD24-SEA",
-    subTotal: 28000,
-    salesChannel: "Partner",
-    terms: "Net 45",
-    tax: 2800,
-    orderType: "New",
-    customerPO: "PO-78901",
-    cancelCharge: 0,
-    source: "Email",
-    project: "P2024-007",
-    orderDate: "2024-03-26",
-    boothInfo: "Booth #G35",
-    billingAddress: "777 Dev Street, Seattle, WA 98101",
-    total: 30800,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Standard Booth Package",
-        itemDescription: "10x10 Standard Booth",
-        quantity: 1,
-        cancellationFee: 0,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 5000,
-        newPrice: 5000,
-        discount: 0,
-        extendedPrice: 5000,
-        userItemDescription: "Standard booth setup",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-26",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-019",
-        industryInformation: "Software Development",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Developer Workstations",
-        itemDescription: "High-Performance Workstations",
-        quantity: 4,
-        cancellationFee: 300,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 3000,
-        newPrice: 3000,
-        discount: 0,
-        extendedPrice: 12000,
-        userItemDescription: "Developer workstations with dual monitors",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-26",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-020",
-        industryInformation: "Software Development",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Demo Area Setup",
-        itemDescription: "Interactive Demo Area",
-        quantity: 1,
-        cancellationFee: 500,
-        quantityCancelled: 0,
-        uom: "SET",
-        kitPrice: 11000,
-        newPrice: 11000,
-        discount: 0,
-        extendedPrice: 11000,
-        userItemDescription: "Interactive demo area with touch screens",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-26",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-021",
-        industryInformation: "Software Development",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-008",
-    showId: "GGL24",
-    occurrenceId: "IO24-SF",
-    subTotal: 42000,
-    salesChannel: "Direct",
-    terms: "Net 30",
-    tax: 4200,
-    orderType: "New",
-    customerPO: "PO-89012",
-    cancelCharge: 0,
-    source: "Web",
-    project: "P2024-008",
-    orderDate: "2024-03-27",
-    boothInfo: "Booth #H40",
-    billingAddress: "888 Innovation Drive, San Francisco, CA 94105",
-    total: 46200,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Deluxe Booth Package",
-        itemDescription: "30x30 Deluxe Booth",
-        quantity: 1,
-        cancellationFee: 1500,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 15000,
-        newPrice: 15000,
-        discount: 0,
-        extendedPrice: 15000,
-        userItemDescription: "Deluxe booth with premium features",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-27",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Deluxe",
-        documentNumber: "DOC-022",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Meeting Rooms",
-        itemDescription: "Private Meeting Rooms",
-        quantity: 2,
-        cancellationFee: 1000,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 8000,
-        newPrice: 8000,
-        discount: 0,
-        extendedPrice: 16000,
-        userItemDescription: "Private meeting rooms with AV",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-27",
-        status: "Confirmed",
-        itemType: "Room",
-        ato: false,
-        lineType: "Deluxe",
-        documentNumber: "DOC-023",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Lounge Area",
-        itemDescription: "VIP Lounge Setup",
-        quantity: 1,
-        cancellationFee: 800,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 11000,
-        newPrice: 11000,
-        discount: 0,
-        extendedPrice: 11000,
-        userItemDescription: "VIP lounge with premium furniture",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-27",
-        status: "Confirmed",
-        itemType: "Furniture",
-        ato: false,
-        lineType: "Deluxe",
-        documentNumber: "DOC-024",
-        industryInformation: "Technology",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-009",
-    showId: "WWDC24",
-    occurrenceId: "WWDC24-CUP",
-    subTotal: 19000,
-    salesChannel: "Direct",
-    terms: "Net 30",
-    tax: 1900,
-    orderType: "New",
-    customerPO: "PO-90123",
-    cancelCharge: 0,
-    source: "Web",
-    project: "P2024-009",
-    orderDate: "2024-03-28",
-    boothInfo: "Booth #I45",
-    billingAddress: "999 Apple Way, Cupertino, CA 95014",
-    total: 20900,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Standard Booth Package",
-        itemDescription: "10x10 Standard Booth",
-        quantity: 1,
-        cancellationFee: 0,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 5000,
-        newPrice: 5000,
-        discount: 0,
-        extendedPrice: 5000,
-        userItemDescription: "Standard booth setup",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-28",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-025",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Display Monitors",
-        itemDescription: "27-inch 4K Monitors",
-        quantity: 4,
-        cancellationFee: 200,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 800,
-        newPrice: 800,
-        discount: 0,
-        extendedPrice: 3200,
-        userItemDescription: "High-resolution monitors for demos",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-28",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-026",
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Demo Stations",
-        itemDescription: "Interactive Demo Stations",
-        quantity: 3,
-        cancellationFee: 400,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 4000,
-        newPrice: 4000,
-        discount: 0,
-        extendedPrice: 12000,
-        userItemDescription: "Interactive demo stations with touch screens",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-28",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: "DOC-027",
-        industryInformation: "Technology",
-      },
-    ],
-  },
-  {
-    orderId: "ORD-010",
-    showId: "CES24",
-    occurrenceId: "CES24-LV",
-    subTotal: 45000,
-    salesChannel: "Partner",
-    terms: "Net 45",
-    tax: 4500,
-    orderType: "New",
-    customerPO: "PO-01234",
-    cancelCharge: 0,
-    source: "Email",
-    project: "P2024-010",
-    orderDate: "2024-03-29",
-    boothInfo: "Booth #J50",
-    billingAddress: "111 Tech Lane, Las Vegas, NV 89109",
-    total: 49500,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Premium Booth Package",
-        itemDescription: "20x20 Premium Booth",
-        quantity: 1,
-        cancellationFee: 1000,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 12000,
-        newPrice: 12000,
-        discount: 0,
-        extendedPrice: 12000,
-        userItemDescription: "Premium booth with custom branding",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-29",
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-028",
-        industryInformation: "Consumer Electronics",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "Product Display Cases",
-        itemDescription: "Premium Display Cases",
-        quantity: 6,
-        cancellationFee: 200,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 2500,
-        newPrice: 2500,
-        discount: 0,
-        extendedPrice: 15000,
-        userItemDescription: "Premium display cases with lighting",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-29",
-        status: "Confirmed",
-        itemType: "Furniture",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-029",
-        industryInformation: "Consumer Electronics",
-      },
-      {
-        serialNo: 3,
-        orderedItem: "Lighting Package",
-        itemDescription: "Professional Lighting Setup",
-        quantity: 1,
-        cancellationFee: 300,
-        quantityCancelled: 0,
-        uom: "SET",
-        kitPrice: 18000,
-        newPrice: 18000,
-        discount: 0,
-        extendedPrice: 18000,
-        userItemDescription: "Professional lighting for product display",
-        dff: "N/A",
-        orderReceivedDate: "2024-03-29",
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Premium",
-        documentNumber: "DOC-030",
-        industryInformation: "Consumer Electronics",
-      },
-    ],
-  },
-];
+import { mockOrders } from "./data";
+import { formatDate, parseDisplayDate } from "@/lib/utils";
 
 export default function OrdersPage() {
+  const router = useRouter();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<OrderItem | null>(null);
@@ -893,22 +35,29 @@ export default function OrdersPage() {
   const [isEditingItem, setIsEditingItem] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Order | null>(null);
   const [editedItem, setEditedItem] = useState<OrderItem | null>(null);
+  const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
+  const [newOrder, setNewOrder] = useState<Partial<Order>>({
+    orderId: "",
+    showId: "",
+    customerPO: "",
+    orderDate: format(new Date(), "yyyy-MM-dd"),
+    orderType: "New",
+    total: 0,
+    subTotal: 0,
+    tax: 0,
+    items: []
+  });
+  const [date, setDate] = useState<Date>();
 
   const filteredOrders = mockOrders.filter((order) => {
-    // If search query is empty, show all orders
     if (!searchQuery) return true;
 
-    // Convert search query to lowercase for case-insensitive search
     const query = searchQuery.toLowerCase();
-
-    // Check if the search query matches any ID
     return (
-      order.orderId.toLowerCase().includes(query) ||
-      order.showId.toLowerCase().includes(query) ||
-      order.occurrenceId.toLowerCase().includes(query) ||
-      order.items.some((item) => 
-        item.documentNumber.toLowerCase().includes(query)
-      )
+      (order.orderId?.toLowerCase() || '').includes(query) ||
+      (order.showId?.toLowerCase() || '').includes(query) ||
+      (order.customerPO?.toLowerCase() || '').includes(query) ||
+      (order.orderDate || '').includes(query)
     );
   });
 
@@ -950,23 +99,45 @@ export default function OrdersPage() {
     }
   };
 
+  const handleCreateOrder = () => {
+    // In a real app, this would be an API call
+    const createdOrder = {
+      ...newOrder,
+      orderId: `ORD-${Math.floor(Math.random() * 10000)}`,
+      items: []
+    } as Order;
+    
+    // Add to mock data
+    mockOrders.unshift(createdOrder);
+    
+    setIsNewOrderModalOpen(false);
+    setNewOrder({
+      orderId: "",
+      showId: "",
+      customerPO: "",
+      orderDate: format(new Date(), "yyyy-MM-dd"),
+      orderType: "New",
+      total: 0,
+      subTotal: 0,
+      tax: 0,
+      items: []
+    });
+  };
+
   return (
     <MainLayout breadcrumbs={[{ label: "Orders" }]}>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Orders List */}
-        <div className="lg:col-span-2">
           <Card>
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Orders</CardTitle>
                 <div className="flex gap-2">
                   <Input
-                    placeholder="Search by ID (Order, Show, Occurrence, Document)..."
+                placeholder="Search by: Order ID | Show ID | Customer PO | Order Date"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-64"
+                className="w-96"
                   />
-                  <Button>New Order</Button>
+              <Button onClick={() => setIsNewOrderModalOpen(true)}>New Order</Button>
                 </div>
               </div>
             </CardHeader>
@@ -980,39 +151,28 @@ export default function OrdersPage() {
                     <TableHead>Order Date</TableHead>
                     <TableHead>Total</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredOrders.map((order) => (
                     <TableRow
                       key={order.orderId}
-                      className={cn(
-                        "cursor-pointer hover:bg-gray-50",
-                        selectedOrder?.orderId === order.orderId && "bg-blue-50"
-                      )}
-                      onClick={() => setSelectedOrder(order)}
+                  className="hover:bg-gray-50"
+                >
+                  <TableCell>
+                    <button
+                      onClick={() => router.push(`/orders/${order.orderId}`)}
+                      className="text-blue-600 hover:underline focus:outline-none"
                     >
-                      <TableCell>{order.orderId}</TableCell>
+                      {order.orderId}
+                    </button>
+                  </TableCell>
                       <TableCell>{order.showId}</TableCell>
                       <TableCell>{order.customerPO}</TableCell>
-                      <TableCell>{order.orderDate}</TableCell>
+                  <TableCell>{formatDate(order.orderDate)}</TableCell>
                       <TableCell>${order.total.toLocaleString()}</TableCell>
                       <TableCell>
                         <Badge variant="default">{order.orderType}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedOrder(order);
-                            handleOrderEdit();
-                          }}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -1020,103 +180,6 @@ export default function OrdersPage() {
               </Table>
             </CardContent>
           </Card>
-        </div>
-
-        {/* Order Details */}
-        {selectedOrder && (
-          <div className="lg:col-span-1">
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>Order Details</CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={handleOrderEdit}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Box 1: Order Information */}
-                <div className="space-y-2">
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label>Order ID</Label>
-                      <Input value={selectedOrder.orderId} readOnly />
-                    </div>
-                    <div>
-                      <Label>Show ID</Label>
-                      <Input value={selectedOrder.showId} readOnly />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Occurrence ID</Label>
-                    <Input value={selectedOrder.occurrenceId} readOnly />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Label>Sub Total</Label>
-                      <Input value={`$${selectedOrder.subTotal}`} readOnly />
-                    </div>
-                    <div>
-                      <Label>Tax</Label>
-                      <Input value={`$${selectedOrder.tax}`} readOnly />
-                    </div>
-                  </div>
-                  <div>
-                    <Label>Total</Label>
-                    <Input value={`$${selectedOrder.total}`} readOnly />
-                  </div>
-                  <div>
-                    <Label>Billing Address</Label>
-                    <Input value={selectedOrder.billingAddress} readOnly />
-                  </div>
-                </div>
-
-                {/* Box 2: Order Items List */}
-                <div className="space-y-2">
-                  <Label>Order Items</Label>
-                  <div className="space-y-2">
-                    {selectedOrder.items.map((item) => (
-                      <div
-                        key={item.serialNo}
-                        className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
-                        onClick={() => setSelectedItem(item)}
-                      >
-                        <div className="flex justify-between items-center">
-                          <div>
-                            <p className="font-medium">{item.orderedItem}</p>
-                            <p className="text-sm text-gray-500">{item.itemDescription}</p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{item.status}</Badge>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleItemEdit(item);
-                              }}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="mt-2 flex justify-between text-sm text-gray-500">
-                          <span>Qty: {item.quantity}</span>
-                          <span>${item.extendedPrice}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-      </div>
 
       {/* Order Edit Modal */}
       <Modal
@@ -1169,7 +232,14 @@ export default function OrdersPage() {
               </div>
               <div className="space-y-2">
                 <Label>Order Date</Label>
-                <Input type="date" value={editedOrder.orderDate} onChange={(e) => setEditedOrder({ ...editedOrder, orderDate: e.target.value })} />
+                <Input 
+                  type="date" 
+                  value={editedOrder.orderDate}
+                  onChange={(e) => setEditedOrder({ 
+                    ...editedOrder, 
+                    orderDate: e.target.value 
+                  })} 
+                />
               </div>
               <div className="space-y-2">
                 <Label>Booth Info</Label>
@@ -1263,7 +333,14 @@ export default function OrdersPage() {
               </div>
               <div className="space-y-2">
                 <Label>Order Received Date</Label>
-                <Input type="date" value={editedItem.orderReceivedDate} onChange={(e) => setEditedItem({ ...editedItem, orderReceivedDate: e.target.value })} />
+                <Input 
+                  type="date" 
+                  value={editedItem.orderReceivedDate} 
+                  onChange={(e) => setEditedItem({ 
+                    ...editedItem, 
+                    orderReceivedDate: e.target.value 
+                  })} 
+                />
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
@@ -1367,7 +444,7 @@ export default function OrdersPage() {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-gray-500">Order Received Date</Label>
-                <p>{selectedItem.orderReceivedDate}</p>
+                <p>{formatDate(selectedItem.orderReceivedDate)}</p>
               </div>
               <div className="space-y-2">
                 <Label className="text-xs text-gray-500">Line Type</Label>
@@ -1384,6 +461,99 @@ export default function OrdersPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* New Order Modal */}
+      <Modal
+        isOpen={isNewOrderModalOpen}
+        onClose={() => setIsNewOrderModalOpen(false)}
+        title="Create New Order"
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Show ID</Label>
+              <Input
+                value={newOrder.showId}
+                onChange={(e) => setNewOrder({ ...newOrder, showId: e.target.value })}
+                placeholder="Enter Show ID"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Customer PO</Label>
+              <Input
+                value={newOrder.customerPO}
+                onChange={(e) => setNewOrder({ ...newOrder, customerPO: e.target.value })}
+                placeholder="Enter Customer PO"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Order Date</Label>
+              <DatePicker
+                date={date}
+                onSelect={(newDate) => {
+                  setDate(newDate);
+                  if (newDate) {
+                    setNewOrder({
+                      ...newOrder,
+                      orderDate: format(newDate, "yyyy-MM-dd")
+                    });
+                  }
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Input
+                value={newOrder.orderType}
+                onChange={(e) => setNewOrder({ ...newOrder, orderType: e.target.value })}
+                placeholder="Enter Status"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Sub Total</Label>
+              <Input
+                type="number"
+                value={newOrder.subTotal}
+                onChange={(e) => {
+                  const subTotal = Number(e.target.value);
+                  const tax = subTotal * 0.1; // 10% tax rate
+                  setNewOrder({
+                    ...newOrder,
+                    subTotal,
+                    tax,
+                    total: subTotal + tax
+                  });
+                }}
+                placeholder="Enter Sub Total"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tax (10%)</Label>
+              <Input
+                type="number"
+                value={newOrder.tax}
+                readOnly
+                className="bg-gray-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Total</Label>
+              <Input
+                type="number"
+                value={newOrder.total}
+                readOnly
+                className="bg-gray-50"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setIsNewOrderModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateOrder}>Create Order</Button>
+          </div>
+        </div>
       </Modal>
     </MainLayout>
   );

@@ -5,7 +5,8 @@ import MainLayout from "@/components/mainlayout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Users, Box, ClipboardList, Check, X, ChevronRight } from "lucide-react";
+import { Search, Users, Box, ClipboardList, Check, X, ChevronRight, XCircle } from "lucide-react";
+import { User, Ruler, FileText, Building, Phone, Mail, LayoutDashboard } from "lucide-react";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { mockShows, mockCustomers, ShowData, Customer, CustomerType } from "@/lib/mockData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -78,9 +79,7 @@ export default function CustomersPage() {
     setShowName("");
     setOccrId("");
     setShowSummary(false);
-    setOriginalShow(null);
     setPreviousShow(null);
-    hasSearchedRef.current = false;
     setFilteredCustomers([]);
     setSummaryData({
       exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
@@ -91,6 +90,11 @@ export default function CustomersPage() {
     setSelectedCustomerForEdit(null);
     setIsDialogOpen(false);
     setKey(Date.now());
+    
+    // Clear any pending searches
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
   }, []);
 
   const handleBreadcrumbClick = useCallback((e: React.MouseEvent) => {
@@ -156,117 +160,116 @@ export default function CustomersPage() {
     });
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setExpandedCustomerId(null);
+  // Completely revamped input handlers
+  const handleOccrIdChange = (value: string) => {
+    setOccrId(value);
     
+    // Cancel any pending searches
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
     
-    if (!query.trim()) {
-      hasSearchedRef.current = false;
-      
-      if (originalShow) {
-        setShowName(originalShow.showName);
-        setOccrId(originalShow.occrId);
-        setShowSummary(true);
-        calculateSummaryData(originalShow);
-        
-        router.push(`/customers?showName=${encodeURIComponent(originalShow.showName)}&occrId=${encodeURIComponent(originalShow.occrId)}`);
-      } else {
-        resetPage();
-        router.push('/customers');
-      }
+    // Update without search if empty
+    if (!value.trim()) {
       return;
     }
     
-    hasSearchedRef.current = true;
-    
+    // Set up new search with delay
     searchTimeoutRef.current = setTimeout(() => {
       const foundShow = mockShows.find(
-        (show) =>
-          show.showId.toLowerCase().includes(query.toLowerCase()) ||
-          show.showName.toLowerCase().includes(query.toLowerCase()) ||
-          show.occrId.toLowerCase().includes(query.toLowerCase())
+        (show) => show.occrId.toLowerCase().includes(value.toLowerCase())
       );
-  
+      
       if (foundShow) {
-        setPreviousShow(foundShow);
-        
-        if (query.length > 2) {
-          router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
-        }
-        
         setShowName(foundShow.showName);
-        setOccrId(foundShow.occrId);
         setShowSummary(true);
         calculateSummaryData(foundShow);
-      }
-    }, 300);
-  };
-
-  const handleDirectInput = (field: 'showName' | 'occrId', value: string) => {
-    if (field === 'showName') {
-      setShowName(value);
-    } else {
-      setOccrId(value);
-    }
-    setExpandedCustomerId(null);
-    
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-    
-    if (!value.trim()) {
-      hasSearchedRef.current = false;
-      
-      if (originalShow) {
-        setShowName(originalShow.showName);
-        setOccrId(originalShow.occrId);
-        setShowSummary(true);
-        calculateSummaryData(originalShow);
-        
-        router.push(`/customers?showName=${encodeURIComponent(originalShow.showName)}&occrId=${encodeURIComponent(originalShow.occrId)}`);
-      } else {
-        resetPage();
-        router.push('/customers');
-      }
-      return;
-    }
-    
-    hasSearchedRef.current = true;
-    
-    searchTimeoutRef.current = setTimeout(() => {
-      let foundShow = null;
-      
-      if (field === 'showName') {
-        foundShow = mockShows.find(
-          (show) => show.showName.toLowerCase().includes(value.toLowerCase())
-        );
-        if (foundShow) {
-          setOccrId(foundShow.occrId);
-        }
-      } else if (field === 'occrId') {
-        foundShow = mockShows.find(
-          (show) => show.occrId.toLowerCase().includes(value.toLowerCase())
-        );
-        if (foundShow) {
-          setShowName(foundShow.showName);
-        }
-      }
-  
-      if (foundShow) {
         setPreviousShow(foundShow);
         
         if (value.length > 2) {
           router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
         }
-        
+      } else if (value.length > 2) {
+        // Keep the text but clear results
+        setShowSummary(false);
+        calculateSummaryData(null);
+      }
+    }, 300);
+  };
+  
+  const handleShowNameChange = (value: string) => {
+    setShowName(value);
+    
+    // Cancel any pending searches
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Update without search if empty
+    if (!value.trim()) {
+      return;
+    }
+    
+    // Set up new search with delay
+    searchTimeoutRef.current = setTimeout(() => {
+      const foundShow = mockShows.find(
+        (show) => show.showName.toLowerCase().includes(value.toLowerCase())
+      );
+      
+      if (foundShow) {
+        setOccrId(foundShow.occrId);
         setShowSummary(true);
         calculateSummaryData(foundShow);
-      } else {
+        setPreviousShow(foundShow);
+        
+        if (value.length > 2) {
+          router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
+        }
+      } else if (value.length > 2) {
+        // Keep the text but clear results
         setShowSummary(false);
+        calculateSummaryData(null);
+      }
+    }, 300);
+  };
+  
+  const handleSearchQueryChange = (value: string) => {
+    setSearchQuery(value);
+    setExpandedCustomerId(null);
+    
+    // Cancel any pending searches
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Update without search if empty
+    if (!value.trim()) {
+      return;
+    }
+    
+    // Set up new search with delay
+    searchTimeoutRef.current = setTimeout(() => {
+      const foundShow = mockShows.find(
+        (show) =>
+          show.showId.toLowerCase().includes(value.toLowerCase()) ||
+          show.showName.toLowerCase().includes(value.toLowerCase()) ||
+          show.occrId.toLowerCase().includes(value.toLowerCase())
+      );
+      
+      if (foundShow) {
+        setShowName(foundShow.showName);
+        setOccrId(foundShow.occrId);
+        setShowSummary(true);
+        calculateSummaryData(foundShow);
+        setPreviousShow(foundShow);
+        
+        if (value.length > 2) {
+          router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
+        }
+      } else if (value.length > 2) {
+        // Keep the text but clear results
+        setShowSummary(false);
+        calculateSummaryData(null);
       }
     }, 300);
   };
@@ -288,9 +291,6 @@ export default function CustomersPage() {
       );
       
       if (foundShow) {
-        if (!hasSearchedRef.current) {
-          setOriginalShow(foundShow);
-        }
         setPreviousShow(foundShow);
         calculateSummaryData(foundShow);
       }
@@ -533,51 +533,8 @@ export default function CustomersPage() {
   );
 
   const handleCustomerBreadcrumbClick = () => {
-    // Reset all form inputs
-    setSearchQuery("");
-    setShowName("");
-    setOccrId("");
-    
-    // Reset all data display flags
-    setShowSummary(false);
-    
-    // Clear all data
-    setOriginalShow(null);
-    setPreviousShow(null);
-    setFilteredCustomers([]);
-    
-    // Reset summary data
-    setSummaryData({
-      exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
-      ee: { customerCount: 0, metric2: 0, metric3: 0 },
-      thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
-    });
-    
-    // Close any open details or edit panels
-    setExpandedCustomerId(null);
-    setExpandedRow(null);
-    setSelectedCustomerForEdit(null);
-    setIsDialogOpen(false);
-    
-    // Reset pagination
-    setCurrentPage(1);
-    setRowsPerPage(5);
-    
-    // Clear any error states
-    setErrors({});
-    
-    // Clear timeouts to prevent delayed searches
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-    
-    // Reset search flag to prevent auto-searches
-    hasSearchedRef.current = false;
-    
-    // Force component re-renders
-    setKey(Date.now());
-    setReloadKey(prev => prev + 1);
+    // Reset all form inputs and data
+    resetPage();
     
     // Reset URL without triggering navigation events
     router.replace('/customers');
@@ -587,6 +544,28 @@ export default function CustomersPage() {
     // Place your data fetching logic here
     // This will run when the component mounts or when reloadKey changes
   }, [reloadKey]);
+
+  // Clear functions
+  const clearOccrId = () => {
+    setOccrId("");
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  };
+
+  const clearShowName = () => {
+    setShowName("");
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  };
+  
+  const clearSearch = () => {
+    setSearchQuery("");
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+  };
 
   return (
     <MainLayout 
@@ -602,35 +581,71 @@ export default function CustomersPage() {
            <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
              <div className="space-y-1">
                <Label htmlFor="occrId">Occurrence ID</Label>
-               <Input
-                 id="occrId"
-                 placeholder="Enter occurrence ID"
-                 value={occrId}
-                 onChange={(e) => handleDirectInput('occrId', e.target.value)}
-                 className="bg-white text-sm"
-               />
+               <div className="relative">
+                 <Input
+                   id="occrId"
+                   placeholder="Enter occurrence ID"
+                   value={occrId}
+                   onChange={(e) => handleOccrIdChange(e.target.value)}
+                   className="bg-white text-sm pr-8"
+                 />
+                 {occrId && (
+                   <button 
+                     className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                     onClick={clearOccrId}
+                     type="button"
+                     aria-label="Clear occurrence ID"
+                   >
+                     <X className="h-4 w-4" />
+                   </button>
+                 )}
+               </div>
              </div>
              <div className="space-y-1">
                <Label htmlFor="showName">Show Name</Label>
-               <Input
-                 id="showName"
-                 placeholder="Enter show name"
-                 value={showName}
-                 onChange={(e) => handleDirectInput('showName', e.target.value)}
-                 className="bg-white text-sm"
-               />
+               <div className="relative">
+                 <Input
+                   id="showName"
+                   placeholder="Enter show name"
+                   value={showName}
+                   onChange={(e) => handleShowNameChange(e.target.value)}
+                   className="bg-white text-sm pr-8"
+                 />
+                 {showName && (
+                   <button 
+                     className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                     onClick={clearShowName}
+                     type="button"
+                     aria-label="Clear show name"
+                   >
+                     <X className="h-4 w-4" />
+                   </button>
+                 )}
+               </div>
              </div>
-             <div className="space-y-1 relative">
+             <div className="space-y-1">
                <Label htmlFor="searchQuery">Search</Label>
-               <Input
-                 id="searchQuery"
-                 type="text"
-                 placeholder="Search by Show ID, Name, or..."
-                 value={searchQuery}
-                 onChange={(e) => handleSearch(e.target.value)}
-                 className="pl-8 bg-white text-sm"
-               />
-               <Search className="absolute left-2.5 bottom-2.5 text-gray-400 h-4 w-4" />
+               <div className="relative">
+                 <Input
+                   id="searchQuery"
+                   type="text"
+                   placeholder="Search by Show ID, Name, or..."
+                   value={searchQuery}
+                   onChange={(e) => handleSearchQueryChange(e.target.value)}
+                   className="pl-8 pr-8 bg-white text-sm"
+                 />
+                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                 {searchQuery && (
+                   <button 
+                     className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                     onClick={clearSearch}
+                     type="button"
+                     aria-label="Clear search"
+                   >
+                     <X className="h-4 w-4" />
+                   </button>
+                 )}
+               </div>
              </div>
            </CardContent>
          </Card>
@@ -641,51 +656,78 @@ export default function CustomersPage() {
               <Card className="shadow rounded-md p-4">
                 <h3 className="font-semibold text-sm mb-3 text-center">EXHIBITOR SUMMARY</h3>
                 <div className="flex justify-around text-center">
-                  <div>
-                    <Users className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Customer Count">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.exhibitor.customerCount}</p>
+                    <p className="text-xs text-gray-500">Customers</p>
                   </div>
-                  <div>
-                    <Box className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Booth Measurements">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
+                      <Ruler className="w-5 h-5 text-green-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.exhibitor.metric2}</p>
+                    <p className="text-xs text-gray-500">Booths</p>
                   </div>
-                  <div>
-                    <ClipboardList className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Orders">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
+                      <FileText className="w-5 h-5 text-amber-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.exhibitor.metric3}</p>
+                    <p className="text-xs text-gray-500">Orders</p>
                   </div>
                 </div>
               </Card>
               <Card className="shadow rounded-md p-4">
                 <h3 className="font-semibold text-sm mb-3 text-center">E&E SUMMARY</h3>
                 <div className="flex justify-around text-center">
-                  <div>
-                    <Users className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Customer Count">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.ee.customerCount}</p>
+                    <p className="text-xs text-gray-500">Customers</p>
                   </div>
-                  <div>
-                    <Box className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Booth Measurements">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
+                      <Ruler className="w-5 h-5 text-green-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.ee.metric2}</p>
+                    <p className="text-xs text-gray-500">Booths</p>
                   </div>
-                  <div>
-                    <ClipboardList className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Orders">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
+                      <FileText className="w-5 h-5 text-amber-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.ee.metric3}</p>
+                    <p className="text-xs text-gray-500">Orders</p>
                   </div>
                 </div>
               </Card>
               <Card className="shadow rounded-md p-4">
                 <h3 className="font-semibold text-sm mb-3 text-center">3RD PARTY</h3>
                 <div className="flex justify-around text-center">
-                  <div>
-                    <Users className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Customer Count">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.thirdParty.customerCount}</p>
+                    <p className="text-xs text-gray-500">Customers</p>
                   </div>
-                  <div>
-                    <Box className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Booth Measurements">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
+                      <Ruler className="w-5 h-5 text-green-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.thirdParty.metric2}</p>
+                    <p className="text-xs text-gray-500">Booths</p>
                   </div>
-                  <div>
-                    <ClipboardList className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Orders">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
+                      <FileText className="w-5 h-5 text-amber-600" />
+                    </div>
                     <p className="text-lg font-semibold">{summaryData.thirdParty.metric3}</p>
+                    <p className="text-xs text-gray-500">Orders</p>
                   </div>
                 </div>
               </Card>

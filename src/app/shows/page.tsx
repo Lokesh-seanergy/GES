@@ -230,6 +230,7 @@ const mockFacilityData: FacilityData[] = [
 
 // Main component
 export default function ShowsPage() {
+  const router = useRouter();
 
   // Search state
   const [searchText, setSearchText] = useState("");
@@ -711,58 +712,39 @@ export default function ShowsPage() {
   };
 
   // Breadcrumb state
-  const [breadcrumbs, setBreadcrumbs] = useState([
-    { label: "Home", href: "/" },
-    { label: "Shows", href: "/shows" },
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
+    { label: "Shows", href: "#" },
   ]);
 
-  // Enhanced breadcrumb handling
-  const handleBreadcrumbClick = (
-    crumb: { label: string; href: string },
-    e: React.MouseEvent
-  ) => {
-    e.preventDefault();
-
-    switch (crumb.href) {
-      case "/":
-        router.push("/");
-        break;
-      case "/shows":
-        setSelectedShow(null);
-        setShowProjectFacilities(false);
-        break;
-      case "#show":
-        if (showProjectFacilities) {
-          setShowProjectFacilities(false);
-        }
-        break;
-      default:
-        break;
-    }
-  };
-
-
-  // Update breadcrumbs with proper hrefs
+  // Update breadcrumbs when show selection changes
   useEffect(() => {
     if (selectedShow) {
-      const newBreadcrumbs = [
-        { label: "Home", href: "/" },
-        { label: "Shows", href: "/shows" },
-        { label: selectedShow.name, href: "#show" },
+      const newBreadcrumbs: BreadcrumbItem[] = [
+        { label: "Shows", href: "#", onClick: () => {
+          setSelectedShow(null);
+          setShowProjectFacilities(false);
+        }},
       ];
 
+      // Add the selected show
+      newBreadcrumbs.push({ 
+        label: selectedShow.name, 
+        href: "#" 
+      });
+
+      // Add project facilities if needed
       if (showProjectFacilities) {
         newBreadcrumbs.push({
           label: "Project Facilities",
-          href: "#facilities",
+          href: "#",
+          onClick: () => setShowProjectFacilities(false)
         });
       }
 
       setBreadcrumbs(newBreadcrumbs);
     } else {
       setBreadcrumbs([
-        { label: "Home", href: "/" },
-        { label: "Shows", href: "/shows" },
+        { label: "Shows", href: "#" },
       ]);
     }
   }, [selectedShow, showProjectFacilities]);
@@ -776,38 +758,11 @@ export default function ShowsPage() {
     restDelta: 0.001, // More precise stopping point
   };
 
-  const router = useRouter();
-
   return (
     <MainLayout
       breadcrumbs={breadcrumbs}
-      breadcrumbClassName="text-lg py-4 bg-gray-50 border-b border-gray-200"
     >
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
-        {/* Custom Breadcrumb Navigation */}
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center space-x-2 text-sm px-6 py-3 bg-white border-b sticky top-0 z-10"
-        >
-          {breadcrumbs.map((crumb, index) => (
-            <div key={index} className="flex items-center">
-              {index > 0 && <span className="mx-2 text-gray-400">/</span>}
-              <Link
-                href={crumb.href}
-                className={cn(
-                  "transition-colors",
-                  crumb.href === "#"
-                    ? "text-gray-600 cursor-default"
-                    : "text-blue-600 hover:text-blue-800"
-                )}
-                onClick={(e) => handleBreadcrumbClick(crumb, e)}
-              >
-                {crumb.label}
-              </Link>
-            </div>
-          ))}
-        </nav>
-
         {/* Main content container with improved transitions */}
         <div className="flex h-full relative transition-all duration-500 ease-out">
           {/* Master View (Show Information) */}

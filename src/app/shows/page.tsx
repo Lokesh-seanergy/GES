@@ -1246,74 +1246,79 @@ export default function ShowsPage() {
                 variants={cardVariants}
               >
                 <Card className="shadow-sm">
-                  <CardHeader>
-                    <CardTitle>Show Occurrences</CardTitle>
+                  <CardHeader className="pb-4">
+                    <CardTitle className="text-xl">Show Occurrences</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-8">
+                  <CardContent className="space-y-4">
                     {/* Section 1: Show */}
                     <Card className="shadow-sm">
-                      <CardHeader>
-                        <CardTitle className="text-lg font-bold text-gray-900">
-                          Show
+                      <CardHeader className="py-3">
+                        <CardTitle className="text-base font-semibold">
+                          Show Details
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="grid grid-cols-3 gap-6">
-                        <div className="space-y-2">
-                          <Label className="font-bold text-gray-900">
+                      <CardContent className="grid grid-cols-3 gap-4 py-3">
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">
                             Show Name
                           </Label>
-                          <Input value={selectedShow.name} readOnly />
+                          <Input
+                            value={selectedShow.name}
+                            readOnly
+                            className="h-9"
+                          />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="font-bold text-gray-900">
-                            Show ID
-                          </Label>
-                          <Input value={selectedShow.id} readOnly />
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">Show ID</Label>
+                          <Input
+                            value={selectedShow.id}
+                            readOnly
+                            className="h-9"
+                          />
                         </div>
-                        <div className="space-y-2">
-                          <Label className="font-bold text-gray-900">
+                        <div className="space-y-1.5">
+                          <Label className="text-sm font-medium">
                             Description
                           </Label>
-                          <Input />
+                          <Input className="h-9" />
                         </div>
                       </CardContent>
                     </Card>
 
                     {/* Section 2: Show Details */}
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {/* Section 2.2: Show Dates */}
                       <Card className="shadow-sm">
-                        <CardHeader>
-                          <CardTitle className="text-lg font-bold text-gray-900">
+                        <CardHeader className="py-3">
+                          <CardTitle className="text-base font-semibold">
                             Show Dates
                           </CardTitle>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-2 gap-6">
-                          <div className="space-y-2">
-                            <Label className="font-bold text-gray-900">
-                              Open
-                            </Label>
-                            <Input type="datetime-local" />
+                        <CardContent className="grid grid-cols-2 gap-4 py-3">
+                          <div className="space-y-1.5">
+                            <Label className="text-sm font-medium">Open</Label>
+                            <Input type="datetime-local" className="h-9" />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="font-bold text-gray-900">
-                              Close
-                            </Label>
-                            <Input type="datetime-local" />
+                          <div className="space-y-1.5">
+                            <Label className="text-sm font-medium">Close</Label>
+                            <Input type="datetime-local" className="h-9" />
                           </div>
                         </CardContent>
                       </Card>
 
                       {/* Section 2.3: Timezone and Customers */}
                       <Card className="shadow-sm">
-                        <CardContent className="flex items-center gap-4 pt-6">
-                          <div className="flex-1 space-y-2">
-                            <Label className="font-bold text-gray-900">
+                        <CardContent className="flex items-center gap-4 py-4">
+                          <div className="flex-1 space-y-1.5">
+                            <Label className="text-sm font-medium">
                               Timezone
                             </Label>
-                            <Input placeholder="Enter timezone" />
+                            <Input
+                              placeholder="Enter timezone"
+                              className="h-9"
+                            />
                           </div>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6 h-10 mt-8">
+                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6 h-9 self-end">
                             Customers
                           </Button>
                         </CardContent>
@@ -1322,344 +1327,344 @@ export default function ShowsPage() {
 
                     {/* Section 3: Tabs */}
                     <Card className="shadow-sm">
-                      <CardContent className="pt-6">
-                        <Tabs value={activeTab} onValueChange={setActiveTab}>
-                          <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent">
+                      <CardContent className="pt-4 pb-2">
+                        <Tabs
+                          value={activeTab}
+                          onValueChange={setActiveTab}
+                          className="w-full"
+                        >
+                          <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent h-9">
                             <TabsTrigger
                               value="projectInfo"
-                              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-100 hover:bg-gray-200"
+                              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
                             >
                               Project Info
                             </TabsTrigger>
                             <TabsTrigger
                               value="keyDates"
-                              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-100 hover:bg-gray-200"
+                              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
                             >
                               Key Dates
                             </TabsTrigger>
                             <TabsTrigger
                               value="generalInfo"
-                              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-100 hover:bg-gray-200"
+                              className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
                             >
                               General Info
                             </TabsTrigger>
                           </TabsList>
 
-                          {/* Project Info Tab */}
-                          <TabsContent
-                            value="projectInfo"
-                            className="space-y-6"
-                          >
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Project Name
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Project Number
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Project Type
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Status
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Production City
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Facility ID
-                                  </TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                <TableRow
-                                  className="cursor-pointer hover:bg-gray-50"
+                          <div className="mt-4">
+                            {/* Project Info Tab */}
+                            <TabsContent
+                              value="projectInfo"
+                              className="space-y-4"
+                            >
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="text-sm font-medium">
+                                      Project Name
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Project Number
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Project Type
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Status
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Production City
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Facility ID
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow
+                                    className="cursor-pointer hover:bg-gray-50"
+                                    onClick={() =>
+                                      handleProjectExpand(mockProjectData)
+                                    }
+                                  >
+                                    <TableCell className="py-2">
+                                      {mockProjectData.projectName}
+                                    </TableCell>
+                                    <TableCell className="py-2">
+                                      {mockProjectData.projectNumber}
+                                    </TableCell>
+                                    <TableCell className="py-2">
+                                      {mockProjectData.projectType}
+                                    </TableCell>
+                                    <TableCell className="py-2">
+                                      {mockProjectData.status}
+                                    </TableCell>
+                                    <TableCell className="py-2">
+                                      {mockProjectData.productionCity}
+                                    </TableCell>
+                                    <TableCell className="py-2">
+                                      {mockProjectData.facilityId}
+                                    </TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4"
                                   onClick={() =>
                                     handleProjectExpand(mockProjectData)
                                   }
                                 >
-                                  <TableCell>
-                                    {mockProjectData.projectName}
-                                  </TableCell>
-                                  <TableCell>
-                                    {mockProjectData.projectNumber}
-                                  </TableCell>
-                                  <TableCell>
-                                    {mockProjectData.projectType}
-                                  </TableCell>
-                                  <TableCell>
-                                    {mockProjectData.status}
-                                  </TableCell>
-                                  <TableCell>
-                                    {mockProjectData.productionCity}
-                                  </TableCell>
-                                  <TableCell>
-                                    {mockProjectData.facilityId}
-                                  </TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                            <div className="flex justify-end gap-4">
-                              <Button
-                                className="bg-blue-600 text-white hover:bg-blue-700 px-6"
-                                onClick={() =>
-                                  handleProjectExpand(mockProjectData)
-                                }
-                              >
-                                Project Facilities
-                              </Button>
-                              <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
-                                Key Contacts
-                              </Button>
-                            </div>
-                          </TabsContent>
-
-                          {/* Key Dates Tab */}
-                          <TabsContent value="keyDates" className="space-y-6">
-                            <div className="flex items-center gap-4">
-                              <Label className="font-bold text-gray-900">
-                                Show Dates for
-                              </Label>
-                              <Select>
-                                <SelectTrigger className="w-[200px]">
-                                  <SelectValue placeholder="Select dates" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="option1">
-                                    Option 1
-                                  </SelectItem>
-                                  <SelectItem value="option2">
-                                    Option 2
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Date Type
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Project Number
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Facility ID
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Date/time
-                                  </TableHead>
-                                  <TableHead className="font-bold text-gray-900">
-                                    Notes
-                                  </TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                <TableRow>
-                                  <TableCell>-</TableCell>
-                                  <TableCell>-</TableCell>
-                                  <TableCell>-</TableCell>
-                                  <TableCell>-</TableCell>
-                                  <TableCell>-</TableCell>
-                                </TableRow>
-                              </TableBody>
-                            </Table>
-                          </TabsContent>
-
-                          {/* General Info Tab */}
-                          <TabsContent
-                            value="generalInfo"
-                            className="space-y-8"
-                          >
-                            {/* Section 3.3.1: Exh Total Sq Ft */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-gray-900">
-                                Exh Total Sq Ft
-                              </h4>
-                              <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
-                                    Projected
-                                  </Label>
-                                  <Input />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
-                                    Actual
-                                  </Label>
-                                  <Input />
-                                </div>
+                                  Project Facilities
+                                </Button>
+                                <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
+                                  Key Contacts
+                                </Button>
                               </div>
-                            </div>
+                            </TabsContent>
 
-                            {/* Section 3.3.2: Exh Freight */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-gray-900">
-                                Exh Freight
-                              </h4>
-                              <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
-                                    Projected
-                                  </Label>
-                                  <Input />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
-                                    Actual
-                                  </Label>
-                                  <Input />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Section 3.3.3: Graphics Sq Ft */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-gray-900">
-                                Graphics Sq Ft
-                              </h4>
-                              <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
-                                    Projected
-                                  </Label>
-                                  <Input />
-                                </div>
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
-                                    Actual
-                                  </Label>
-                                  <Input />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Section 3.3.4: Other Details */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-gray-900">
-                                Other Details
-                              </h4>
-                              <div className="grid grid-cols-2 gap-4">
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="flooring" />
-                                  <Label
-                                    htmlFor="flooring"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    Flooring Mandatory
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="targeted" />
-                                  <Label
-                                    htmlFor="targeted"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    Targeted Show
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="marshalling" />
-                                  <Label
-                                    htmlFor="marshalling"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    Marshalling
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="rtw" />
-                                  <Label
-                                    htmlFor="rtw"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    No RTW
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="ops" />
-                                  <Label
-                                    htmlFor="ops"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    Natl Ops Team
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="design" />
-                                  <Label
-                                    htmlFor="design"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    Design Collaboration
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="clean" />
-                                  <Label
-                                    htmlFor="clean"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    Clean Floor Policy
-                                  </Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Checkbox id="booth" />
-                                  <Label
-                                    htmlFor="booth"
-                                    className="font-bold text-gray-900"
-                                  >
-                                    Show Org Booth Pkg
-                                  </Label>
-                                </div>
-                              </div>
-                              <div className="space-y-2">
-                                <Label className="font-bold text-gray-900">
-                                  Tier Pricing
+                            {/* Key Dates Tab */}
+                            <TabsContent value="keyDates" className="space-y-4">
+                              <div className="flex items-center gap-4">
+                                <Label className="text-sm font-medium">
+                                  Show Dates for
                                 </Label>
-                                <Input />
+                                <Select>
+                                  <SelectTrigger className="w-[180px] h-9">
+                                    <SelectValue placeholder="Select dates" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="option1">
+                                      Option 1
+                                    </SelectItem>
+                                    <SelectItem value="option2">
+                                      Option 2
+                                    </SelectItem>
+                                  </SelectContent>
+                                </Select>
                               </div>
-                            </div>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="text-sm font-medium">
+                                      Date Type
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Project Number
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Facility ID
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Date/time
+                                    </TableHead>
+                                    <TableHead className="text-sm font-medium">
+                                      Notes
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableCell className="py-2">-</TableCell>
+                                    <TableCell className="py-2">-</TableCell>
+                                    <TableCell className="py-2">-</TableCell>
+                                    <TableCell className="py-2">-</TableCell>
+                                    <TableCell className="py-2">-</TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </TabsContent>
 
-                            {/* Section 3.3.5: Comments */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-gray-900">
-                                Comments
-                              </h4>
-                              <div className="space-y-2">
-                                <Label className="font-bold text-gray-900">
-                                  Freight Info
-                                </Label>
-                                <Textarea className="min-h-[100px]" />
-                              </div>
-                            </div>
-
-                            {/* Section 3.3.6: Show Package */}
-                            <div className="space-y-4">
-                              <h4 className="font-bold text-gray-900">
-                                Show Package
-                              </h4>
-                              <div className="space-y-4">
-                                <Textarea className="min-h-[100px]" />
-                                <div className="space-y-4">
-                                  <div className="space-y-2">
-                                    <Label className="font-bold text-gray-900">
-                                      Specify Logo
+                            {/* General Info Tab */}
+                            <TabsContent
+                              value="generalInfo"
+                              className="space-y-6"
+                            >
+                              {/* Section 3.3.1: Exh Total Sq Ft */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium">
+                                  Exh Total Sq Ft
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">
+                                      Projected
                                     </Label>
-                                    <Input />
+                                    <Input className="h-9" />
                                   </div>
-                                  <div className="space-y-2">
-                                    <Label className="font-bold text-gray-900">
-                                      Send Exhibitor Survey
+                                  <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">
+                                      Actual
                                     </Label>
-                                    <Input />
+                                    <Input className="h-9" />
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          </TabsContent>
+
+                              {/* Section 3.3.2: Exh Freight */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium">
+                                  Exh Freight
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">
+                                      Projected
+                                    </Label>
+                                    <Input className="h-9" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">
+                                      Actual
+                                    </Label>
+                                    <Input className="h-9" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.3: Graphics Sq Ft */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium">
+                                  Graphics Sq Ft
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">
+                                      Projected
+                                    </Label>
+                                    <Input className="h-9" />
+                                  </div>
+                                  <div className="space-y-1.5">
+                                    <Label className="text-sm font-medium">
+                                      Actual
+                                    </Label>
+                                    <Input className="h-9" />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.4: Other Details */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium">
+                                  Other Details
+                                </h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="flooring"
+                                      className="h-4 w-4"
+                                    />
+                                    <Label
+                                      htmlFor="flooring"
+                                      className="text-sm"
+                                    >
+                                      Flooring Mandatory
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="targeted"
+                                      className="h-4 w-4"
+                                    />
+                                    <Label
+                                      htmlFor="targeted"
+                                      className="text-sm"
+                                    >
+                                      Targeted Show
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                      id="marshalling"
+                                      className="h-4 w-4"
+                                    />
+                                    <Label
+                                      htmlFor="marshalling"
+                                      className="text-sm"
+                                    >
+                                      Marshalling
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="rtw" className="h-4 w-4" />
+                                    <Label htmlFor="rtw" className="text-sm">
+                                      No RTW
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="ops" className="h-4 w-4" />
+                                    <Label htmlFor="ops" className="text-sm">
+                                      Natl Ops Team
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="design" className="h-4 w-4" />
+                                    <Label htmlFor="design" className="text-sm">
+                                      Design Collaboration
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="clean" className="h-4 w-4" />
+                                    <Label htmlFor="clean" className="text-sm">
+                                      Clean Floor Policy
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="booth" className="h-4 w-4" />
+                                    <Label htmlFor="booth" className="text-sm">
+                                      Show Org Booth Pkg
+                                    </Label>
+                                  </div>
+                                </div>
+                                <div className="space-y-1.5">
+                                  <Label className="text-sm font-medium">
+                                    Tier Pricing
+                                  </Label>
+                                  <Input className="h-9" />
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.5: Comments */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium">
+                                  Comments
+                                </h4>
+                                <div className="space-y-1.5">
+                                  <Label className="text-sm font-medium">
+                                    Freight Info
+                                  </Label>
+                                  <Textarea className="min-h-[80px]" />
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.6: Show Package */}
+                              <div className="space-y-3">
+                                <h4 className="text-sm font-medium">
+                                  Show Package
+                                </h4>
+                                <div className="space-y-3">
+                                  <Textarea className="min-h-[80px]" />
+                                  <div className="space-y-3">
+                                    <div className="space-y-1.5">
+                                      <Label className="text-sm font-medium">
+                                        Specify Logo
+                                      </Label>
+                                      <Input className="h-9" />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                      <Label className="text-sm font-medium">
+                                        Send Exhibitor Survey
+                                      </Label>
+                                      <Input className="h-9" />
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </TabsContent>
+                          </div>
                         </Tabs>
                       </CardContent>
                     </Card>
@@ -1696,34 +1701,38 @@ export default function ShowsPage() {
                         variants={cardVariants}
                       >
                         <Card className="shadow-sm">
-                          <CardHeader>
-                            <CardTitle>Project Facility Details</CardTitle>
+                          <CardHeader className="pb-4">
+                            <CardTitle className="text-xl">
+                              Project Facility Details
+                            </CardTitle>
                           </CardHeader>
-                          <CardContent>
+                          <CardContent className="space-y-4">
                             {/* Section 1: Project */}
                             <Card className="shadow-sm">
-                              <CardHeader>
-                                <CardTitle className="text-lg font-bold text-gray-900">
+                              <CardHeader className="py-3">
+                                <CardTitle className="text-base font-semibold">
                                   Project
                                 </CardTitle>
                               </CardHeader>
-                              <CardContent className="grid grid-cols-2 gap-6">
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
+                              <CardContent className="grid grid-cols-2 gap-4 py-3">
+                                <div className="space-y-1.5">
+                                  <Label className="text-sm font-medium">
                                     Project Number
                                   </Label>
                                   <Input
                                     value={selectedProject.projectNumber}
                                     readOnly
+                                    className="h-9"
                                   />
                                 </div>
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
+                                <div className="space-y-1.5">
+                                  <Label className="text-sm font-medium">
                                     Project Name
                                   </Label>
                                   <Input
                                     value={selectedProject.projectName}
                                     readOnly
+                                    className="h-9"
                                   />
                                 </div>
                               </CardContent>
@@ -1731,37 +1740,37 @@ export default function ShowsPage() {
 
                             {/* Section 2: Registration and Table */}
                             <Card className="shadow-sm">
-                              <CardContent className="space-y-6 pt-6">
-                                <div className="flex justify-end">
-                                  <Label className="font-bold text-gray-900">
+                              <CardContent className="space-y-4 py-4">
+                                <div className="flex justify-end items-center text-sm">
+                                  <Label className="font-medium">
                                     Registration:
                                   </Label>
-                                  <span className="ml-2">
+                                  <span className="ml-2 text-gray-600">
                                     ----------------Servicecenter(TM)----------------
                                   </span>
                                 </div>
                                 <Table>
                                   <TableHeader>
                                     <TableRow>
-                                      <TableHead className="font-bold text-gray-900 text-center">
+                                      <TableHead className="text-sm font-medium text-center py-2">
                                         Facility ID
                                       </TableHead>
-                                      <TableHead className="font-bold text-gray-900 text-center">
+                                      <TableHead className="text-sm font-medium text-center py-2">
                                         Facility Name
                                       </TableHead>
-                                      <TableHead className="font-bold text-gray-900 text-center">
+                                      <TableHead className="text-sm font-medium text-center py-2">
                                         Hall
                                       </TableHead>
-                                      <TableHead className="font-bold text-gray-900 text-center">
+                                      <TableHead className="text-sm font-medium text-center py-2">
                                         Location
                                       </TableHead>
-                                      <TableHead className="font-bold text-gray-900 text-center">
+                                      <TableHead className="text-sm font-medium text-center py-2">
                                         Location
                                       </TableHead>
-                                      <TableHead className="font-bold text-gray-900 text-center">
+                                      <TableHead className="text-sm font-medium text-center py-2">
                                         Area Code
                                       </TableHead>
-                                      <TableHead className="font-bold text-gray-900 text-center">
+                                      <TableHead className="text-sm font-medium text-center py-2">
                                         Phone
                                       </TableHead>
                                     </TableRow>
@@ -1769,25 +1778,25 @@ export default function ShowsPage() {
                                   <TableBody>
                                     {mockFacilityData.map((facility) => (
                                       <TableRow key={facility.facilityId}>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-2">
                                           {facility.facilityId}
                                         </TableCell>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-2">
                                           {facility.facilityName}
                                         </TableCell>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-2">
                                           {facility.hall}
                                         </TableCell>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-2">
                                           {facility.location1}
                                         </TableCell>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-2">
                                           {facility.location2}
                                         </TableCell>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-2">
                                           {facility.areaCode}
                                         </TableCell>
-                                        <TableCell className="text-center">
+                                        <TableCell className="text-center py-2">
                                           {facility.phone}
                                         </TableCell>
                                       </TableRow>
@@ -1799,43 +1808,52 @@ export default function ShowsPage() {
 
                             {/* Section 3: Notes and Comments */}
                             <Card className="shadow-sm">
-                              <CardContent className="grid grid-cols-3 gap-6 pt-6">
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
+                              <CardContent className="grid grid-cols-3 gap-4 py-4">
+                                <div className="space-y-1.5">
+                                  <Label className="text-sm font-medium">
                                     Notes
                                   </Label>
-                                  <Input placeholder="Enter notes" />
+                                  <Input
+                                    placeholder="Enter notes"
+                                    className="h-9"
+                                  />
                                 </div>
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
+                                <div className="space-y-1.5">
+                                  <Label className="text-sm font-medium">
                                     Comments
                                   </Label>
-                                  <Input placeholder="Enter comments" />
+                                  <Input
+                                    placeholder="Enter comments"
+                                    className="h-9"
+                                  />
                                 </div>
-                                <div className="space-y-2">
-                                  <Label className="font-bold text-gray-900">
+                                <div className="space-y-1.5">
+                                  <Label className="text-sm font-medium">
                                     Special Instructions
                                   </Label>
-                                  <Input placeholder="Enter special instructions" />
+                                  <Input
+                                    placeholder="Enter special instructions"
+                                    className="h-9"
+                                  />
                                 </div>
                               </CardContent>
                             </Card>
 
                             {/* Action Buttons */}
-                            <div className="flex justify-between items-center pt-4">
-                              <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                            <div className="flex justify-between items-center pt-2">
+                              <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
                                 Auto-Out
                               </Button>
-                              <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                              <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
                                 Details
                               </Button>
-                              <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                              <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
                                 Schedule
                               </Button>
-                              <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                              <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
                                 Material Handling
                               </Button>
-                              <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                              <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
                                 Vendor Info
                               </Button>
                             </div>

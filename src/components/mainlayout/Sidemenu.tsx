@@ -12,6 +12,7 @@ import {
   Settings,
   ChevronRight,
   Menu,
+  ShoppingCart,
 } from "lucide-react";
 
 interface MenuItem {
@@ -42,6 +43,12 @@ export default function Sidemenu() {
       label: "SHOWS",
       icon: <Ticket size={20} />,
       href: "/shows",
+    },
+    {
+      id: "orders",
+      label: "ORDERS",
+      icon: <ShoppingCart size={20} />,
+      href: "/orders",
     },
     {
       id: "exhibits",

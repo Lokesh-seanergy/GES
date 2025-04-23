@@ -1,4 +1,7 @@
+"use client";
+
 import MainLayout from "@/components/mainlayout/MainLayout";
+import { useAuthProtection } from "@/hooks/useAuthProtection";
 import {
   Table,
   TableBody,
@@ -9,6 +12,9 @@ import {
 } from "@/components/ui/table";
 
 export default function DashboardPage() {
+  // This will automatically redirect to login if not authenticated
+  useAuthProtection();
+
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -189,9 +195,9 @@ export default function DashboardPage() {
                           strokeLinecap="round"
                           strokeLinejoin="round"
                         >
-                          <circle cx="12" cy="12" r="1"></circle>
-                          <circle cx="19" cy="12" r="1"></circle>
-                          <circle cx="5" cy="12" r="1"></circle>
+                          <circle cx="12" cy="12" r="1" />
+                          <circle cx="19" cy="12" r="1" />
+                          <circle cx="5" cy="12" r="1" />
                         </svg>
                       </button>
                     </TableCell>
@@ -199,51 +205,6 @@ export default function DashboardPage() {
                 ))}
               </TableBody>
             </Table>
-          </div>
-        </div>
-
-        <div className="flex justify-between items-center px-6 py-4 text-sm border-t">
-          <div>SHOWING 10 OF 15 RESULTS</div>
-          <div className="flex space-x-1">
-            <button className="w-8 h-8 flex items-center justify-center rounded border">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="15 18 9 12 15 6"></polyline>
-              </svg>
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded bg-blue-500 text-white">
-              1
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border">
-              2
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border">
-              3
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="9 18 15 12 9 6"></polyline>
-              </svg>
-            </button>
           </div>
         </div>
       </div>

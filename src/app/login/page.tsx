@@ -50,7 +50,7 @@ export default function LoginPage() {
       setError("");
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       login(userCredential.user.uid);
-      router.push("/orders");
+      router.push("/ges-workbench/dashboard");
     } catch (error: any) {
       setError(error.message || "Failed to sign in");
     } finally {
@@ -62,11 +62,44 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       setError("");
+      
+      console.log("Starting Google sign-in process...");
+      
+      // Create Google provider with prompt='select_account' to force account selection
       const provider = new GoogleAuthProvider();
-      const result = await signInWithPopup(auth, provider);
-      login(result.user.uid);
-      router.push("/orders");
+      
+      // Add prompt parameter to force account selection every time
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
+      console.log("Initialized Google provider, opening popup...");
+      
+      // Use a more robust approach with error handling
+      const result = await signInWithPopup(auth, provider)
+        .catch(error => {
+          console.error("Error during sign-in popup:", error);
+          throw error;
+        });
+      
+      console.log("Sign-in successful, extracting user profile...");
+      
+      // Extract user profile data
+      const userProfile = {
+        displayName: result.user.displayName,
+        email: result.user.email,
+        photoURL: result.user.photoURL
+      };
+      
+      console.log("User profile:", userProfile);
+      
+      // Pass both the token and user profile to the login function
+      login(result.user.uid, userProfile);
+      
+      console.log("Redirecting to orders page...");
+      router.push("/ges-workbench/dashboard");
     } catch (error: any) {
+      console.error("Google sign-in failed:", error);
       setError(error.message || "Failed to sign in with Google");
     } finally {
       setIsLoading(false);

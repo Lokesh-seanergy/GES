@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
-import type { BreadcrumbItem } from "@/components/mainlayout/MainLayout";
+import type { BreadcrumbItem } from "@/components/mainlayout/Breadcrumb";
 import {
   Table,
   TableBody,
@@ -187,28 +187,20 @@ export default function ShowsPage() {
 
   // Create dynamic breadcrumbs based on navigation state
   const getBreadcrumbs = (): BreadcrumbItem[] => {
+    const handleShowClick = () => {
+      setSelectedShow(null);
+      setSelectedProject(null);
+      setActiveStep("show");
+      setActiveTab("projectInfo"); // Reset active tab to default
+    };
+
     const breadcrumbs: BreadcrumbItem[] = [
       {
-        label: "Home",
-        href: "/",
-        onClick: () => {
-          setSelectedShow(null);
-          setSelectedProject(null);
-          setActiveStep("show");
-        },
+        label: "Shows",
+        href: "#",
+        onClick: handleShowClick,
       },
     ];
-
-    // Add Shows section
-    breadcrumbs.push({
-      label: selectedShow ? "Shows" : "Shows : Show Information",
-      href: "#",
-      onClick: () => {
-        setSelectedShow(null);
-        setSelectedProject(null);
-        setActiveStep("show");
-      },
-    });
 
     // Add Show details if selected
     if (selectedShow) {
@@ -218,6 +210,7 @@ export default function ShowsPage() {
         onClick: () => {
           setSelectedProject(null);
           setActiveStep("occurrence");
+          setActiveTab("projectInfo");
         },
       });
 
@@ -228,6 +221,7 @@ export default function ShowsPage() {
         onClick: () => {
           setSelectedProject(null);
           setActiveStep("occurrence");
+          setActiveTab(activeTab); // Keep the current active tab
         },
       });
 
@@ -238,6 +232,7 @@ export default function ShowsPage() {
           href: "#",
           onClick: () => {
             setActiveStep("dates");
+            setActiveTab("projectInfo");
           },
         });
       }
@@ -272,11 +267,11 @@ export default function ShowsPage() {
       router.push(`/customers?${queryParams}`);
     }
   };
+  console.log(selectedShow);
 
   return (
     <MainLayout
       breadcrumbs={getBreadcrumbs()}
-      breadcrumbClassName="text-lg py-4 bg-gray-50 border-b border-gray-200"
     >
       <div className="space-y-6 p-6">
         {/* Search Bar */}

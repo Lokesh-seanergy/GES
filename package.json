@@ -33,6 +33,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@shadcn/ui": "^0.0.4",
+    "@types/firebase": "^3.2.3",
     "@types/node": "^22.14.1",
     "@types/react": "^19",
     "@types/react-dom": "^19",

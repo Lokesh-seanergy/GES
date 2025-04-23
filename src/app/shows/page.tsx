@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
+import type { BreadcrumbItem } from "@/components/mainlayout/MainLayout";
 import {
   Table,
   TableBody,
@@ -11,17 +12,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -29,95 +26,51 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { motion, AnimatePresence } from "@/lib/motion-stub";
+import { ArrowDownCircle } from "lucide-react";
+import { useNavigationStore } from "@/store/navigationStore";
 import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation";
+
+// Import types and data from centralized file
+import {
+  ShowData,
+  ProjectData,
+  FacilityData,
+  mockShows,
+  mockProjectData,
+  mockFacilityData,
+} from "@/lib/mockData"; // Updated import
 
 // Icons from Lucide React
-import {
-  Search,
-  Filter,
-  Calendar,
-  ChevronDown,
-  ArrowUpDown,
-  ArrowUp,
-  ArrowDown,
-  X,
-} from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
-// Types
-interface ShowData {
-  showId: string;
-  showName: string;
-  occrId: string;
-  occrType: string;
-  marketType: string;
-  projectNumber: string;
-  cityOrg: string;
-  yrmo: string;
-}
+// REMOVE INLINE TYPES - They are now imported
+// interface ShowData { ... }
+// interface ProjectData { ... }
+// interface FacilityData { ... }
 
-// Mock data
-const mockShows: ShowData[] = [
-  {
-    showId: "AWS23",
-    showName: "AWS re:Invent 2024",
-    occrId: "AWS23-LV",
-    occrType: "Annual Conference",
-    marketType: "Cloud & Enterprise",
-    projectNumber: "P2024-001",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-11",
-  },
-  {
-    showId: "MSFT24",
-    showName: "Microsoft Build 2024",
-    occrId: "BUILD24-SEA",
-    occrType: "Developer Conference",
-    marketType: "Software Development",
-    projectNumber: "P2024-002",
-    cityOrg: "Seattle, WA",
-    yrmo: "2024-05",
-  },
-  {
-    showId: "GGL24",
-    showName: "Google I/O 2024",
-    occrId: "IO24-SF",
-    occrType: "Developer Conference",
-    marketType: "Technology",
-    projectNumber: "P2024-003",
-    cityOrg: "San Francisco, CA",
-    yrmo: "2024-05",
-  },
-  {
-    showId: "WWDC24",
-    showName: "Apple WWDC 2024",
-    occrId: "WWDC24-CUP",
-    occrType: "Developer Conference",
-    marketType: "Software & Hardware",
-    projectNumber: "P2024-004",
-    cityOrg: "Cupertino, CA",
-    yrmo: "2024-06",
-  },
-  {
-    showId: "CES24",
-    showName: "CES 2024",
-    occrId: "CES24-LV",
-    occrType: "Trade Show",
-    marketType: "Consumer Electronics",
-    projectNumber: "P2024-005",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-01",
-  },
-];
+// REMOVE INLINE MOCK DATA - It is now imported
+// const mockShows: ShowData[] = [ ... ];
 
 type SortField = keyof ShowData;
 type SortDirection = "asc" | "desc" | null;
 
 export default function ShowsPage() {
+  const router = useRouter();
+  const { setActiveStep } = useNavigationStore();
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterType, setFilterType] = useState("all");
   const [sortField, setSortField] = useState<SortField>("showId");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [selectedShow, setSelectedShow] = useState<ShowData | null>(null);
+  const [activeTab, setActiveTab] = useState("projectInfo");
+  const [selectedProject, setSelectedProject] = useState<ProjectData | null>(
+    null
+  );
+
+  // REMOVE INLINE MOCK DATA - It is now imported
+  // const mockProjectData: ProjectData = { ... };
+  // const mockFacilityData: FacilityData[] = [ ... ];
 
   // Handle sorting
   const handleSort = (field: SortField) => {
@@ -146,7 +99,7 @@ export default function ShowsPage() {
     return <ArrowUpDown className="h-4 w-4 text-gray-400" />;
   };
 
-  // Filter and sort shows
+  // Filter and sort shows (using imported mockShows)
   const filteredAndSortedShows = [...mockShows]
     .filter((show) => {
       const searchFields = [
@@ -164,11 +117,7 @@ export default function ShowsPage() {
         field.includes(searchQuery.toLowerCase())
       );
 
-      if (filterType === "all") return matchesSearch;
-      return (
-        matchesSearch &&
-        show.occrType.toLowerCase().includes(filterType.toLowerCase())
-      );
+      return matchesSearch;
     })
     .sort((a, b) => {
       if (!sortDirection) return 0;
@@ -179,52 +128,159 @@ export default function ShowsPage() {
         : bValue.localeCompare(aValue);
     });
 
-  // Handle show selection
-  const handleShowClick = (show: ShowData) => {
-    setSelectedShow({ ...show });
+  const handleCardExpand = (show: ShowData) => {
+    setSelectedShow(show);
+    setSelectedProject(null);
+    setActiveStep("occurrence");
+    setActiveTab("projectInfo");
   };
 
-  // Handle input changes
-  const handleInputChange = (field: keyof ShowData, value: string) => {
-    if (selectedShow) {
-      setSelectedShow({
-        ...selectedShow,
-        [field]: value,
-      });
+  const handleProjectExpand = (project: ProjectData) => {
+    setSelectedProject(project);
+    setActiveStep("dates");
+  };
+
+  const handleChevronClick = (
+    e: React.MouseEvent<HTMLDivElement>,
+    type: "show" | "project"
+  ) => {
+    e.stopPropagation();
+    if (type === "show") {
+      setSelectedShow(null);
+      setSelectedProject(null);
+      setActiveStep("show");
+    } else {
+      setSelectedProject(null);
+      setActiveStep("occurrence");
     }
   };
 
-  // Close details panel
-  const handleCloseDetails = () => {
-    setSelectedShow(null);
+  const cardVariants = {
+    hidden: { opacity: 0, y: -20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.3,
+        ease: "easeOut",
+      },
+    },
+    exit: {
+      opacity: 0,
+      y: -20,
+      transition: {
+        duration: 0.2,
+        ease: "easeIn",
+      },
+    },
   };
 
-  // Reset selected show when search or filter changes
-  useEffect(() => {
-    setSelectedShow(null);
-  }, [searchQuery, filterType]);
+  const chevronVariants = {
+    initial: { rotate: 0 },
+    rotate: {
+      rotate: 180,
+      transition: {
+        duration: 0.3,
+      },
+    },
+  };
+
+  // Create dynamic breadcrumbs based on navigation state
+  const getBreadcrumbs = (): BreadcrumbItem[] => {
+    const breadcrumbs: BreadcrumbItem[] = [
+      {
+        label: "Home",
+        href: "/",
+        onClick: () => {
+          setSelectedShow(null);
+          setSelectedProject(null);
+          setActiveStep("show");
+        },
+      },
+    ];
+
+    // Add Shows section
+    breadcrumbs.push({
+      label: selectedShow ? "Shows" : "Shows : Show Information",
+      href: "#",
+      onClick: () => {
+        setSelectedShow(null);
+        setSelectedProject(null);
+        setActiveStep("show");
+      },
+    });
+
+    // Add Show details if selected
+    if (selectedShow) {
+      breadcrumbs.push({
+        label: selectedShow.showName,
+        href: "#",
+        onClick: () => {
+          setSelectedProject(null);
+          setActiveStep("occurrence");
+        },
+      });
+
+      // Add current section based on active tab
+      breadcrumbs.push({
+        label: `Show Occurrences : ${getActiveTabLabel()}`,
+        href: "#",
+        onClick: () => {
+          setSelectedProject(null);
+          setActiveStep("occurrence");
+        },
+      });
+
+      // Add Project Facility Details if viewing project
+      if (selectedProject) {
+        breadcrumbs.push({
+          label: "Project Facility Details",
+          href: "#",
+          onClick: () => {
+            setActiveStep("dates");
+          },
+        });
+      }
+    }
+
+    return breadcrumbs;
+  };
+
+  // Helper function to get the active tab label
+  const getActiveTabLabel = () => {
+    switch (activeTab) {
+      case "projectInfo":
+        return "Project Details";
+      case "keyDates":
+        return "Key Dates";
+      case "generalInfo":
+        return "General Info";
+      default:
+        return "Project Details";
+    }
+  };
+
+  // Add a function to handle navigating to the customers page
+  const handleNavigateToCustomers = () => {
+    if (selectedShow) {
+      // Construct the URL with query parameters
+      const queryParams = new URLSearchParams({
+        showName: selectedShow.showName,
+        occrId: selectedShow.occrId
+      }).toString();
+      
+      router.push(`/customers?${queryParams}`);
+    }
+  };
 
   return (
-    <MainLayout breadcrumbs={[{ label: "Shows" }]}>
+    <MainLayout
+      breadcrumbs={getBreadcrumbs()}
+      breadcrumbClassName="text-lg py-4 bg-gray-50 border-b border-gray-200"
+    >
       <div className="space-y-6 p-6">
-        {/* Title */}
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold text-gray-900">Show Information</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            className="flex items-center gap-1"
-          >
-            <Calendar className="h-4 w-4" />
-            <span>Export</span>
-          </Button>
-        </div>
-
-        {/* Search and Filter Section */}
-        <Card className="border-none shadow-sm bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4 items-start md:items-center">
-              <div className="relative flex-1">
+        {/* Search Bar */}
+        <div className="relative flex-1 max-w-md">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
                   type="text"
@@ -235,37 +291,12 @@ export default function ShowsPage() {
                 />
               </div>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="flex items-center gap-1">
-                    <Filter className="h-4 w-4" />
-                    <span>Filter</span>
-                    <ChevronDown className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setFilterType("all")}>
-                    All Types
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterType("conference")}>
-                    Conferences
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setFilterType("trade show")}>
-                    Trade Shows
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </CardContent>
-        </Card>
-
         {/* Main Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
           {/* Shows Table */}
-          <div className="lg:col-span-2">
             <Card>
               <CardHeader>
-                <CardTitle>Show Listings</CardTitle>
+              <CardTitle>Show Information</CardTitle>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -273,27 +304,79 @@ export default function ShowsPage() {
                     <TableRow>
                       <TableHead
                         onClick={() => handleSort("showId")}
-                        className="cursor-pointer"
+                      className="cursor-pointer text-center font-bold text-gray-900"
                       >
-                        Show ID {getSortIcon("showId")}
+                      <div className="flex items-center justify-center gap-2">
+                        Show ID
+                        <span className="ml-1">{getSortIcon("showId")}</span>
+                      </div>
                       </TableHead>
                       <TableHead
                         onClick={() => handleSort("showName")}
-                        className="cursor-pointer"
+                      className="cursor-pointer text-center font-bold text-gray-900"
                       >
-                        Show Name {getSortIcon("showName")}
+                      <div className="flex items-center justify-center gap-2">
+                        Show Name
+                        <span className="ml-1">{getSortIcon("showName")}</span>
+                      </div>
                       </TableHead>
                       <TableHead
                         onClick={() => handleSort("occrId")}
-                        className="cursor-pointer"
+                      className="cursor-pointer text-center font-bold text-gray-900"
                       >
-                        Occurrence ID {getSortIcon("occrId")}
+                      <div className="flex items-center justify-center gap-2">
+                        Occr ID
+                        <span className="ml-1">{getSortIcon("occrId")}</span>
+                      </div>
                       </TableHead>
                       <TableHead
                         onClick={() => handleSort("occrType")}
-                        className="cursor-pointer"
-                      >
-                        Type {getSortIcon("occrType")}
+                      className="cursor-pointer text-center font-bold text-gray-900"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        Occr Type
+                        <span className="ml-1">{getSortIcon("occrType")}</span>
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("marketType")}
+                      className="cursor-pointer text-center font-bold text-gray-900"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        Market Type
+                        <span className="ml-1">
+                          {getSortIcon("marketType")}
+                        </span>
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("projectNumber")}
+                      className="cursor-pointer text-center font-bold text-gray-900"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        Project#
+                        <span className="ml-1">
+                          {getSortIcon("projectNumber")}
+                        </span>
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("cityOrg")}
+                      className="cursor-pointer text-center font-bold text-gray-900"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        City Org
+                        <span className="ml-1">{getSortIcon("cityOrg")}</span>
+                      </div>
+                    </TableHead>
+                    <TableHead
+                      onClick={() => handleSort("yrmo")}
+                      className="cursor-pointer text-center font-bold text-gray-900"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        YRMO
+                        <span className="ml-1">{getSortIcon("yrmo")}</span>
+                      </div>
                       </TableHead>
                     </TableRow>
                   </TableHeader>
@@ -303,163 +386,744 @@ export default function ShowsPage() {
                         key={show.showId}
                         className={cn(
                           "cursor-pointer hover:bg-gray-50",
-                          selectedShow?.showId === show.showId && "bg-blue-50"
-                        )}
-                        onClick={() => handleShowClick(show)}
-                      >
-                        <TableCell>{show.showId}</TableCell>
-                        <TableCell>{show.showName}</TableCell>
-                        <TableCell>{show.occrId}</TableCell>
-                        <TableCell>
+                        selectedShow?.showId === show.showId &&
+                          "bg-blue-50 hover:bg-blue-50"
+                      )}
+                      onClick={() => handleCardExpand(show)}
+                    >
+                      <TableCell className="text-center">
+                        {show.showId}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {show.showName}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {show.occrId}
+                      </TableCell>
+                      <TableCell className="text-center">
                           <Badge
-                            variant={
-                              show.occrType.toLowerCase().includes("conference")
-                                ? "default"
-                                : "secondary"
-                            }
+                          variant="secondary"
+                          className="bg-[#0A0C10] text-white hover:bg-[#0A0C10]/90 px-4 py-1"
                           >
                             {show.occrType}
                           </Badge>
                         </TableCell>
+                      <TableCell className="text-center">
+                        {show.marketType}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {show.projectNumber}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {show.cityOrg}
+                      </TableCell>
+                      <TableCell className="text-center">{show.yrmo}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
                 </Table>
               </CardContent>
             </Card>
-          </div>
 
-          {/* Show Details */}
-          <div className="lg:col-span-1">
-            {selectedShow ? (
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
-                    Show Details
-                  </CardTitle>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleCloseDetails}
-                    className="h-8 w-8 p-0"
+          {/* Show Occurrences Section */}
+          <AnimatePresence>
+            {selectedShow && (
+              <div className="relative" style={{ marginTop: "-40px" }}>
+                {/* Container for first chevron */}
+                <div className="relative h-10 mb-6 mt-2">
+                  <motion.div
+                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform z-10"
+                    onClick={(e: React.MouseEvent<HTMLDivElement>) => handleChevronClick(e, "show")}
+                    initial="initial"
+                    animate="rotate"
+                    variants={chevronVariants}
                   >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    <div className="p-3">
+                      <ArrowDownCircle className="h-8 w-8 text-blue-600 bg-white rounded-full shadow-sm" />
+                    </div>
+                  </motion.div>
+                </div>
+
+                {/* Show Occurrences Card */}
+                <motion.div
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  variants={cardVariants}
+                >
+                  <Card className="shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Show Occurrences</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-8">
+                      {/* Section 1: Show */}
+                      <Card className="shadow-sm">
+                        <CardHeader>
+                          <CardTitle className="text-lg font-bold text-gray-900">
+                            Show
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-3 gap-6">
+                          <div className="space-y-2">
+                            <Label className="font-bold text-gray-900">
+                              Show Name
+                            </Label>
+                            <Input value={selectedShow.showName} readOnly />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="font-bold text-gray-900">
+                              Show ID
+                            </Label>
+                            <Input value={selectedShow.showId} readOnly />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="font-bold text-gray-900">
+                              Description
+                            </Label>
+                            <Input />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Section 2: Show Details */}
+                      <div className="space-y-6">
+                        {/* Section 2.1: Show Occurrence */}
+                        <Card className="shadow-sm">
+                          <CardHeader>
+                            <CardTitle className="text-lg font-bold text-gray-900">
+                              Show Occurrence
+                            </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="info" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="info">Show Info</TabsTrigger>
-                      <TabsTrigger value="occurrences">
-                        Show Occurrences
-                      </TabsTrigger>
-                    </TabsList>
-                    <TabsContent value="info">
-                      <div className="space-y-4">
+                          <CardContent className="grid grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                YRMO
+                              </Label>
+                              <Input value={selectedShow.yrmo} readOnly />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                Occr Type
+                              </Label>
+                              <Input value={selectedShow.occrType} readOnly />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                Market Type
+                              </Label>
+                              <Input value={selectedShow.marketType} readOnly />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                Status
+                              </Label>
+                              <Input />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                Occr ID
+                              </Label>
+                              <Input value={selectedShow.occrId} readOnly />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                Event City
+                              </Label>
+                              <Input />
+                            </div>
                         <div className="space-y-2">
-                          <Label>Show ID</Label>
-                          <Input
-                            value={selectedShow.showId}
-                            onChange={(e) =>
-                              handleInputChange("showId", e.target.value)
-                            }
-                          />
+                              <Label className="font-bold text-gray-900">
+                                Pricing Loc
+                              </Label>
+                              <Input />
                         </div>
                         <div className="space-y-2">
-                          <Label>Show Name</Label>
-                          <Input
-                            value={selectedShow.showName}
-                            onChange={(e) =>
-                              handleInputChange("showName", e.target.value)
-                            }
-                          />
+                              <Label className="font-bold text-gray-900">
+                                City Org
+                              </Label>
+                              <Input value={selectedShow.cityOrg} readOnly />
                         </div>
                         <div className="space-y-2">
-                          <Label>Market Type</Label>
-                          <Input
-                            value={selectedShow.marketType}
-                            onChange={(e) =>
-                              handleInputChange("marketType", e.target.value)
-                            }
-                          />
+                              <Label className="font-bold text-gray-900">
+                                Occr Desc
+                              </Label>
+                              <Input />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Section 2.2: Show Dates */}
+                        <Card className="shadow-sm">
+                          <CardHeader>
+                            <CardTitle className="text-lg font-bold text-gray-900">
+                              Show Dates
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="grid grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                Open
+                              </Label>
+                              <Input type="datetime-local" />
                         </div>
                         <div className="space-y-2">
-                          <Label>Project Number</Label>
-                          <Input
-                            value={selectedShow.projectNumber}
-                            onChange={(e) =>
-                              handleInputChange("projectNumber", e.target.value)
-                            }
-                          />
+                              <Label className="font-bold text-gray-900">
+                                Close
+                              </Label>
+                              <Input type="datetime-local" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        {/* Section 2.3: Timezone and Customers */}
+                        <Card className="shadow-sm">
+                          <CardContent className="flex items-center gap-4 pt-6">
+                            <div className="flex-1 space-y-2">
+                              <Label className="font-bold text-gray-900">
+                                Timezone
+                              </Label>
+                              <Input placeholder="Enter timezone" />
                         </div>
+                            <Button 
+                              className="bg-blue-600 text-white hover:bg-blue-700 px-6 h-10 mt-8"
+                              onClick={handleNavigateToCustomers}
+                              disabled={!selectedShow}
+                            >
+                              Customers
+                            </Button>
+                          </CardContent>
+                        </Card>
                       </div>
-                    </TabsContent>
-                    <TabsContent value="occurrences">
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label>Occurrence ID</Label>
-                          <Input
-                            value={selectedShow.occrId}
-                            onChange={(e) =>
-                              handleInputChange("occrId", e.target.value)
-                            }
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Occurrence Type</Label>
-                          <Select
-                            value={selectedShow.occrType}
-                            onValueChange={(value) =>
-                              handleInputChange("occrType", value)
-                            }
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
+
+                      {/* Section 3: Tabs */}
+                      <Card className="shadow-sm">
+                        <CardContent className="pt-6">
+                          <Tabs value={activeTab} onValueChange={setActiveTab}>
+                            <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent">
+                              <TabsTrigger
+                                value="projectInfo"
+                                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-100 hover:bg-gray-200"
+                              >
+                                Project Info
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="keyDates"
+                                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-100 hover:bg-gray-200"
+                              >
+                                Key Dates
+                              </TabsTrigger>
+                              <TabsTrigger
+                                value="generalInfo"
+                                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-100 hover:bg-gray-200"
+                              >
+                                General Info
+                              </TabsTrigger>
+                            </TabsList>
+
+                            {/* Project Info Tab */}
+                            <TabsContent
+                              value="projectInfo"
+                              className="space-y-6"
+                            >
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Project Name
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Project Number
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Project Type
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Status
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Production City
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Facility ID
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow
+                                    className="cursor-pointer hover:bg-gray-50"
+                                    onClick={() =>
+                                      handleProjectExpand(mockProjectData)
+                                    }
+                                  >
+                                    <TableCell>
+                                      {mockProjectData.projectName}
+                                    </TableCell>
+                                    <TableCell>
+                                      {mockProjectData.projectNumber}
+                                    </TableCell>
+                                    <TableCell>
+                                      {mockProjectData.projectType}
+                                    </TableCell>
+                                    <TableCell>
+                                      {mockProjectData.status}
+                                    </TableCell>
+                                    <TableCell>
+                                      {mockProjectData.productionCity}
+                                    </TableCell>
+                                    <TableCell>
+                                      {mockProjectData.facilityId}
+                                    </TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                              <div className="flex justify-end gap-4">
+                                <Button
+                                  className="bg-blue-600 text-white hover:bg-blue-700 px-6"
+                                  onClick={() =>
+                                    handleProjectExpand(mockProjectData)
+                                  }
+                                >
+                                  Project Facilities
+                                </Button>
+                                <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                                  Key Contacts
+                                </Button>
+                              </div>
+                            </TabsContent>
+
+                            {/* Key Dates Tab */}
+                            <TabsContent value="keyDates" className="space-y-6">
+                              <div className="flex items-center gap-4">
+                                <Label className="font-bold text-gray-900">
+                                  Show Dates for
+                                </Label>
+                                <Select>
+                                  <SelectTrigger className="w-[200px]">
+                                    <SelectValue placeholder="Select dates" />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="Annual Conference">
-                                Annual Conference
+                                    <SelectItem value="option1">
+                                      Option 1
                               </SelectItem>
-                              <SelectItem value="Developer Conference">
-                                Developer Conference
-                              </SelectItem>
-                              <SelectItem value="Trade Show">
-                                Trade Show
+                                    <SelectItem value="option2">
+                                      Option 2
                               </SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Date Type
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Project Number
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Facility ID
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Date/time
+                                    </TableHead>
+                                    <TableHead className="font-bold text-gray-900">
+                                      Notes
+                                    </TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  <TableRow>
+                                    <TableCell>-</TableCell>
+                                    <TableCell>-</TableCell>
+                                    <TableCell>-</TableCell>
+                                    <TableCell>-</TableCell>
+                                    <TableCell>-</TableCell>
+                                  </TableRow>
+                                </TableBody>
+                              </Table>
+                            </TabsContent>
+
+                            {/* General Info Tab */}
+                            <TabsContent
+                              value="generalInfo"
+                              className="space-y-8"
+                            >
+                              {/* Section 3.3.1: Exh Total Sq Ft */}
+                              <div className="space-y-4">
+                                <h4 className="font-bold text-gray-900">
+                                  Exh Total Sq Ft
+                                </h4>
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Projected
+                                    </Label>
+                                    <Input />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Actual
+                                    </Label>
+                                    <Input />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.2: Exh Freight */}
+                              <div className="space-y-4">
+                                <h4 className="font-bold text-gray-900">
+                                  Exh Freight
+                                </h4>
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Projected
+                                    </Label>
+                                    <Input />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Actual
+                                    </Label>
+                                    <Input />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.3: Graphics Sq Ft */}
+                              <div className="space-y-4">
+                                <h4 className="font-bold text-gray-900">
+                                  Graphics Sq Ft
+                                </h4>
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Projected
+                                    </Label>
+                                    <Input />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Actual
+                                    </Label>
+                                    <Input />
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.4: Other Details */}
+                              <div className="space-y-4">
+                                <h4 className="font-bold text-gray-900">
+                                  Other Details
+                                </h4>
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="flooring" />
+                                    <Label
+                                      htmlFor="flooring"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      Flooring Mandatory
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="targeted" />
+                                    <Label
+                                      htmlFor="targeted"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      Targeted Show
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="marshalling" />
+                                    <Label
+                                      htmlFor="marshalling"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      Marshalling
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="rtw" />
+                                    <Label
+                                      htmlFor="rtw"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      No RTW
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="ops" />
+                                    <Label
+                                      htmlFor="ops"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      Natl Ops Team
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="design" />
+                                    <Label
+                                      htmlFor="design"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      Design Collaboration
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="clean" />
+                                    <Label
+                                      htmlFor="clean"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      Clean Floor Policy
+                                    </Label>
+                                  </div>
+                                  <div className="flex items-center space-x-2">
+                                    <Checkbox id="booth" />
+                                    <Label
+                                      htmlFor="booth"
+                                      className="font-bold text-gray-900"
+                                    >
+                                      Show Org Booth Pkg
+                                    </Label>
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <Label className="font-bold text-gray-900">
+                                    Tier Pricing
+                                  </Label>
+                                  <Input />
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.5: Comments */}
+                              <div className="space-y-4">
+                                <h4 className="font-bold text-gray-900">
+                                  Comments
+                                </h4>
+                                <div className="space-y-2">
+                                  <Label className="font-bold text-gray-900">
+                                    Freight Info
+                                  </Label>
+                                  <Textarea className="min-h-[100px]" />
+                                </div>
+                              </div>
+
+                              {/* Section 3.3.6: Show Package */}
+                              <div className="space-y-4">
+                                <h4 className="font-bold text-gray-900">
+                                  Show Package
+                                </h4>
+                                <div className="space-y-4">
+                                  <Textarea className="min-h-[100px]" />
+                                  <div className="space-y-4">
                         <div className="space-y-2">
-                          <Label>City</Label>
-                          <Input
-                            value={selectedShow.cityOrg}
-                            onChange={(e) =>
-                              handleInputChange("cityOrg", e.target.value)
-                            }
-                          />
+                                      <Label className="font-bold text-gray-900">
+                                        Specify Logo
+                                      </Label>
+                                      <Input />
                         </div>
                         <div className="space-y-2">
-                          <Label>Year/Month</Label>
-                          <Input
-                            value={selectedShow.yrmo}
-                            onChange={(e) =>
-                              handleInputChange("yrmo", e.target.value)
-                            }
-                          />
+                                      <Label className="font-bold text-gray-900">
+                                        Send Exhibitor Survey
+                                      </Label>
+                                      <Input />
+                                    </div>
+                                  </div>
                         </div>
                       </div>
                     </TabsContent>
                   </Tabs>
                 </CardContent>
               </Card>
-            ) : (
-              <Card>
-                <CardContent className="p-6 text-center text-gray-500">
-                  Select a show to view details
+                    </CardContent>
+                  </Card>
+
+                  {/* Project Facility Details Section */}
+                  <AnimatePresence>
+                    {selectedProject && (
+                      <div
+                        className="relative mt-6"
+                        style={{ marginTop: "-55px" }}
+                      >
+                        {/* Container for second chevron */}
+                        <div className="relative h-10 my-6">
+                          <motion.div
+                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform z-10"
+                            onClick={(e: React.MouseEvent<HTMLDivElement>) => handleChevronClick(e, "project")}
+                            initial="initial"
+                            animate="rotate"
+                            variants={chevronVariants}
+                          >
+                            <div className="p-3">
+                              <ArrowDownCircle className="h-8 w-8 text-blue-600 bg-white rounded-full shadow-sm" />
+                            </div>
+                          </motion.div>
+                        </div>
+
+                        {/* Project Facility Details Card */}
+                        <motion.div
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          variants={cardVariants}
+                        >
+                          <Card className="shadow-sm">
+                            <CardHeader>
+                              <CardTitle>Project Facility Details</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              {/* Section 1: Project */}
+                              <Card className="shadow-sm">
+                                <CardHeader>
+                                  <CardTitle className="text-lg font-bold text-gray-900">
+                                    Project
+                                  </CardTitle>
+                                </CardHeader>
+                                <CardContent className="grid grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Project Number
+                                    </Label>
+                                    <Input
+                                      value={selectedProject.projectNumber}
+                                      readOnly
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Project Name
+                                    </Label>
+                                    <Input
+                                      value={selectedProject.projectName}
+                                      readOnly
+                                    />
+                                  </div>
+                                </CardContent>
+                              </Card>
+
+                              {/* Section 2: Registration and Table */}
+                              <Card className="shadow-sm">
+                                <CardContent className="space-y-6 pt-6">
+                                  <div className="flex justify-end">
+                                    <Label className="font-bold text-gray-900">
+                                      Registration:
+                                    </Label>
+                                    <span className="ml-2">
+                                      ----------------Servicecenter(TM)----------------
+                                    </span>
+                                  </div>
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead className="font-bold text-gray-900 text-center">
+                                          Facility ID
+                                        </TableHead>
+                                        <TableHead className="font-bold text-gray-900 text-center">
+                                          Facility Name
+                                        </TableHead>
+                                        <TableHead className="font-bold text-gray-900 text-center">
+                                          Hall
+                                        </TableHead>
+                                        <TableHead className="font-bold text-gray-900 text-center">
+                                          Location
+                                        </TableHead>
+                                        <TableHead className="font-bold text-gray-900 text-center">
+                                          Location
+                                        </TableHead>
+                                        <TableHead className="font-bold text-gray-900 text-center">
+                                          Area Code
+                                        </TableHead>
+                                        <TableHead className="font-bold text-gray-900 text-center">
+                                          Phone
+                                        </TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {mockFacilityData.map((facility) => (
+                                        <TableRow key={facility.facilityId}>
+                                          <TableCell className="text-center">
+                                            {facility.facilityId}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {facility.facilityName}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {facility.hall}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {facility.location1}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {facility.location2}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {facility.areaCode}
+                                          </TableCell>
+                                          <TableCell className="text-center">
+                                            {facility.phone}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </CardContent>
+                              </Card>
+
+                              {/* Section 3: Notes and Comments */}
+                              <Card className="shadow-sm">
+                                <CardContent className="grid grid-cols-3 gap-6 pt-6">
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Notes
+                                    </Label>
+                                    <Input placeholder="Enter notes" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Comments
+                                    </Label>
+                                    <Input placeholder="Enter comments" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <Label className="font-bold text-gray-900">
+                                      Special Instructions
+                                    </Label>
+                                    <Input placeholder="Enter special instructions" />
+                                  </div>
+                                </CardContent>
+                              </Card>
+
+                              {/* Action Buttons */}
+                              <div className="flex justify-between items-center pt-4">
+                                <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                                  Auto-Out
+                                </Button>
+                                <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                                  Details
+                                </Button>
+                                <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                                  Schedule
+                                </Button>
+                                <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                                  Material Handling
+                                </Button>
+                                <Button className="bg-blue-600 text-white hover:bg-blue-700 px-6">
+                                  Vendor Info
+                                </Button>
+                              </div>
                 </CardContent>
               </Card>
+                        </motion.div>
+                      </div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              </div>
             )}
-          </div>
+          </AnimatePresence>
         </div>
       </div>
     </MainLayout>

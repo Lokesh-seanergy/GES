@@ -6,9 +6,28 @@ import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { auth } from "@/lib/firebase/config";
 import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+
+import { isMFAEnabled } from "@/lib/firebase/mfa";
+import MFAVerification from "@/components/auth/MFAVerification";
+import PhoneAuth from "@/components/auth/PhoneAuth";
+import {
+  checkRateLimit, 
+  getRemainingAttempts, 
+  resetRateLimit, 
+  validatePassword, 
+  checkSecurityFeatures, 
+  sanitizeInput, 
+  logSecurityEvent,
+  RATE_LIMIT_WINDOW 
+} from "@/lib/auth/security";
+import Cookies from 'js-cookie';
+
+type AuthMethod = 'email' | 'phone' | 'social';
+
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");

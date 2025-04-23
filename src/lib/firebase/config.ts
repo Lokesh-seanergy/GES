@@ -7,7 +7,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyDDUKdQsy5WFz7mEbwK7mSeD7S4tmsloTQ",
   authDomain: "ges-demo-b2d08.firebaseapp.com",
   projectId: "ges-demo-b2d08",
-  storageBucket: "ges-demo-b2d08.firestorage.app",
+  storageBucket: "ges-demo-b2d08.appspot.com",
   messagingSenderId: "419716709251",
   appId: "1:419716709251:web:17a178fe3f778b91cd94b6",
   measurementId: "G-PZBBSGWH48"

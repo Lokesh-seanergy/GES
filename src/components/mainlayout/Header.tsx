@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Bell, ChevronDown, LogOut } from "lucide-react";
+import { Bell, ChevronDown, LogOut, User } from "lucide-react";
 import { Roboto } from "next/font/google";
 import { SearchBar } from "../ui/SearchBar";
 import Image from "next/image";
@@ -15,8 +15,9 @@ const roboto = Roboto({
 });
 
 export default function Header() {
-  const { logout } = useAuthStore();
+  const { logout, userProfile } = useAuthStore();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [imageError, setImageError] = useState(false);
 
   const handleLogout = () => {
     try {
@@ -31,14 +32,25 @@ export default function Header() {
     setIsProfileOpen(!isProfileOpen);
   };
 
+  // Default values if no profile is available
+  const displayName = userProfile?.displayName || 'Jesse Rose';
+  const email = userProfile?.email || 'jesse@example.com';
+  const photoURL = !imageError && userProfile?.photoURL 
+    ? userProfile.photoURL 
+    : '/ges-workbench/profile.png';
+  const role = 'Admin'; // This could come from a role management system
+
+  const handleImageError = () => {
+    setImageError(true);
+  };
+
   return (
     <header className="bg-white shadow-sm px-6 h-16 flex items-center justify-between">
       <div className="flex items-center">
         <h1
           className={`${roboto.className} text-[26px] leading-[100%] tracking-[0%] ml-8`}
         >
-          <span className="font-[300] ">Welcome To </span>
-          <span className="font-[400] ">WorkBench</span>
+          <span className="font-[400] ">ShowFlow</span>
         </h1>
       </div>
 
@@ -63,16 +75,24 @@ export default function Header() {
             className="flex items-center gap-2 border-l pl-4 ml-2"
           >
             <div className="h-8 w-8 rounded-full overflow-hidden relative">
+              {imageError && !photoURL.startsWith('/') ? (
+                <div className="bg-gray-200 h-full w-full flex items-center justify-center">
+                  <User className="text-gray-500" size={16} />
+                </div>
+              ) : (
               <Image
-                src="/ges-workbench/profile.png"
+                  src={photoURL}
                 alt="User profile"
                 fill
                 className="object-cover"
+                  onError={handleImageError}
+                  unoptimized={photoURL.startsWith('https://')}
               />
+              )}
             </div>
             <div className="text-sm">
-              <p className="font-medium">Jesse Rose</p>
-              <p className="text-xs text-gray-500">Admin</p>
+              <p className="font-medium">{displayName}</p>
+              <p className="text-xs text-gray-500">{role}</p>
             </div>
             <ChevronDown size={16} className={`transition-transform ${isProfileOpen ? 'rotate-180' : ''}`} />
           </button>
@@ -81,8 +101,8 @@ export default function Header() {
           {isProfileOpen && (
             <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
               <div className="px-4 py-2 border-b border-gray-100">
-                <p className="text-sm font-medium text-gray-900">Jesse Rose</p>
-                <p className="text-xs text-gray-500">jesse@example.com</p>
+                <p className="text-sm font-medium text-gray-900">{displayName}</p>
+                <p className="text-xs text-gray-500">{email}</p>
               </div>
               <button
                 onClick={handleLogout}

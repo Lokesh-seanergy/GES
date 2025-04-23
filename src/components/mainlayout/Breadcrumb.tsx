@@ -7,6 +7,7 @@ import { Home } from "lucide-react";
 export interface BreadcrumbItem {
   label: string;
   href?: string;
+  onClick?: () => void;
 }
 
 interface BreadcrumbProps {
@@ -30,7 +31,15 @@ export default function Breadcrumb({ items }: BreadcrumbProps) {
         {items.map((item, index) => (
           <li key={index} className="flex items-center">
             <span className="mx-2 text-gray-400">/</span>
-            {item.href ? (
+            {item.onClick ? (
+              <button 
+                type="button"
+                onClick={item.onClick}
+                className="text-blue-500 hover:underline cursor-pointer bg-transparent border-0 p-0 m-0 text-sm font-normal"
+              >
+                {item.label}
+              </button>
+            ) : item.href ? (
               <Link href={item.href} className="text-blue-500 hover:underline">
                 {item.label}
               </Link>

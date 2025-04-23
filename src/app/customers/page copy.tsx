@@ -13,15 +13,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import React from "react";
-import Router from "next/router";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 
 interface SummaryData {
   exhibitor: {
@@ -71,7 +62,6 @@ export default function CustomersPage() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [reloadKey, setReloadKey] = useState(0);
   
   const resetPage = useCallback(() => {
     setSearchQuery("");
@@ -301,7 +291,6 @@ export default function CustomersPage() {
 
   const handleCustomerCardClick = (customerId: string) => {
     setExpandedCustomerId(customerId);
-    setExpandedRow(customerId);
   };
   
   const openEditDialog = (customer: Customer) => {
@@ -532,68 +521,13 @@ export default function CustomersPage() {
     currentPage * rowsPerPage
   );
 
-  const handleCustomerBreadcrumbClick = () => {
-    // Reset all form inputs
-    setSearchQuery("");
-    setShowName("");
-    setOccrId("");
-    
-    // Reset all data display flags
-    setShowSummary(false);
-    
-    // Clear all data
-    setOriginalShow(null);
-    setPreviousShow(null);
-    setFilteredCustomers([]);
-    
-    // Reset summary data
-    setSummaryData({
-      exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
-      ee: { customerCount: 0, metric2: 0, metric3: 0 },
-      thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
-    });
-    
-    // Close any open details or edit panels
-    setExpandedCustomerId(null);
-    setExpandedRow(null);
-    setSelectedCustomerForEdit(null);
-    setIsDialogOpen(false);
-    
-    // Reset pagination
-    setCurrentPage(1);
-    setRowsPerPage(5);
-    
-    // Clear any error states
-    setErrors({});
-    
-    // Clear timeouts to prevent delayed searches
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-    
-    // Reset search flag to prevent auto-searches
-    hasSearchedRef.current = false;
-    
-    // Force component re-renders
-    setKey(Date.now());
-    setReloadKey(prev => prev + 1);
-    
-    // Reset URL without triggering navigation events
-    router.replace('/customers');
-  };
-
-  useEffect(() => {
-    // Place your data fetching logic here
-    // This will run when the component mounts or when reloadKey changes
-  }, [reloadKey]);
-
   return (
     <MainLayout 
       breadcrumbs={[{
-        label: "Customers",
-        href: "#",
-        onClick: handleCustomerBreadcrumbClick,
+        label: "Customers" , href: "#",
+        onClick: () => {
+          resetPage();
+        },
       }]}
       key={key}
     >
@@ -776,7 +710,6 @@ export default function CustomersPage() {
                             ? "bg-blue-50 border border-blue-300 shadow-md"
                             : "bg-white border"
                         )}
-                        onClick={() => handleCustomerCardClick(customer.id)}
                       >
                         <div className="flex flex-col gap-1 text-sm">
                           <div className="font-semibold text-base mb-1">{customer.customerName}</div>
@@ -825,39 +758,40 @@ export default function CustomersPage() {
                           <div className="-mx-4 overflow-x-auto">
                             <div className="inline-block min-w-full align-middle">
                               <div className="relative overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
-                                <Table className="min-w-full table-fixed divide-y divide-gray-300">
-                                  <TableHeader className="bg-gray-50">
-                                    <TableRow>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project #</TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Facility</TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth #</TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Type</TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Service Issue</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody className="divide-y divide-gray-200 bg-white">
+                                <div className="p-4">
+                                  <table className="min-w-full table-fixed divide-y divide-gray-300">
+                                    <thead className="bg-gray-50">
+                                      <tr>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project #</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Facility</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth #</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Type</th>
+                                        <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Service Issue</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-200 bg-white">
                                       {filteredCustomers.map((customer) => (
                                         <React.Fragment key={customer.id}>
-                                        <TableRow onClick={() => handleRowClick(customer.id)} className="cursor-pointer">
-                                          <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.showId}>
+                                          <tr onClick={() => handleRowClick(customer.id)} className="cursor-pointer">
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.showId}>
                                               <span className={customer.showId === 'AWS23' ? 'font-semibold' : ''}>
                                                 {customer.showId}
                                               </span>
-                                          </TableCell>
-                                          <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.facilityName}>{customer.facilityName}</TableCell>
-                                          <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.boothNumber}>{customer.boothNumber}</TableCell>
-                                          <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.boothType || 'N/A'}>{customer.boothType || 'N/A'}</TableCell>
-                                          <TableCell className="whitespace-nowrap px-3 py-4 text-sm truncate">
+                                            </td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.facilityName}>{customer.facilityName}</td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.boothNumber}>{customer.boothNumber}</td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate" title={customer.boothType || 'N/A'}>{customer.boothType || 'N/A'}</td>
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm truncate">
                                               {customer.serviceIssue && customer.serviceIssue.toLowerCase() !== 'none' ? (
                                                 <span className="font-medium text-green-600">ACTIVE</span>
                                               ) : (
                                                 <span className="font-medium text-gray-500">INACTIVE</span>
                                               )}
-                                          </TableCell>
-                                        </TableRow>
+                                            </td>
+                                          </tr>
                                           {expandedRow === customer.id && (
-                                          <TableRow>
-                                            <TableCell colSpan={5} className="px-3 py-4">
+                                            <tr>
+                                              <td colSpan={5} className="px-3 py-4">
                                                 <div className="bg-gray-50 p-4 rounded-md shadow-sm">
                                                   <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
                                                     <div><strong>First Name:</strong> {customer.firstName}</div>
@@ -874,13 +808,14 @@ export default function CustomersPage() {
                                                     <div><strong>Service Issue:</strong> {customer.serviceIssue}</div>
                                                   </div>
                                                 </div>
-                                            </TableCell>
-                                          </TableRow>
+                                              </td>
+                                            </tr>
                                           )}
                                         </React.Fragment>
                                       ))}
-                                  </TableBody>
-                                </Table>
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
                             </div>
                           </div>

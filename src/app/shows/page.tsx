@@ -2,6 +2,9 @@
 
 import { useState, useMemo, useEffect } from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
+
+import type { BreadcrumbItem } from "@/components/mainlayout/Breadcrumb";
+
 import {
   Table,
   TableBody,
@@ -27,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AlertDialog,
@@ -226,6 +230,7 @@ const mockFacilityData: FacilityData[] = [
 
 // Main component
 export default function ShowsPage() {
+
   // Search state
   const [searchText, setSearchText] = useState("");
   const debouncedSearch = useDebounce(searchText);
@@ -248,7 +253,9 @@ export default function ShowsPage() {
 
   // Sort state
   const [sortField, setSortField] = useState<SortField>("id");
+
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
 
   // Update search store with debounced value
   useEffect(() => {
@@ -390,6 +397,7 @@ export default function ShowsPage() {
   }, [debouncedSearch, sortField, sortDirection, shows, activeFilters]);
 
   // Sort handlers
+
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -459,6 +467,7 @@ export default function ShowsPage() {
     setIsNewShowOpen(false);
   };
 
+
   const createOccr = () => {
     // Here you would typically update both the shows and occurrences
     // For now, we'll just close the form
@@ -472,6 +481,7 @@ export default function ShowsPage() {
       timezone: "",
       projectNumber: "",
       facilityId: "",
+
     });
     setIsNewOccrOpen(false);
   };
@@ -484,7 +494,9 @@ export default function ShowsPage() {
   // Delete show
   const handleDeleteShow = (show: ShowData) => {
     setSelectedShow(show);
+
     setShowDeleteDialog(true);
+
   };
 
   const confirmDelete = () => {
@@ -496,6 +508,7 @@ export default function ShowsPage() {
     setShowDeleteDialog(false);
     setSelectedShow(null);
   };
+
 
   const [activeTab, setActiveTab] = useState("projectInfo");
 
@@ -518,6 +531,7 @@ export default function ShowsPage() {
       const month = cleaned.slice(4, 6);
       const validMonth = validateMonth(month);
       formattedValue = month ? `${year}-${validMonth}` : year;
+
     }
 
     // Format as a range if there's enough digits
@@ -675,6 +689,7 @@ export default function ShowsPage() {
             scrollContainer.removeEventListener("scroll", handleScroll);
           }
         };
+
       }
     }, 0);
 
@@ -725,6 +740,7 @@ export default function ShowsPage() {
         break;
     }
   };
+
 
   // Update breadcrumbs with proper hrefs
   useEffect(() => {
@@ -880,6 +896,7 @@ export default function ShowsPage() {
                         "text-white"
                       )}
                       onClick={toggleNewShow}
+
                     >
                       <Plus
                         className={`h-4 w-4 transition-transform ${
@@ -969,6 +986,7 @@ export default function ShowsPage() {
                           </SelectContent>
                         </Select>
                       </div>
+
                       <div className="space-y-2">
                         <Label className="text-sm text-gray-500">
                           Market Type
@@ -1046,6 +1064,7 @@ export default function ShowsPage() {
                       >
                         Apply Filters
                       </Button>
+
                     </div>
                   </motion.div>
 
@@ -1238,6 +1257,7 @@ export default function ShowsPage() {
                               onChange={handleNewOccrChange("description")}
                             />
                           </div>
+
                           <div className="space-y-2">
                             <Label className="text-sm text-gray-500">
                               Open
@@ -1302,6 +1322,7 @@ export default function ShowsPage() {
                       </CardContent>
                     </Card>
                   )}
+
 
                   {/* Shows Table */}
                   <Card
@@ -1493,6 +1514,7 @@ export default function ShowsPage() {
                                         </Button>
                                       </div>
                                     </TableCell>
+
                                   </>
                                 )}
                               </TableRow>
@@ -1557,6 +1579,7 @@ export default function ShowsPage() {
                           </div>
                         </div>
                       )}
+
                     </CardContent>
                   </Card>
                 </div>
@@ -1644,6 +1667,7 @@ export default function ShowsPage() {
                             <span className="mx-2">•</span>
                             <span>{selectedShow.id}</span>
                           </div>
+
                         </div>
 
                         {/* Show Occurrences Content */}
@@ -1721,6 +1745,7 @@ export default function ShowsPage() {
                                   </div>
                                 </div>
                               </div>
+
                             </CardContent>
                           </Card>
 
@@ -2123,6 +2148,7 @@ export default function ShowsPage() {
                             </CardContent>
                           </Card>
                         </div>
+
                       </div>
                     </div>
                   )}

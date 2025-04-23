@@ -1,28 +1,25 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 /**
- * Root page component that automatically redirects to the dashboard
- * This ensures users always land on the dashboard when accessing the root URL
+ * Root page component that handles authentication and redirection
  */
 export default function Home() {
   const router = useRouter();
+  const { checkAuth } = useAuthStore();
 
-  // Force immediate redirect on component mount
   useEffect(() => {
-    console.log("Redirecting to dashboard...");
-    router.push("/dashboard");
-  }, [router]);
+    const isAuthenticated = checkAuth();
+    if (!isAuthenticated) {
+      router.replace('/ges-workbench/login');
+    } else {
+      router.replace('/ges-workbench/dashboard');
+    }
+  }, [router, checkAuth]);
 
-  // This will be rendered briefly before redirection happens
-  return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className="text-center p-6">
-        <h1 className="text-2xl font-bold mb-2">Welcome to GES WorkBench</h1>
-        <p className="text-gray-600">Redirecting to dashboard...</p>
-      </div>
-    </div>
-  );
+  // Show nothing while redirecting
+  return null;
 }

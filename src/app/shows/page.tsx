@@ -14,8 +14,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, ChevronLeft } from "lucide-react";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, ArrowUp } from "lucide-react";
+import { ArrowUpDown, ArrowDown } from "lucide-react";
 import { create } from "zustand";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -41,6 +41,8 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface ShowData {
   id: string;
@@ -630,16 +632,168 @@ export default function ShowsPage() {
     }
   };
 
+  // Add pagination constants
+  const ITEMS_PER_PAGE = 10;
+
+  // Add pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Calculate paginated shows
+  const paginatedShows = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return filteredAndSortedShows.slice(startIndex, endIndex);
+  }, [filteredAndSortedShows, currentPage]);
+
+  const totalPages = Math.ceil(filteredAndSortedShows.length / ITEMS_PER_PAGE);
+
+  // Back to Top button visibility state and functionality
+  const [showBackToTop, setShowBackToTop] = useState(false);
+
+  // Scroll handler with proper cleanup
+  useEffect(() => {
+    let scrollContainer: HTMLDivElement | null = null;
+
+    // Wait for component to mount and DOM to be ready
+    setTimeout(() => {
+      scrollContainer = document.querySelector(
+        ".h-\\[calc\\(100vh-4rem\\)\\]"
+      ) as HTMLDivElement;
+
+      if (scrollContainer) {
+        const handleScroll = () => {
+          if (scrollContainer) {
+            setShowBackToTop(scrollContainer.scrollTop > 400);
+          }
+        };
+
+        scrollContainer.addEventListener("scroll", handleScroll);
+
+        // Return cleanup function
+        return () => {
+          if (scrollContainer) {
+            scrollContainer.removeEventListener("scroll", handleScroll);
+          }
+        };
+      }
+    }, 0);
+
+    // Cleanup in case component unmounts before setTimeout
+    return () => {
+      if (scrollContainer) {
+        scrollContainer.removeEventListener("scroll", () => {});
+      }
+    };
+  }, []);
+
+  const scrollToTop = () => {
+    const scrollContainer = document.querySelector(
+      ".h-\\[calc\\(100vh-4rem\\)\\]"
+    ) as HTMLDivElement;
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+  // Breadcrumb state
+  const [breadcrumbs, setBreadcrumbs] = useState([
+    { label: "Home", href: "/" },
+    { label: "Shows", href: "/shows" },
+  ]);
+
+  // Enhanced breadcrumb handling
+  const handleBreadcrumbClick = (
+    crumb: { label: string; href: string },
+    e: React.MouseEvent
+  ) => {
+    e.preventDefault();
+
+    switch (crumb.href) {
+      case "/":
+        router.push("/");
+        break;
+      case "/shows":
+        setSelectedShow(null);
+        setShowProjectFacilities(false);
+        break;
+      case "#show":
+        if (showProjectFacilities) {
+          setShowProjectFacilities(false);
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
+  // Update breadcrumbs with proper hrefs
+  useEffect(() => {
+    if (selectedShow) {
+      const newBreadcrumbs = [
+        { label: "Home", href: "/" },
+        { label: "Shows", href: "/shows" },
+        { label: selectedShow.name, href: "#show" },
+      ];
+
+      if (showProjectFacilities) {
+        newBreadcrumbs.push({
+          label: "Project Facilities",
+          href: "#facilities",
+        });
+      }
+
+      setBreadcrumbs(newBreadcrumbs);
+    } else {
+      setBreadcrumbs([
+        { label: "Home", href: "/" },
+        { label: "Shows", href: "/shows" },
+      ]);
+    }
+  }, [selectedShow, showProjectFacilities]);
+
+  // Enhanced container transition configuration
+  const containerTransition = {
+    type: "spring",
+    stiffness: 150, // Reduced for smoother motion
+    damping: 20, // Reduced for smoother settling
+    mass: 0.8, // Added mass for more natural movement
+    restDelta: 0.001, // More precise stopping point
+  };
+
+  const router = useRouter();
+
   return (
     <MainLayout
-      breadcrumbs={[
-        { label: "Home", href: "/" },
-        { label: "Shows : Show Information", href: "/shows" },
-      ]}
+      breadcrumbs={breadcrumbs}
       breadcrumbClassName="text-lg py-4 bg-gray-50 border-b border-gray-200"
     >
-      <div className="h-[calc(100vh-4rem)] overflow-hidden">
-        <div className="flex h-full">
+      <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
+        {/* Custom Breadcrumb Navigation */}
+        <nav
+          aria-label="Breadcrumb"
+          className="flex items-center space-x-2 text-sm px-6 py-3 bg-white border-b sticky top-0 z-10"
+        >
+          {breadcrumbs.map((crumb, index) => (
+            <div key={index} className="flex items-center">
+              {index > 0 && <span className="mx-2 text-gray-400">/</span>}
+              <Link
+                href={crumb.href}
+                className={cn(
+                  "transition-colors",
+                  crumb.href === "#"
+                    ? "text-gray-600 cursor-default"
+                    : "text-blue-600 hover:text-blue-800"
+                )}
+                onClick={(e) => handleBreadcrumbClick(crumb, e)}
+              >
+                {crumb.label}
+              </Link>
+            </div>
+          ))}
+        </nav>
+
+        {/* Main content container with improved transitions */}
+        <div className="flex h-full relative transition-all duration-500 ease-out">
           {/* Master View (Show Information) */}
           <motion.div
             className={cn(
@@ -653,16 +807,13 @@ export default function ShowsPage() {
                 : selectedShow
                 ? "25%"
                 : "100%",
-              transition: {
-                type: "spring",
-                stiffness: 300,
-                damping: 30,
-              },
+              transition: containerTransition,
             }}
+            layout // Add layout prop for smoother size changes
           >
             <div
               className={cn(
-                "h-full overflow-y-auto",
+                "h-full overflow-y-auto overflow-x-hidden scroll-smooth",
                 selectedShow ? "p-3" : "p-6"
               )}
             >
@@ -1273,7 +1424,7 @@ export default function ShowsPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {filteredAndSortedShows.map((show) => (
+                            {paginatedShows.map((show) => (
                               <TableRow
                                 key={show.id}
                                 className={cn(
@@ -1349,6 +1500,63 @@ export default function ShowsPage() {
                           </TableBody>
                         </Table>
                       </div>
+
+                      {/* Pagination */}
+                      {!selectedShow && filteredAndSortedShows.length > 0 && (
+                        <div className="flex justify-between items-center px-6 py-4 text-sm border-t">
+                          <div>
+                            SHOWING{" "}
+                            {Math.min(
+                              currentPage * ITEMS_PER_PAGE,
+                              filteredAndSortedShows.length
+                            )}{" "}
+                            OF {filteredAndSortedShows.length} RESULTS
+                          </div>
+                          <div className="flex space-x-1">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setCurrentPage((prev) => Math.max(1, prev - 1))
+                              }
+                              disabled={currentPage === 1}
+                              className="w-8 h-8 p-0"
+                            >
+                              <ChevronLeft className="h-4 w-4" />
+                            </Button>
+                            {[...Array(totalPages)].map((_, i) => (
+                              <Button
+                                key={i + 1}
+                                variant={
+                                  currentPage === i + 1 ? "default" : "outline"
+                                }
+                                size="sm"
+                                onClick={() => setCurrentPage(i + 1)}
+                                className={cn(
+                                  "w-8 h-8 p-0",
+                                  currentPage === i + 1 &&
+                                    "bg-blue-500 text-white hover:bg-blue-600"
+                                )}
+                              >
+                                {i + 1}
+                              </Button>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setCurrentPage((prev) =>
+                                  Math.min(totalPages, prev + 1)
+                                )
+                              }
+                              disabled={currentPage === totalPages}
+                              className="w-8 h-8 p-0"
+                            >
+                              <ChevronLeft className="h-4 w-4 rotate-180" />
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
@@ -1357,7 +1565,7 @@ export default function ShowsPage() {
           </motion.div>
 
           {/* Detail View (Show Occurrences) */}
-          <AnimatePresence>
+          <AnimatePresence mode="wait">
             {selectedShow && (
               <motion.div
                 className={cn(
@@ -1370,10 +1578,18 @@ export default function ShowsPage() {
                   opacity: 1,
                   width: showProjectFacilities ? "25%" : "75%",
                 }}
-                exit={{ x: "100%", opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                exit={{
+                  x: "100%",
+                  opacity: 0,
+                  transition: {
+                    ...containerTransition,
+                    duration: 0.3,
+                  },
+                }}
+                transition={containerTransition}
+                layout
               >
-                <div className="h-full overflow-y-auto">
+                <div className="h-full overflow-y-auto overflow-x-hidden scroll-smooth">
                   {showProjectFacilities ? (
                     // Minimized view when facilities are shown
                     <div className="p-4 space-y-4">
@@ -1916,16 +2132,27 @@ export default function ShowsPage() {
           </AnimatePresence>
 
           {/* Project Facilities Panel */}
-          <AnimatePresence>
+          <AnimatePresence mode="wait">
             {showProjectFacilities && (
               <motion.div
                 className={cn("bg-white", getContainerWidths().facilities)}
                 initial={{ x: "100%", opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: "100%", opacity: 0 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                animate={{
+                  x: 0,
+                  opacity: 1,
+                }}
+                exit={{
+                  x: "100%",
+                  opacity: 0,
+                  transition: {
+                    ...containerTransition,
+                    duration: 0.3,
+                  },
+                }}
+                transition={containerTransition}
+                layout
               >
-                <div className="h-full overflow-y-auto">
+                <div className="h-full overflow-y-auto overflow-x-hidden scroll-smooth">
                   <div className="p-4 max-w-[1200px] mx-auto">
                     <div className="flex items-center justify-between pb-3 mb-4 border-b">
                       <h2 className="text-lg font-semibold">
@@ -2091,6 +2318,21 @@ export default function ShowsPage() {
                   </div>
                 </div>
               </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Back to Top Button */}
+          <AnimatePresence>
+            {showBackToTop && (
+              <motion.button
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                onClick={scrollToTop}
+                className="fixed bottom-8 right-8 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors z-50"
+              >
+                <ArrowUp className="h-5 w-5" />
+              </motion.button>
             )}
           </AnimatePresence>
         </div>

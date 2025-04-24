@@ -1,5 +1,3 @@
-import { auth } from '../firebase/config';
-
 // Rate limiting configuration
 export const RATE_LIMIT_WINDOW = 3600000; // 1 hour in milliseconds
 export const MAX_ATTEMPTS = 5;
@@ -112,7 +110,7 @@ export const checkSecurityFeatures = (): {
         localStorage.setItem('test', 'test');
         localStorage.removeItem('test');
         return true;
-      } catch (e) {
+      } catch {
         return false;
       }
     })(),

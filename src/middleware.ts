@@ -1,12 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import {
-  ROUTES,
-  isPublicRoute,
-  isPrivateRoute,
-  createRedirectUrl,
-  withBasePath,
-} from './config/routes'
 
 // Define protected routes
 const protectedRoutes = [

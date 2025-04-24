@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft } from "lucide-react";
-import { Order } from "@/types/orders";
+import type { Order } from "@/types/orders";
 import { formatDate } from "@/lib/utils";
 
 interface OrderDetailsClientProps {
@@ -72,7 +72,10 @@ export default function OrderDetailsClient({ order }: OrderDetailsClientProps) {
                 </div>
                 <div>
                   <Label>Sub Total</Label>
-                  <Input value={`$${order.subTotal.toLocaleString()}`} readOnly />
+                  <Input
+                    value={`$${order.subTotal.toLocaleString()}`}
+                    readOnly
+                  />
                 </div>
                 <div>
                   <Label>Tax</Label>
@@ -100,8 +103,12 @@ export default function OrderDetailsClient({ order }: OrderDetailsClientProps) {
                           </p>
                           <div className="mt-2 space-x-4 text-sm text-gray-600">
                             <span>Quantity: {item.quantity}</span>
-                            <span>Unit Price: ${item.newPrice.toLocaleString()}</span>
-                            <span>Total: ${item.extendedPrice.toLocaleString()}</span>
+                            <span>
+                              Unit Price: ${item.newPrice.toLocaleString()}
+                            </span>
+                            <span>
+                              Total: ${item.extendedPrice.toLocaleString()}
+                            </span>
                           </div>
                         </div>
                         <Badge variant="secondary">{item.status}</Badge>
@@ -116,4 +123,4 @@ export default function OrderDetailsClient({ order }: OrderDetailsClientProps) {
       </div>
     </MainLayout>
   );
-} 
+}

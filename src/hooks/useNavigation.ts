@@ -23,7 +23,7 @@ export const useNavigation = (
       console.log("Redirecting to:", redirectTo);
       router.push(redirectTo);
     }
-  }, [redirectTo, condition, router]);
+  }, [redirectTo, condition, router, currentPath]);
 
   return { navigate: (path: string) => router.push(path) };
 };

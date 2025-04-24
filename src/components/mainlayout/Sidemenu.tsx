@@ -6,7 +6,6 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   Ticket,
-  Image as ImageIcon,
   Users,
   BarChart,
   Settings,

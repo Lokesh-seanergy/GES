@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, X, ChevronRight } from "lucide-react";
 import { User, Ruler, FileText } from "lucide-react";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import {
   mockShows,
   mockCustomers,
@@ -55,7 +55,7 @@ interface SummaryData {
 
 const customerTypes: CustomerType[] = ["Exhibitors", "ShowOrg", "3rd party"];
 
-export default function CustomersPage() {
+function CustomersContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -1608,5 +1608,13 @@ export default function CustomersPage() {
         )}
       </div>
     </MainLayout>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CustomersContent />
+    </Suspense>
   );
 }

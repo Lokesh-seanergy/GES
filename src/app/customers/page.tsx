@@ -73,6 +73,9 @@ export default function CustomersPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [reloadKey, setReloadKey] = useState(0);
+  const occrIdInputRef = useRef<HTMLInputElement>(null);
+  const showNameInputRef = useRef<HTMLInputElement>(null);
+  const [prioritizedCustomers, setPrioritizedCustomers] = useState<Customer[]>([]);
   
   const resetPage = useCallback(() => {
     setSearchQuery("");
@@ -87,6 +90,7 @@ export default function CustomersPage() {
       thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
     });
     setExpandedCustomerId(null);
+    setPrioritizedCustomers([]);
     setSelectedCustomerForEdit(null);
     setIsDialogOpen(false);
     setKey(Date.now());
@@ -129,6 +133,7 @@ export default function CustomersPage() {
         thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
       });
       setFilteredCustomers([]);
+      setPrioritizedCustomers([]);
       return;
     }
 
@@ -136,6 +141,7 @@ export default function CustomersPage() {
       customer => customer.showId === show.showId
     );
     setFilteredCustomers(showCustomers);
+    setPrioritizedCustomers(showCustomers);
 
     const exhibitorCustomers = showCustomers.filter(c => c.type.includes('Exhibitors'));
     const eeCustomers = showCustomers.filter(c => c.type.includes('ShowOrg'));
@@ -169,30 +175,38 @@ export default function CustomersPage() {
       clearTimeout(searchTimeoutRef.current);
     }
     
-    // Update without search if empty
+    // If input is cleared manually, reset everything
     if (!value.trim()) {
-      return;
+      setShowName("");
+      setShowSummary(false);
+      setFilteredCustomers([]);
+      setSummaryData({ 
+        exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+        ee: { customerCount: 0, metric2: 0, metric3: 0 },
+        thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
+      });
+      router.push('/customers', { scroll: false });
+      return; // Don't proceed to search timeout
     }
     
-    // Set up new search with delay
+    // Set up new search with delay only if input is not empty
     searchTimeoutRef.current = setTimeout(() => {
       const foundShow = mockShows.find(
         (show) => show.occrId.toLowerCase().includes(value.toLowerCase())
       );
       
       if (foundShow) {
-        setShowName(foundShow.showName);
+        setShowName(foundShow.showName); // Update the other field
         setShowSummary(true);
         calculateSummaryData(foundShow);
         setPreviousShow(foundShow);
-        
-        if (value.length > 2) {
-          router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
-        }
-      } else if (value.length > 2) {
-        // Keep the text but clear results
+        router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`, { scroll: false });
+      } else {
+        // Keep the typed text, but clear results if no show found
         setShowSummary(false);
         calculateSummaryData(null);
+        // Optionally clear the other field if desired, or leave it 
+        // setShowName(""); 
       }
     }, 300);
   };
@@ -204,31 +218,39 @@ export default function CustomersPage() {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-    
-    // Update without search if empty
+
+    // If input is cleared manually, reset everything
     if (!value.trim()) {
-      return;
+      setOccrId("");
+      setShowSummary(false);
+      setFilteredCustomers([]);
+      setSummaryData({ 
+        exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+        ee: { customerCount: 0, metric2: 0, metric3: 0 },
+        thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
+      });
+      router.push('/customers', { scroll: false });
+      return; // Don't proceed to search timeout
     }
     
-    // Set up new search with delay
+    // Set up new search with delay only if input is not empty
     searchTimeoutRef.current = setTimeout(() => {
       const foundShow = mockShows.find(
         (show) => show.showName.toLowerCase().includes(value.toLowerCase())
       );
       
       if (foundShow) {
-        setOccrId(foundShow.occrId);
+        setOccrId(foundShow.occrId); // Update the other field
         setShowSummary(true);
         calculateSummaryData(foundShow);
         setPreviousShow(foundShow);
-        
-        if (value.length > 2) {
-          router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
-        }
-      } else if (value.length > 2) {
-        // Keep the text but clear results
+        router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`, { scroll: false });
+      } else {
+        // Keep the typed text, but clear results if no show found
         setShowSummary(false);
         calculateSummaryData(null);
+        // Optionally clear the other field if desired, or leave it
+        // setOccrId(""); 
       }
     }, 300);
   };
@@ -285,6 +307,7 @@ export default function CustomersPage() {
       setOccrId(urlOccrId);
       setShowSummary(true);
       setExpandedCustomerId(null);
+      setPrioritizedCustomers([]);
       
       const foundShow = mockShows.find(
         (show) => show.showName === urlShowName && show.occrId === urlOccrId
@@ -300,6 +323,11 @@ export default function CustomersPage() {
   }, [searchParams, pathname, resetPage, showName, occrId]);
 
   const handleCustomerCardClick = (customerId: string) => {
+    const selectedCustomer = filteredCustomers.find(c => c.id === customerId);
+    if (selectedCustomer) {
+      const remainingCustomers = filteredCustomers.filter(c => c.id !== customerId);
+      setPrioritizedCustomers([selectedCustomer, ...remainingCustomers]);
+    }
     setExpandedCustomerId(customerId);
     setExpandedRow(customerId);
   };
@@ -515,7 +543,8 @@ export default function CustomersPage() {
 
   const closeDetailsPanel = () => {
     setExpandedCustomerId(null);
-    setExpandedRow(null); // Reset expanded row
+    setPrioritizedCustomers(filteredCustomers);
+    setExpandedRow(null);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -546,18 +575,42 @@ export default function CustomersPage() {
   }, [reloadKey]);
 
   // Clear functions
-  const clearOccrId = () => {
+  const clearOccrId = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowName("");
     setOccrId("");
+    setShowSummary(false);
+    setFilteredCustomers([]);
+    setSummaryData({
+      exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+      ee: { customerCount: 0, metric2: 0, metric3: 0 },
+      thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
+    });
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
+    router.push('/customers', { scroll: false });
+    occrIdInputRef.current?.blur();
   };
 
-  const clearShowName = () => {
+  const clearShowName = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
     setShowName("");
+    setOccrId("");
+    setShowSummary(false);
+    setFilteredCustomers([]);
+    setSummaryData({
+      exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+      ee: { customerCount: 0, metric2: 0, metric3: 0 },
+      thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
+    });
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
+    router.push('/customers', { scroll: false });
+    showNameInputRef.current?.blur();
   };
   
   const clearSearch = () => {
@@ -565,6 +618,19 @@ export default function CustomersPage() {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
+  };
+
+  const handleClearFields = () => {
+    setShowName("");
+    setOccrId("");
+    setShowSummary(false);
+    setFilteredCustomers([]);
+    setSummaryData({
+      exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+      ee: { customerCount: 0, metric2: 0, metric3: 0 },
+      thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
+    });
+    router.push('/customers');
   };
 
   return (
@@ -588,6 +654,7 @@ export default function CustomersPage() {
                    value={occrId}
                    onChange={(e) => handleOccrIdChange(e.target.value)}
                    className="bg-white text-sm pr-8"
+                   ref={occrIdInputRef}
                  />
                  {occrId && (
                    <button 
@@ -610,6 +677,7 @@ export default function CustomersPage() {
                    value={showName}
                    onChange={(e) => handleShowNameChange(e.target.value)}
                    className="bg-white text-sm pr-8"
+                   ref={showNameInputRef}
                  />
                  {showName && (
                    <button 
@@ -623,29 +691,17 @@ export default function CustomersPage() {
                  )}
                </div>
              </div>
-             <div className="space-y-1">
+             <div className="space-y-1 relative">
                <Label htmlFor="searchQuery">Search</Label>
-               <div className="relative">
-                 <Input
-                   id="searchQuery"
-                   type="text"
-                   placeholder="Search by Show ID, Name, or..."
-                   value={searchQuery}
-                   onChange={(e) => handleSearchQueryChange(e.target.value)}
-                   className="pl-8 pr-8 bg-white text-sm"
-                 />
-                 <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
-                 {searchQuery && (
-                   <button 
-                     className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                     onClick={clearSearch}
-                     type="button"
-                     aria-label="Clear search"
-                   >
-                     <X className="h-4 w-4" />
-                   </button>
-                 )}
-               </div>
+               <Input
+                 id="searchQuery"
+                 type="text"
+                 placeholder="Search by Show ID, Name, or..."
+                 value={searchQuery}
+                 onChange={(e) => handleSearchQueryChange(e.target.value)}
+                 className="pl-8 bg-white text-sm"
+               />
+               <Search className="absolute left-2.5 bottom-2.5 text-gray-400 h-4 w-4" />
              </div>
            </CardContent>
          </Card>
@@ -808,15 +864,15 @@ export default function CustomersPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
-                  <div className="space-y-4 md:max-w-xs lg:max-w-sm">
-                    {filteredCustomers.map((customer) => (
+                  <div className="space-y-4 md:max-w-xs lg:max-w-sm h-[calc(100vh-14rem)] overflow-y-auto pr-2">
+                    {prioritizedCustomers.map((customer) => (
                       <Card 
                         key={customer.id} 
                         className={cn(
-                          "p-4 transition-colors duration-150 ease-in-out",
+                          "p-4 transition-all duration-150 ease-in-out border cursor-pointer",
                           expandedCustomerId === customer.id 
-                            ? "bg-blue-50 border border-blue-300 shadow-md"
-                            : "bg-white border"
+                            ? "bg-blue-50 border-blue-300 shadow-md"
+                            : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-gray-300"
                         )}
                         onClick={() => handleCustomerCardClick(customer.id)}
                       >

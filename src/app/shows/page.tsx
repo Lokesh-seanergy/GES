@@ -758,6 +758,12 @@ export default function ShowsPage() {
     restDelta: 0.001, // More precise stopping point
   };
 
+  const handleCustomerButtonClick = () => {
+    if (selectedShow) {
+      router.push(`/customers?showName=${encodeURIComponent(selectedShow.name)}&occrId=${encodeURIComponent(selectedShow.occrId)}`);
+    }
+  };
+
   return (
     <MainLayout
       breadcrumbs={breadcrumbs}
@@ -1693,7 +1699,10 @@ export default function ShowsPage() {
                                         placeholder="Enter timezone"
                                         className="h-9 px-3 w-full md:w-3/4"
                                       />
-                                      <Button className="h-9 bg-blue-600 text-white hover:bg-blue-700">
+                                      <Button 
+                                        className="h-9 bg-blue-600 text-white hover:bg-blue-700"
+                                        onClick={handleCustomerButtonClick}
+                                      >
                                         Customers
                                       </Button>
                                     </div>

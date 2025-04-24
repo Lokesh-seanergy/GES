@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import type { BreadcrumbItem } from "@/components/mainlayout/MainLayout";
 import {
@@ -26,21 +27,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { motion, AnimatePresence } from "@/lib/motion-stub";
 import { ArrowDownCircle } from "lucide-react";
 import { useNavigationStore } from "@/store/navigationStore";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 
 // Import types and data from centralized file
-import {
-  ShowData,
-  ProjectData,
-  FacilityData,
-  mockShows,
-  mockProjectData,
-  mockFacilityData,
-} from "@/lib/mockData"; // Updated import
+import type { ShowData, ProjectData } from "@/lib/mockData";
+import { mockShows, mockProjectData, mockFacilityData } from "@/lib/mockData";
 
 // Icons from Lucide React
 import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
@@ -171,16 +165,6 @@ export default function ShowsPage() {
       transition: {
         duration: 0.2,
         ease: "easeIn",
-      },
-    },
-  };
-
-  const chevronVariants = {
-    initial: { rotate: 0 },
-    rotate: {
-      rotate: 180,
-      transition: {
-        duration: 0.3,
       },
     },
   };
@@ -432,11 +416,19 @@ export default function ShowsPage() {
                 {/* Container for first chevron */}
                 <div className="relative h-10 mb-6 mt-2">
                   <motion.div
-                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform z-10"
+                    style={{
+                      position: "absolute",
+                      left: "50%",
+                      top: "50%",
+                      transform: "translate(-50%, -50%)",
+                      cursor: "pointer",
+                      zIndex: 10
+                    }}
                     onClick={(e: React.MouseEvent<HTMLDivElement>) => handleChevronClick(e, "show")}
-                    initial="initial"
-                    animate="rotate"
-                    variants={chevronVariants}
+                    initial={{ rotate: 0 }}
+                    animate={{ rotate: 180 }}
+                    transition={{ duration: 0.3 }}
+                    whileHover={{ scale: 1.1 }}
                   >
                     <div className="p-3">
                       <ArrowDownCircle className="h-8 w-8 text-blue-600 bg-white rounded-full shadow-sm" />
@@ -949,13 +941,21 @@ export default function ShowsPage() {
                         style={{ marginTop: "-55px" }}
                       >
                         {/* Container for second chevron */}
-                        <div className="relative h-10 my-6">
+                        <div className="relative h-10 mb-6 mt-2">
                           <motion.div
-                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-110 transition-transform z-10"
+                            style={{
+                              position: "absolute",
+                              left: "50%",
+                              top: "50%",
+                              transform: "translate(-50%, -50%)",
+                              cursor: "pointer",
+                              zIndex: 10
+                            }}
                             onClick={(e: React.MouseEvent<HTMLDivElement>) => handleChevronClick(e, "project")}
-                            initial="initial"
-                            animate="rotate"
-                            variants={chevronVariants}
+                            initial={{ rotate: 0 }}
+                            animate={{ rotate: 180 }}
+                            transition={{ duration: 0.3 }}
+                            whileHover={{ scale: 1.1 }}
                           >
                             <div className="p-3">
                               <ArrowDownCircle className="h-8 w-8 text-blue-600 bg-white rounded-full shadow-sm" />

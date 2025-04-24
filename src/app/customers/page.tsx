@@ -5,9 +5,10 @@ import MainLayout from "@/components/mainlayout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, Users, Box, ClipboardList, Check, X, ChevronRight } from "lucide-react";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { mockShows, mockCustomers, ShowData, Customer, CustomerType } from "@/lib/mockData";
+import { Search, Users, Box, ClipboardList, X, ChevronRight } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
+import type { ShowData, Customer, CustomerType } from "@/lib/mockData";
+import { mockShows, mockCustomers } from "@/lib/mockData";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -34,7 +35,7 @@ interface SummaryData {
 
 const customerTypes: CustomerType[] = ['Exhibitors', 'ShowOrg', '3rd party'];
 
-export default function CustomersPage() {
+function CustomersPageContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -44,7 +45,6 @@ export default function CustomersPage() {
   const [occrId, setOccrId] = useState("");
   const [showSummary, setShowSummary] = useState(false);
   const [originalShow, setOriginalShow] = useState<ShowData | null>(null);
-  const [previousShow, setPreviousShow] = useState<ShowData | null>(null);
   const [summaryData, setSummaryData] = useState<SummaryData>({
     exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
     ee: { customerCount: 0, metric2: 0, metric3: 0 },
@@ -69,7 +69,6 @@ export default function CustomersPage() {
     setOccrId("");
     setShowSummary(false);
     setOriginalShow(null);
-    setPreviousShow(null);
     hasSearchedRef.current = false;
     setFilteredCustomers([]);
     setSummaryData({
@@ -82,30 +81,6 @@ export default function CustomersPage() {
     setIsDialogOpen(false);
     setKey(Date.now());
   }, []);
-
-  const handleBreadcrumbClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    setSearchQuery("");
-    setShowName("");
-    setOccrId("");
-    setShowSummary(false);
-    setFilteredCustomers([]);
-    setSummaryData({
-      exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
-      ee: { customerCount: 0, metric2: 0, metric3: 0 },
-      thirdParty: { customerCount: 0, metric2: 0, metric3: 0 }
-    });
-    hasSearchedRef.current = false;
-    setExpandedCustomerId(null);
-    setSelectedCustomerForEdit(null);
-    
-    setKey(Date.now());
-    
-    window.history.pushState({}, '', '/customers');
-    
-    resetPage();
-  }, [resetPage]);
 
   const calculateSummaryData = (show: ShowData | null) => {
     if (!show) {
@@ -182,7 +157,7 @@ export default function CustomersPage() {
       );
   
       if (foundShow) {
-        setPreviousShow(foundShow);
+        setOriginalShow(foundShow);
         
         if (query.length > 2) {
           router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
@@ -247,7 +222,7 @@ export default function CustomersPage() {
       }
   
       if (foundShow) {
-        setPreviousShow(foundShow);
+        setOriginalShow(foundShow);
         
         if (value.length > 2) {
           router.push(`/customers?showName=${encodeURIComponent(foundShow.showName)}&occrId=${encodeURIComponent(foundShow.occrId)}`);
@@ -281,7 +256,6 @@ export default function CustomersPage() {
         if (!hasSearchedRef.current) {
           setOriginalShow(foundShow);
         }
-        setPreviousShow(foundShow);
         calculateSummaryData(foundShow);
       }
     } else if (isInitialLoad && pathname === "/customers") {
@@ -289,10 +263,6 @@ export default function CustomersPage() {
     }
   }, [searchParams, pathname, resetPage, showName, occrId]);
 
-  const handleCustomerCardClick = (customerId: string) => {
-    setExpandedCustomerId(customerId);
-  };
-  
   const openEditDialog = (customer: Customer) => {
       setSelectedCustomerForEdit(customer);
       setEditedCustomer({ ...customer });
@@ -494,8 +464,8 @@ export default function CustomersPage() {
 
   // Click handler for booth info column in 3-column view
   const handleBoothInfoClick = (e: React.MouseEvent, customerId: string) => {
-      e.stopPropagation(); // Prevent card click (if any)
-      setExpandedCustomerId(customerId);
+    e.stopPropagation(); // Prevent card click (if any)
+    setExpandedCustomerId(customerId);
   };
 
   const handleRowClick = (customerId: string) => {
@@ -1107,6 +1077,28 @@ export default function CustomersPage() {
         )}
       </div>
     </MainLayout>
+  );
+}
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={
+      <MainLayout 
+        breadcrumbs={[{ 
+          label: "Home", href: "/"
+        }, {
+          label: "Customers"
+        }]}
+      >
+        <div className="space-y-6 p-6">
+          <div className="flex items-center justify-center h-32">
+            <div className="text-gray-500">Loading...</div>
+          </div>
+        </div>
+      </MainLayout>
+    }>
+      <CustomersPageContent />
+    </Suspense>
   );
 }
 

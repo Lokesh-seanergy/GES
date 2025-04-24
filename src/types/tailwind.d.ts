@@ -1,5 +1,11 @@
 declare module "tailwindcss" {
-  export type Config = any;
+  export interface Config {
+    content: string[];
+    theme: {
+      extend: Record<string, unknown>;
+    };
+    plugins: unknown[];
+  }
 }
 
 declare module "tailwindcss/defaultTheme" {
@@ -8,4 +14,8 @@ declare module "tailwindcss/defaultTheme" {
     mono: string[];
     serif: string[];
   };
+}
+
+declare module 'tailwindcss/colors' {
+  export const colors: Record<string, Record<string, string>>;
 }

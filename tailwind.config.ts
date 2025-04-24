@@ -1,7 +1,9 @@
-import type { Config } from "tailwindcss";
+import type { Config } from "tailwindcss/types/config";
 import { fontFamily } from "tailwindcss/defaultTheme";
 // Import animate plugin
 import tailwindcssAnimate from "tailwindcss-animate";
+import typography from "@tailwindcss/typography";
+import forms from "@tailwindcss/forms";
 
 const config: Config = {
   darkMode: ["class"],
@@ -13,14 +15,31 @@ const config: Config = {
   ],
   prefix: "",
   theme: {
-    container: {
-      center: true,
-      padding: "2rem",
+    extend: {
+      container: {
+        center: true,
+        padding: "2rem",
+        screens: {
+          "2xl": "1400px",
+        },
+      },
       screens: {
+        xs: "480px",
+        sm: "640px",
+        md: "768px",
+        lg: "1024px",
+        xl: "1280px",
         "2xl": "1400px",
       },
-    },
-    extend: {
+      spacing: {
+        "4.5": "1.125rem",
+        "5.5": "1.375rem",
+        "6.5": "1.625rem",
+      },
+      maxWidth: {
+        "8xl": "88rem",
+        "9xl": "96rem",
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -80,7 +99,11 @@ const config: Config = {
       },
     },
   },
-  plugins: [tailwindcssAnimate],
+  plugins: [
+    tailwindcssAnimate,
+    typography,
+    forms,
+  ],
 };
 
 export default config;

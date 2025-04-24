@@ -257,7 +257,6 @@ export default function ShowsPage() {
 
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
 
-
   // Update search store with debounced value
   useEffect(() => {
     setQuery(debouncedSearch);
@@ -468,7 +467,6 @@ export default function ShowsPage() {
     setIsNewShowOpen(false);
   };
 
-
   const createOccr = () => {
     // Here you would typically update both the shows and occurrences
     // For now, we'll just close the form
@@ -482,7 +480,6 @@ export default function ShowsPage() {
       timezone: "",
       projectNumber: "",
       facilityId: "",
-
     });
     setIsNewOccrOpen(false);
   };
@@ -497,7 +494,6 @@ export default function ShowsPage() {
     setSelectedShow(show);
 
     setShowDeleteDialog(true);
-
   };
 
   const confirmDelete = () => {
@@ -509,7 +505,6 @@ export default function ShowsPage() {
     setShowDeleteDialog(false);
     setSelectedShow(null);
   };
-
 
   const [activeTab, setActiveTab] = useState("projectInfo");
 
@@ -532,7 +527,6 @@ export default function ShowsPage() {
       const month = cleaned.slice(4, 6);
       const validMonth = validateMonth(month);
       formattedValue = month ? `${year}-${validMonth}` : year;
-
     }
 
     // Format as a range if there's enough digits
@@ -690,7 +684,6 @@ export default function ShowsPage() {
             scrollContainer.removeEventListener("scroll", handleScroll);
           }
         };
-
       }
     }, 0);
 
@@ -720,16 +713,20 @@ export default function ShowsPage() {
   useEffect(() => {
     if (selectedShow) {
       const newBreadcrumbs: BreadcrumbItem[] = [
-        { label: "Shows", href: "#", onClick: () => {
-          setSelectedShow(null);
-          setShowProjectFacilities(false);
-        }},
+        {
+          label: "Shows",
+          href: "#",
+          onClick: () => {
+            setSelectedShow(null);
+            setShowProjectFacilities(false);
+          },
+        },
       ];
 
       // Add the selected show
-      newBreadcrumbs.push({ 
-        label: selectedShow.name, 
-        href: "#" 
+      newBreadcrumbs.push({
+        label: selectedShow.name,
+        href: "#",
       });
 
       // Add project facilities if needed
@@ -737,15 +734,13 @@ export default function ShowsPage() {
         newBreadcrumbs.push({
           label: "Project Facilities",
           href: "#",
-          onClick: () => setShowProjectFacilities(false)
+          onClick: () => setShowProjectFacilities(false),
         });
       }
 
       setBreadcrumbs(newBreadcrumbs);
     } else {
-      setBreadcrumbs([
-        { label: "Shows", href: "#" },
-      ]);
+      setBreadcrumbs([{ label: "Shows", href: "#" }]);
     }
   }, [selectedShow, showProjectFacilities]);
 
@@ -760,14 +755,16 @@ export default function ShowsPage() {
 
   const handleCustomerButtonClick = () => {
     if (selectedShow) {
-      router.push(`/customers?showName=${encodeURIComponent(selectedShow.name)}&occrId=${encodeURIComponent(selectedShow.occrId)}`);
+      router.push(
+        `/customers?showName=${encodeURIComponent(
+          selectedShow.name
+        )}&occrId=${encodeURIComponent(selectedShow.occrId)}`
+      );
     }
   };
 
   return (
-    <MainLayout
-      breadcrumbs={breadcrumbs}
-    >
+    <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
         {/* Main content container with improved transitions */}
         <div className="flex h-full relative transition-all duration-500 ease-out">
@@ -857,7 +854,6 @@ export default function ShowsPage() {
                         "text-white"
                       )}
                       onClick={toggleNewShow}
-
                     >
                       <Plus
                         className={`h-4 w-4 transition-transform ${
@@ -1025,7 +1021,6 @@ export default function ShowsPage() {
                       >
                         Apply Filters
                       </Button>
-
                     </div>
                   </motion.div>
 
@@ -1284,7 +1279,6 @@ export default function ShowsPage() {
                     </Card>
                   )}
 
-
                   {/* Shows Table */}
                   <Card
                     className={cn(
@@ -1475,7 +1469,6 @@ export default function ShowsPage() {
                                         </Button>
                                       </div>
                                     </TableCell>
-
                                   </>
                                 )}
                               </TableRow>
@@ -1540,7 +1533,6 @@ export default function ShowsPage() {
                           </div>
                         </div>
                       )}
-
                     </CardContent>
                   </Card>
                 </div>
@@ -1628,7 +1620,6 @@ export default function ShowsPage() {
                             <span className="mx-2">•</span>
                             <span>{selectedShow.id}</span>
                           </div>
-
                         </div>
 
                         {/* Show Occurrences Content */}
@@ -1699,7 +1690,7 @@ export default function ShowsPage() {
                                         placeholder="Enter timezone"
                                         className="h-9 px-3 w-full md:w-3/4"
                                       />
-                                      <Button 
+                                      <Button
                                         className="h-9 bg-blue-600 text-white hover:bg-blue-700"
                                         onClick={handleCustomerButtonClick}
                                       >
@@ -1709,7 +1700,6 @@ export default function ShowsPage() {
                                   </div>
                                 </div>
                               </div>
-
                             </CardContent>
                           </Card>
 
@@ -2112,7 +2102,6 @@ export default function ShowsPage() {
                             </CardContent>
                           </Card>
                         </div>
-
                       </div>
                     </div>
                   )}

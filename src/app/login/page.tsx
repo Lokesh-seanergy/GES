@@ -5,36 +5,22 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import { auth } from "@/lib/firebase/config";
-import { signInWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-
-import { isMFAEnabled } from "@/lib/firebase/mfa";
-import MFAVerification from "@/components/auth/MFAVerification";
-import PhoneAuth from "@/components/auth/PhoneAuth";
-import {
-  checkRateLimit, 
-  getRemainingAttempts, 
-  resetRateLimit, 
-  validatePassword, 
-  checkSecurityFeatures, 
-  sanitizeInput, 
-  logSecurityEvent,
-  RATE_LIMIT_WINDOW 
-} from "@/lib/auth/security";
-import Cookies from 'js-cookie';
-
-type AuthMethod = 'email' | 'phone' | 'social';
-
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  
+
   const { login } = useAuthStore();
   const router = useRouter();
 
@@ -48,11 +34,19 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       setError("");
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       login(userCredential.user.uid);
       router.push("/ges-workbench/dashboard");
-    } catch (error: any) {
-      setError(error.message || "Failed to sign in");
+    } catch (error: unknown) {
+      if (error instanceof Error) {
+        setError(error.message || "Failed to sign in");
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -62,45 +56,48 @@ export default function LoginPage() {
     try {
       setIsLoading(true);
       setError("");
-      
+
       console.log("Starting Google sign-in process...");
-      
+
       // Create Google provider with prompt='select_account' to force account selection
       const provider = new GoogleAuthProvider();
-      
+
       // Add prompt parameter to force account selection every time
       provider.setCustomParameters({
-        prompt: 'select_account'
+        prompt: "select_account",
       });
-      
+
       console.log("Initialized Google provider, opening popup...");
-      
+
       // Use a more robust approach with error handling
-      const result = await signInWithPopup(auth, provider)
-        .catch(error => {
-          console.error("Error during sign-in popup:", error);
-          throw error;
-        });
-      
+      const result = await signInWithPopup(auth, provider).catch((error) => {
+        console.error("Error during sign-in popup:", error);
+        throw error;
+      });
+
       console.log("Sign-in successful, extracting user profile...");
-      
+
       // Extract user profile data
       const userProfile = {
         displayName: result.user.displayName,
         email: result.user.email,
-        photoURL: result.user.photoURL
+        photoURL: result.user.photoURL,
       };
-      
+
       console.log("User profile:", userProfile);
-      
+
       // Pass both the token and user profile to the login function
       login(result.user.uid, userProfile);
-      
+
       console.log("Redirecting to orders page...");
       router.push("/ges-workbench/dashboard");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Google sign-in failed:", error);
-      setError(error.message || "Failed to sign in with Google");
+      if (error instanceof Error) {
+        setError(error.message || "Failed to sign in with Google");
+      } else {
+        setError("An unexpected error occurred");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -128,10 +125,7 @@ export default function LoginPage() {
 
             {/* Login Form */}
             <div className="flex-1 w-full md:w-1/2 space-y-8">
-              <div className="text-center">
-                
-               
-              </div>
+              <div className="text-center"></div>
 
               <form onSubmit={handleEmailSignIn} className="space-y-6">
                 <div>
@@ -156,11 +150,7 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {error && (
-                  <div className="text-sm text-red-600">
-                    {error}
-                  </div>
-                )}
+                {error && <div className="text-sm text-red-600">{error}</div>}
 
                 <Button
                   type="submit"
@@ -176,7 +166,9 @@ export default function LoginPage() {
                   <div className="w-full border-t border-gray-200" />
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                  <span className="px-2 bg-white text-gray-500">
+                    Or continue with
+                  </span>
                 </div>
               </div>
 

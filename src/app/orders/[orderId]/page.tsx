@@ -10,11 +10,13 @@ type PageProps = {
 };
 
 export default async function OrderDetailsPage({ params }: PageProps) {
-  const order = mockOrders.find((order: Order) => order.orderId === params.orderId);
+  const order = mockOrders.find(
+    (order: Order) => order.orderId === params.orderId
+  );
 
   if (!order) {
     throw new Error(`Order with ID ${params.orderId} not found`);
   }
 
   return <OrderDetailsClient order={order} />;
-} 
+}

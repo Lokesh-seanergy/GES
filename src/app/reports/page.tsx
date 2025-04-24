@@ -14,11 +14,10 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { format } from "date-fns";
 import { Download, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { mockOrders } from "../orders/data";
 import { formatDate } from "@/lib/utils";
+import type { Order } from "@/types/orders";
 import {
   BarChart,
   Bar,
@@ -37,14 +36,18 @@ import {
 import { CSVLink } from "react-csv";
 
 // Helper function to group and sum data
-const groupAndSum = (data: any[], key: string, valueKey: string = "total") => {
+const groupAndSum = (
+  data: Order[],
+  key: keyof Order,
+  valueKey: keyof Order = "total"
+) => {
   return Object.entries(
-    data.reduce((acc: any, item: any) => {
-      const groupKey = item[key];
+    data.reduce((acc: { [key: string]: number }, item) => {
+      const groupKey = String(item[key]);
       if (!acc[groupKey]) {
         acc[groupKey] = 0;
       }
-      acc[groupKey] += item[valueKey];
+      acc[groupKey] += Number(item[valueKey]);
       return acc;
     }, {})
   ).map(([name, value]) => ({ name, value }));
@@ -59,7 +62,7 @@ export default function ReportsPage() {
   // Filter orders based on search query
   const filteredOrders = mockOrders.filter((order) => {
     if (!searchQuery) return true;
-    
+
     const query = searchQuery.toLowerCase();
     return (
       order.orderId.toLowerCase().includes(query) ||
@@ -71,14 +74,23 @@ export default function ReportsPage() {
 
   // Calculate KPIs from filtered data
   const totalOrders = filteredOrders.length;
-  const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.total, 0);
-  const uniqueExhibitors = new Set(filteredOrders.map(order => order.customerPO)).size;
-  const showCounts = filteredOrders.reduce((acc: any, order) => {
-    acc[order.showId] = (acc[order.showId] || 0) + 1;
-    return acc;
-  }, {});
-  const mostPopularShow = Object.entries(showCounts).reduce((a, b) => 
-    (a[1] as number) > (b[1] as number) ? a : b, ["No shows", 0]
+  const totalRevenue = filteredOrders.reduce(
+    (sum, order) => sum + order.total,
+    0
+  );
+  const uniqueExhibitors = new Set(
+    filteredOrders.map((order) => order.customerPO)
+  ).size;
+  const showCounts = filteredOrders.reduce(
+    (acc: { [key: string]: number }, order) => {
+      acc[order.showId] = (acc[order.showId] || 0) + 1;
+      return acc;
+    },
+    {}
+  );
+  const mostPopularShow = Object.entries(showCounts).reduce(
+    (a, b) => ((a[1] as number) > (b[1] as number) ? a : b),
+    ["No shows", 0]
   )[0];
 
   // Prepare chart data from filtered data
@@ -88,11 +100,14 @@ export default function ReportsPage() {
 
   // Prepare time series data from filtered data
   const ordersByDate = filteredOrders
-    .sort((a, b) => new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime())
-    .map(order => ({
+    .sort(
+      (a, b) =>
+        new Date(a.orderDate).getTime() - new Date(b.orderDate).getTime()
+    )
+    .map((order) => ({
       date: formatDate(order.orderDate),
       orders: 1,
-      revenue: order.total
+      revenue: order.total,
     }));
 
   // Get recent orders from filtered data
@@ -117,7 +132,9 @@ export default function ReportsPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-10">
             <p className="text-lg text-gray-500">No matching reports found</p>
-            <p className="text-sm text-gray-400 mt-2">Try adjusting your search criteria</p>
+            <p className="text-sm text-gray-400 mt-2">
+              Try adjusting your search criteria
+            </p>
           </CardContent>
         </Card>
       ) : (
@@ -126,21 +143,29 @@ export default function ReportsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Orders
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{totalOrders}</div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {searchQuery ? `Filtered from ${mockOrders.length} total orders` : "All orders"}
+                  {searchQuery
+                    ? `Filtered from ${mockOrders.length} total orders`
+                    : "All orders"}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Total Revenue
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">${totalRevenue.toLocaleString()}</div>
+                <div className="text-2xl font-bold">
+                  ${totalRevenue.toLocaleString()}
+                </div>
                 <p className="text-xs text-gray-500 mt-1">
                   {searchQuery ? "Filtered revenue" : "Total revenue"}
                 </p>
@@ -148,7 +173,9 @@ export default function ReportsPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Unique Exhibitors</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Unique Exhibitors
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{uniqueExhibitors}</div>
@@ -159,7 +186,9 @@ export default function ReportsPage() {
             </Card>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Most Popular Show</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Most Popular Show
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{mostPopularShow}</div>
@@ -207,13 +236,18 @@ export default function ReportsPage() {
                         cx="50%"
                         cy="50%"
                         labelLine={false}
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ name, percent }) =>
+                          `${name} (${(percent * 100).toFixed(0)}%)`
+                        }
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
                       >
                         {revenueByShow.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Pie>
                       <Tooltip />
@@ -276,10 +310,15 @@ export default function ReportsPage() {
                         outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
-                        label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
+                        label={({ name, percent }) =>
+                          `${name} (${(percent * 100).toFixed(0)}%)`
+                        }
                       >
                         {revenueByChannel.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={COLORS[index % COLORS.length]}
+                          />
                         ))}
                       </Pie>
                       <Tooltip />
@@ -296,14 +335,8 @@ export default function ReportsPage() {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Recent Orders</CardTitle>
-                <Button
-                  variant="default"
-                  asChild
-                >
-                  <CSVLink
-                    data={filteredOrders}
-                    filename="orders-report.csv"
-                  >
+                <Button variant="default" asChild>
+                  <CSVLink data={filteredOrders} filename="orders-report.csv">
                     <Download className="mr-2 h-4 w-4" />
                     Download Report
                   </CSVLink>

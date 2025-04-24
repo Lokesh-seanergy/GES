@@ -10,6 +10,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
 } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,7 +43,7 @@ export default function LoginPage() {
       login(userCredential.user.uid);
       router.push("/ges-workbench/dashboard");
     } catch (error: unknown) {
-      if (error instanceof Error) {
+      if (error instanceof FirebaseError) {
         setError(error.message || "Failed to sign in");
       } else {
         setError("An unexpected error occurred");
@@ -93,7 +94,7 @@ export default function LoginPage() {
       router.push("/ges-workbench/dashboard");
     } catch (error: unknown) {
       console.error("Google sign-in failed:", error);
-      if (error instanceof Error) {
+      if (error instanceof FirebaseError) {
         setError(error.message || "Failed to sign in with Google");
       } else {
         setError("An unexpected error occurred");
@@ -150,7 +151,11 @@ export default function LoginPage() {
                   />
                 </div>
 
-                {error && <div className="text-sm text-red-600">{error}</div>}
+                {error && (
+                  <div key={error} className="text-sm text-red-600">
+                    {error}
+                  </div>
+                )}
 
                 <Button
                   type="submit"

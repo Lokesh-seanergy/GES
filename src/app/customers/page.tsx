@@ -787,7 +787,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.exhibitor.customerCount}
                     </p>
-                    <p className="text-xs text-gray-500">Customers</p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
                   <div title="Booth Measurements">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
@@ -796,7 +796,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.exhibitor.metric2}
                     </p>
-                    <p className="text-xs text-gray-500">Booths</p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
                   <div title="Orders">
                     <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
@@ -821,7 +821,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.ee.customerCount}
                     </p>
-                    <p className="text-xs text-gray-500">Customers</p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
                   <div title="Booth Measurements">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
@@ -830,7 +830,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.ee.metric2}
                     </p>
-                    <p className="text-xs text-gray-500">Booths</p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
                   <div title="Orders">
                     <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
@@ -855,7 +855,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.thirdParty.customerCount}
                     </p>
-                    <p className="text-xs text-gray-500">Customers</p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
                   <div title="Booth Measurements">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
@@ -864,7 +864,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.thirdParty.metric2}
                     </p>
-                    <p className="text-xs text-gray-500">Booths</p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
                   <div title="Orders">
                     <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">

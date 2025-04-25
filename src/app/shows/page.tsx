@@ -702,7 +702,7 @@ export default function ShowsPage() {
               width: showProjectFacilities
                 ? "15%"
                 : selectedShow
-                ? "25%"
+                ? "15%"
                 : "100%",
               transition: containerTransition,
             }}
@@ -711,7 +711,7 @@ export default function ShowsPage() {
             <div
               className={cn(
                 "h-full overflow-y-auto overflow-x-hidden scroll-smooth",
-                selectedShow ? "p-3" : "p-6"
+                selectedShow ? "p-2" : "p-6"
               )}
             >
               {selectedShow ? (
@@ -769,13 +769,7 @@ export default function ShowsPage() {
                       </span>
                     </Button>
                     <Button
-                      className={cn(
-                        "gap-2",
-                        isNewShowOpen
-                          ? "bg-gray-600 hover:bg-gray-700"
-                          : "bg-blue-600 hover:bg-blue-700",
-                        "text-white"
-                      )}
+                      variant="success"
                       onClick={toggleNewShow}
                     >
                       <Plus
@@ -786,7 +780,7 @@ export default function ShowsPage() {
                       <span>New Show</span>
                     </Button>
                     <Button
-                      className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                      variant="success"
                       onClick={toggleNewOccr}
                     >
                       <Plus
@@ -939,7 +933,7 @@ export default function ShowsPage() {
                         Reset Filters
                       </Button>
                       <Button
-                        className="bg-blue-600 text-white hover:bg-blue-700"
+                        variant="success"
                         onClick={applyFilters}
                       >
                         Apply Filters
@@ -1074,7 +1068,7 @@ export default function ShowsPage() {
                             Cancel
                           </Button>
                           <Button
-                            className="bg-blue-600 text-white hover:bg-blue-700"
+                            variant="success"
                             onClick={handleAddShow}
                           >
                             Create Show
@@ -1192,7 +1186,7 @@ export default function ShowsPage() {
                             Cancel
                           </Button>
                           <Button
-                            className="bg-blue-600 text-white hover:bg-blue-700"
+                            variant="success"
                             onClick={handleAddShow}
                           >
                             Create Occurrence
@@ -1209,36 +1203,14 @@ export default function ShowsPage() {
                       selectedShow && "border-0 shadow-none"
                     )}
                   >
-                    <CardHeader
-                      className={cn(
-                        "pb-0",
-                        selectedShow ? "px-2 py-2" : "px-4 py-3"
-                      )}
-                    >
-                      <CardTitle
-                        className={cn(
-                          "flex items-center justify-between",
-                          selectedShow
-                            ? "text-sm font-medium"
-                            : "text-base font-semibold"
-                        )}
-                      >
-                        Show Information
-                        {selectedShow && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedShow(null)}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
                     <CardContent
                       className={cn("px-0", selectedShow ? "py-2" : "py-3")}
                     >
+                      {/* Section Title above the table */}
+                      <div className="flex items-center justify-between pb-2">
+                        <h2 className="text-lg font-semibold">Show Information</h2>
+                      </div>
+                      <div className="border-b border-gray-200 mb-4" />
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader className="bg-[#E6F0FA] sticky top-0">
@@ -1268,7 +1240,7 @@ export default function ShowsPage() {
                                 onClick={() => handleSort("occrId")}
                               >
                                 <div className="flex items-center justify-center gap-2">
-                                  Occr ID {getSortIcon("occrId")}
+                                  Occurrence ID {getSortIcon("occrId")}
                                 </div>
                               </TableHead>
                               {!selectedShow && (
@@ -1278,7 +1250,7 @@ export default function ShowsPage() {
                                     onClick={() => handleSort("occrType")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
-                                      Occr Type {getSortIcon("occrType")}
+                                      Occurrence Type {getSortIcon("occrType")}
                                     </div>
                                   </TableHead>
                                   <TableHead
@@ -1302,7 +1274,7 @@ export default function ShowsPage() {
                                     onClick={() => handleSort("cityOrg")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
-                                      City Org {getSortIcon("cityOrg")}
+                                      Show Location {getSortIcon("cityOrg")}
                                     </div>
                                   </TableHead>
                                   <TableHead
@@ -1310,7 +1282,7 @@ export default function ShowsPage() {
                                     onClick={() => handleSort("yrmo")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
-                                      YRMO {getSortIcon("yrmo")}
+                                      Year/Month {getSortIcon("yrmo")}
                                     </div>
                                   </TableHead>
                                   <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3">
@@ -1404,26 +1376,26 @@ export default function ShowsPage() {
                           </TableBody>
                         </Table>
                       </div>
-                      
-                      <div className="flex items-center justify-between mt-4">
-                        <PageSizeSelector
-                          pageSize={pagination.itemsPerPage}
-                          setPageSize={(value) => {
-                            setPagination(prev => ({
-                              ...prev,
-                              itemsPerPage: value,
-                              currentPage: 1
-                            }));
-                          }}
-                        />
-                        <CustomPagination
-                          currentPage={pagination.currentPage}
-                          totalPages={Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
-                          onPageChange={handlePageChange}
-                        />
-                      </div>
                     </CardContent>
                   </Card>
+                  {/* Pagination controls outside the card */}
+                  <div className="flex items-center justify-between mt-4">
+                    <PageSizeSelector
+                      pageSize={pagination.itemsPerPage}
+                      setPageSize={(value) => {
+                        setPagination(prev => ({
+                          ...prev,
+                          itemsPerPage: value,
+                          currentPage: 1
+                        }));
+                      }}
+                    />
+                    <CustomPagination
+                      currentPage={pagination.currentPage}
+                      totalPages={Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
+                      onPageChange={handlePageChange}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -1580,10 +1552,11 @@ export default function ShowsPage() {
                                         className="h-9 px-3 w-full md:w-3/4"
                                       />
                                       <Button
-                                        className="h-9 bg-blue-600 text-white hover:bg-blue-700"
+                                        variant="success"
+                                        className="h-9"
                                         onClick={handleCustomerButtonClick}
                                       >
-                                        Customers
+                                        Exhibitor
                                       </Button>
                                     </div>
                                   </div>
@@ -1603,19 +1576,19 @@ export default function ShowsPage() {
                                 <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent h-9">
                                   <TabsTrigger
                                     value="projectInfo"
-                                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-green-400 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
                                   >
                                     Project Info
                                   </TabsTrigger>
                                   <TabsTrigger
                                     value="keyDates"
-                                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-green-400 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
                                   >
                                     Key Dates
                                   </TabsTrigger>
                                   <TabsTrigger
                                     value="generalInfo"
-                                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-green-400 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
                                   >
                                     General Info
                                   </TabsTrigger>
@@ -1658,11 +1631,11 @@ export default function ShowsPage() {
                                     <div className="flex justify-end gap-2">
                                       <Button
                                         onClick={() => setShowProjectFacilities(true)}
-                                        className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4"
+                                        className="bg-green-400 text-white hover:bg-green-300 h-9 px-4"
                                       >
                                         Project Facilities
                                       </Button>
-                                      <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
+                                      <Button className="bg-green-400 text-white hover:bg-green-300 h-9 px-4">
                                         Key Contacts
                                       </Button>
                                     </div>
@@ -2081,19 +2054,19 @@ export default function ShowsPage() {
 
                         {/* Action Buttons */}
                         <div className="flex justify-between items-center mt-6">
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
                             Auto-Out
                           </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
                             Details
                           </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
                             Schedule
                           </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
                             Material Handling
                           </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
                             Vendor Info
                           </Button>
                         </div>
@@ -2113,7 +2086,7 @@ export default function ShowsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 20 }}
                 onClick={scrollToTop}
-                className="fixed bottom-8 right-8 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors z-50"
+                className="fixed bottom-8 right-8 bg-green-400 text-white rounded-full p-3 shadow-lg hover:bg-green-300 transition-colors z-50"
               >
                 <ArrowUp className="h-5 w-5" />
               </motion.button>

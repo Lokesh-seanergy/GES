@@ -36,6 +36,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CustomPagination } from "@/components/ui/pagination";
+import { PageSizeSelector } from "@/components/ui/page-size-selector";
 
 interface SummaryData {
   exhibitor: {
@@ -1535,37 +1537,19 @@ function CustomersContent() {
             )}
 
             <div className="flex justify-end items-center mt-4">
-              <span className="mr-2">Rows per page:</span>
-              <select
-                value={rowsPerPage}
-                onChange={handleRowsPerPageChange}
-                className="border rounded-md"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-              </select>
-              <span className="ml-4">
-                {currentPage} of{" "}
-                {Math.ceil(filteredCustomers.length / rowsPerPage)}
-              </span>
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="ml-2"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={
-                  currentPage ===
-                  Math.ceil(filteredCustomers.length / rowsPerPage)
-                }
-                className="ml-2"
-              >
-                Next
-              </button>
+              <PageSizeSelector
+                pageSize={rowsPerPage}
+                setPageSize={(value) => {
+                  setRowsPerPage(value);
+                  setCurrentPage(1); // Reset to first page when changing items per page
+                }}
+              />
+              <CustomPagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredCustomers.length / rowsPerPage)}
+                onPageChange={handlePageChange}
+                className="ml-4"
+              />
             </div>
           </>
         )}

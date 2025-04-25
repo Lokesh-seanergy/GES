@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { BreadcrumbItem } from "@/components/mainlayout/Breadcrumb";
 
 import {
@@ -53,6 +53,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { CustomPagination } from "@/components/ui/pagination";
+import { PageSizeSelector } from "@/components/ui/page-size-selector";
 
 interface ShowData {
   showId: string;
@@ -1237,48 +1239,6 @@ export default function ShowsPage() {
                     <CardContent
                       className={cn("px-0", selectedShow ? "py-2" : "py-3")}
                     >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm text-gray-500">Show</span>
-                          <Select
-                            value={pagination.itemsPerPage.toString()}
-                            onValueChange={handleItemsPerPageChange}
-                          >
-                            <SelectTrigger className="h-8 w-[70px]">
-                              <SelectValue placeholder={pagination.itemsPerPage} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="10">10</SelectItem>
-                              <SelectItem value="20">20</SelectItem>
-                              <SelectItem value="50">50</SelectItem>
-                              <SelectItem value="100">100</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <span className="text-sm text-gray-500">entries</span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(pagination.currentPage - 1)}
-                            disabled={pagination.currentPage === 1}
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                          <span className="text-sm">
-                            Page {pagination.currentPage} of {Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
-                          </span>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handlePageChange(pagination.currentPage + 1)}
-                            disabled={pagination.currentPage === Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
-                          >
-                            <ChevronRight className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader className="bg-[#E6F0FA] sticky top-0">
@@ -1443,6 +1403,24 @@ export default function ShowsPage() {
                             ))}
                           </TableBody>
                         </Table>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-4">
+                        <PageSizeSelector
+                          pageSize={pagination.itemsPerPage}
+                          setPageSize={(value) => {
+                            setPagination(prev => ({
+                              ...prev,
+                              itemsPerPage: value,
+                              currentPage: 1
+                            }));
+                          }}
+                        />
+                        <CustomPagination
+                          currentPage={pagination.currentPage}
+                          totalPages={Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
+                          onPageChange={handlePageChange}
+                        />
                       </div>
                     </CardContent>
                   </Card>

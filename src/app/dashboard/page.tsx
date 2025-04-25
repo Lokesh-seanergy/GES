@@ -10,10 +10,77 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CustomPagination } from "@/components/ui/pagination";
+import { PageSizeSelector } from "@/components/ui/page-size-selector";
+import { useState } from "react";
 
 export default function DashboardPage() {
   // This will automatically redirect to login if not authenticated
   useAuthProtection();
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(5);
+
+  // Mock data for upcoming and ongoing shows
+  const shows = [
+    {
+      id: "VU32963",
+      name: "Consumer Electronics Show 2023J",
+      date: "Apr 09, 2025",
+      location: "Las Vegas, NV",
+      status: "Upcoming",
+    },
+    {
+      id: "VU11563",
+      name: "ProMak Manufacturing Show",
+      date: "Apr 09, 2025",
+      location: "Chicago, IL",
+      status: "Ongoing",
+    },
+    {
+      id: "VU32964",
+      name: "Tech Expo 2023",
+      date: "May 15, 2025",
+      location: "San Francisco, CA",
+      status: "Upcoming",
+    },
+    {
+      id: "VU11564",
+      name: "Industrial Automation Show",
+      date: "May 20, 2025",
+      location: "Detroit, MI",
+      status: "Ongoing",
+    },
+    {
+      id: "VU32965",
+      name: "Digital Marketing Conference",
+      date: "Jun 01, 2025",
+      location: "New York, NY",
+      status: "Upcoming",
+    },
+    {
+      id: "VU11565",
+      name: "Healthcare Innovation Summit",
+      date: "Jun 10, 2025",
+      location: "Boston, MA",
+      status: "Ongoing",
+    },
+  ];
+
+  // Paginate shows
+  const paginatedShows = shows.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
+  };
 
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
@@ -64,14 +131,14 @@ export default function DashboardPage() {
             </svg>
           </div>
           <div>
-            <h3 className="text-4xl font-bold">04</h3>
+            <h3 className="text-4xl font-bold">12</h3>
             <p className="text-sm text-gray-500">Ongoing Shows</p>
           </div>
         </div>
 
-        {/* Total Exhibits */}
+        {/* Total Revenue */}
         <div className="bg-white rounded-lg shadow p-6 flex items-center">
-          <div className="bg-yellow-50 rounded-full p-3 mr-4">
+          <div className="bg-purple-50 rounded-full p-3 mr-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -82,21 +149,21 @@ export default function DashboardPage() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-yellow-500"
+              className="text-purple-500"
             >
-              <path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"></path>
-              <path d="M16.5 9.4 7.55 4.24"></path>
+              <line x1="12" y1="1" x2="12" y2="23"></line>
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
             </svg>
           </div>
           <div>
-            <h3 className="text-4xl font-bold">256</h3>
-            <p className="text-sm text-gray-500">Total Exhibits</p>
+            <h3 className="text-4xl font-bold">$1.2M</h3>
+            <p className="text-sm text-gray-500">Total Revenue</p>
           </div>
         </div>
 
-        {/* Active Locations */}
+        {/* Active Customers */}
         <div className="bg-white rounded-lg shadow p-6 flex items-center">
-          <div className="bg-pink-50 rounded-full p-3 mr-4">
+          <div className="bg-orange-50 rounded-full p-3 mr-4">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="24"
@@ -107,20 +174,19 @@ export default function DashboardPage() {
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
-              className="text-pink-500"
+              className="text-orange-500"
             >
-              <path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" />
-              <circle cx="12" cy="10" r="3" />
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
             </svg>
           </div>
           <div>
-            <h3 className="text-4xl font-bold">08</h3>
-            <p className="text-sm text-gray-500">Active Locations</p>
+            <h3 className="text-4xl font-bold">1,234</h3>
+            <p className="text-sm text-gray-500">Active Customers</p>
           </div>
         </div>
       </div>
 
-      {/* Shows Table Section */}
       <div className="rounded-lg shadow mb-8 bg-white">
         <div className="flex flex-row items-center justify-between p-6">
           <h2 className="text-lg font-semibold">UPCOMING & ONGOING SHOWS</h2>
@@ -155,56 +221,55 @@ export default function DashboardPage() {
                 </TableRow>
               </TableHeader>
               <TableBody className="bg-white">
-                {[...Array(4)].map((_, index) => (
-                  <TableRow key={index} className="border-t border-blue-100">
+                {paginatedShows.map((show) => (
+                  <TableRow key={show.id} className="border-t border-blue-100">
                     <TableCell className="font-medium text-gray-700 py-4 px-6">
-                      #{index % 2 === 0 ? "VU32963" : "VU11563"}
+                      #{show.id}
                     </TableCell>
                     <TableCell className="text-gray-700 py-4 px-6">
-                      {index % 2 === 0
-                        ? "Consumer Electronics Show 2023J"
-                        : "ProMak Manufacturing Show"}
+                      {show.name}
                     </TableCell>
                     <TableCell className="text-gray-700 py-4 px-6">
-                      Apr 09, 2025
+                      {show.date}
                     </TableCell>
                     <TableCell className="text-gray-700 py-4 px-6">
-                      {index % 2 === 0 ? "Las Vegas, NV" : "Chicago, IL"}
+                      {show.location}
                     </TableCell>
                     <TableCell className="py-4 px-6">
                       <span
                         className={`px-3 py-1 rounded-full text-xs ${
-                          index % 2 === 0
+                          show.status === "Upcoming"
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-green-100 text-green-800"
                         }`}
                       >
-                        {index % 2 === 0 ? "Upcoming" : "Ongoing"}
+                        {show.status}
                       </span>
                     </TableCell>
                     <TableCell className="py-4 px-6">
-                      <button className="text-gray-500">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <circle cx="12" cy="12" r="1" />
-                          <circle cx="19" cy="12" r="1" />
-                          <circle cx="5" cy="12" r="1" />
-                        </svg>
+                      <button className="text-blue-600 hover:text-blue-800">
+                        View Details
                       </button>
                     </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <PageSizeSelector
+              pageSize={itemsPerPage}
+              setPageSize={(value) => {
+                setItemsPerPage(value);
+                setCurrentPage(1);
+              }}
+            />
+            <CustomPagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(shows.length / itemsPerPage)}
+              onPageChange={handlePageChange}
+            />
           </div>
         </div>
       </div>

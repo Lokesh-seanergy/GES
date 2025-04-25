@@ -11,9 +11,11 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import {
   mockShows,
   mockCustomers,
+  mockFacilityData,
   type ShowData,
-  type Customer,
+  type CustomerData,
   type CustomerType,
+  type FacilityData,
 } from "@/lib/mockData";
 import {
   Dialog,
@@ -54,29 +56,43 @@ interface SummaryData {
 }
 
 const customerTypes: CustomerType[] = ["Exhibitors", "ShowOrg", "3rd party"];
+interface EditedCustomer extends Omit<CustomerData, 'type'> {
+  type: CustomerType[];
+  cityStateZip?: string;
+}
 
 function CustomersContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
 
+  // Get show parameters from URL
+  const showNameFromUrl = searchParams.get('showName');
+  const occrIdFromUrl = searchParams.get('occrId');
+  const showIdFromUrl = searchParams.get('showId');
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [showName, setShowName] = useState("");
-  const [occrId, setOccrId] = useState("");
+  const [showName, setShowName] = useState(showNameFromUrl || "");
+  const [occrId, setOccrId] = useState(occrIdFromUrl || "");
   const [showSummary, setShowSummary] = useState(false);
   const [summaryData, setSummaryData] = useState<SummaryData>({
     exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
     ee: { customerCount: 0, metric2: 0, metric3: 0 },
     thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
   });
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+
+  // Initialize with filtered customers if show ID is provided
+  const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>(
+    showIdFromUrl ? mockCustomers.filter(customer => customer.showId === showIdFromUrl) : []
+  );
+
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(
     null
   );
   const [selectedCustomerForEdit, setSelectedCustomerForEdit] =
-    useState<Customer | null>(null);
+    useState<CustomerData | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editedCustomer, setEditedCustomer] = useState<Customer | null>(null);
+  const [editedCustomer, setEditedCustomer] = useState<EditedCustomer | null>(null);
   const [key, setKey] = useState(Date.now());
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -85,7 +101,7 @@ function CustomersContent() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const occrIdInputRef = useRef<HTMLInputElement>(null);
   const showNameInputRef = useRef<HTMLInputElement>(null);
-  const [prioritizedCustomers, setPrioritizedCustomers] = useState<Customer[]>(
+  const [prioritizedCustomers, setPrioritizedCustomers] = useState<CustomerData[]>(
     []
   );
 
@@ -146,21 +162,25 @@ function CustomersContent() {
       c.type.includes("3rd party")
     );
 
+    // Calculate total booth sizes for each type
+    const calculateTotalBoothSize = (customers: CustomerData[]) =>
+      customers.reduce((total, c) => total + parseInt(c.boothSize || "0"), 0);
+
     setSummaryData({
       exhibitor: {
         customerCount: exhibitorCustomers.length,
-        metric2: 1,
-        metric3: 800,
+        metric2: calculateTotalBoothSize(exhibitorCustomers),
+        metric3: exhibitorCustomers.reduce((total, c) => total + c.orders, 0),
       },
       ee: {
         customerCount: eeCustomers.length,
-        metric2: 0,
-        metric3: 0,
+        metric2: calculateTotalBoothSize(eeCustomers),
+        metric3: eeCustomers.reduce((total, c) => total + c.orders, 0),
       },
       thirdParty: {
         customerCount: thirdPartyCustomers.length,
-        metric2: 0,
-        metric3: 0,
+        metric2: calculateTotalBoothSize(thirdPartyCustomers),
+        metric3: thirdPartyCustomers.reduce((total, c) => total + c.orders, 0),
       },
     });
   };
@@ -328,6 +348,20 @@ function CustomersContent() {
     }
   }, [searchParams, pathname, resetPage, showName, occrId]);
 
+  useEffect(() => {
+    if (showIdFromUrl) {
+      const show = mockShows.find(s => s.showId === showIdFromUrl);
+      if (show) {
+        setShowName(show.showName);
+        setOccrId(show.occrId);
+        setShowSummary(true);
+        const customers = mockCustomers.filter(c => c.showId === showIdFromUrl);
+        setFilteredCustomers(customers);
+        calculateSummaryData(show);
+      }
+    }
+  }, [showIdFromUrl]);
+
   const handleCustomerCardClick = (customerId: string) => {
     const selectedCustomer = filteredCustomers.find((c) => c.id === customerId);
     if (selectedCustomer) {
@@ -335,14 +369,15 @@ function CustomersContent() {
         (c) => c.id !== customerId
       );
       setPrioritizedCustomers([selectedCustomer, ...remainingCustomers]);
+      setExpandedCustomerId(customerId);
+      setExpandedRow(customerId);
     }
-    setExpandedCustomerId(customerId);
-    setExpandedRow(customerId);
   };
 
-  const openEditDialog = (customer: Customer) => {
+  const openEditDialog = (customer: CustomerData) => {
+    if (!customer) return;
     setSelectedCustomerForEdit(customer);
-    setEditedCustomer({ ...customer });
+    setEditedCustomer({ ...customer } as EditedCustomer);
     setIsDialogOpen(true);
   };
 
@@ -359,13 +394,13 @@ function CustomersContent() {
 
     if (!editedCustomer?.email?.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedCustomer.email)) {
+    } else if (editedCustomer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedCustomer.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
     if (!editedCustomer?.phone?.trim()) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^[\d\s\-()]+$/.test(editedCustomer.phone)) {
+    } else if (editedCustomer.phone && !/^[\d\s\-()]+$/.test(editedCustomer.phone)) {
       newErrors.phone = "Please enter a valid phone number";
     }
 
@@ -386,6 +421,7 @@ function CustomersContent() {
       if (!editedCustomer?.subContractor?.email?.trim()) {
         newErrors["subContractor.email"] = "Subcontractor email is required";
       } else if (
+        editedCustomer.subContractor?.email &&
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedCustomer.subContractor.email)
       ) {
         newErrors["subContractor.email"] = "Please enter a valid email address";
@@ -393,7 +429,10 @@ function CustomersContent() {
 
       if (!editedCustomer?.subContractor?.phone?.trim()) {
         newErrors["subContractor.phone"] = "Subcontractor phone is required";
-      } else if (!/^[\d\s\-()]+$/.test(editedCustomer.subContractor.phone)) {
+      } else if (
+        editedCustomer.subContractor?.phone &&
+        !/^[\d\s\-()]+$/.test(editedCustomer.subContractor.phone)
+      ) {
         newErrors["subContractor.phone"] = "Please enter a valid phone number";
       }
     }
@@ -402,31 +441,33 @@ function CustomersContent() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSave = async () => {
+    if (!editedCustomer) return;
+    
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editedCustomer),
+      });
 
-    if (!validateForm()) {
-      return;
-    }
-
-    if (editedCustomer) {
-      const updatedCustomers = filteredCustomers.map((customer) =>
-        customer.id === editedCustomer.id ? editedCustomer : customer
-      );
-      setFilteredCustomers(updatedCustomers);
-
-      const customerIndex = mockCustomers.findIndex(
-        (c) => c.id === editedCustomer.id
-      );
-      if (customerIndex !== -1) {
-        mockCustomers[customerIndex] = { ...editedCustomer };
+      if (!response.ok) {
+        throw new Error('Failed to update customer');
       }
 
-      recalculateSummaryData(updatedCustomers);
-
+      setFilteredCustomers((prevCustomers) => {
+        if (!prevCustomers) return prevCustomers;
+        return prevCustomers.map((customer) =>
+          customer.id === editedCustomer.id ? editedCustomer : customer
+        );
+      });
+      
+      setEditedCustomer(null);
       setIsDialogOpen(false);
-      setSelectedCustomerForEdit(null);
-      setKey(Date.now());
+    } catch (error) {
+      console.error('Error updating customer:', error);
     }
   };
 
@@ -455,37 +496,38 @@ function CustomersContent() {
     }
   };
 
-  const handleInputChange = (
-    field:
-      | keyof Customer
-      | `subContractor.${keyof NonNullable<Customer["subContractor"]>}`,
-    value: string | boolean | CustomerType[]
-  ) => {
-    if (!editedCustomer) return;
-
-    if (errors[field]) {
-      const updatedErrors = { ...errors };
-      delete updatedErrors[field];
-      setErrors(updatedErrors);
-    }
-
-    if (field.startsWith("subContractor.")) {
-      const subField = field.split(".")[1] as keyof NonNullable<
-        Customer["subContractor"]
-      >;
-      setEditedCustomer({
-        ...editedCustomer,
-        subContractor: {
-          ...(editedCustomer.subContractor || { name: "" }),
-          [subField]: value,
-        },
-      });
-    } else {
-      setEditedCustomer({
-        ...editedCustomer,
-        [field as keyof Customer]: value,
-      });
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    setEditedCustomer((prev) => {
+      if (!prev) return prev;
+      
+      if (name === 'type') {
+        // Handle type as CustomerType[]
+        return {
+          ...prev,
+          type: [value as CustomerType]
+        };
+      }
+      
+      if (name.includes('.')) {
+        const [parent, child] = name.split('.');
+        if (parent === 'address') {
+          return {
+            ...prev,
+            address: {
+              ...prev.address,
+              [child]: value
+            }
+          };
+        }
+      }
+      
+      return {
+        ...prev,
+        [name]: value
+      };
+    });
   };
 
   const handleTypeChange = (typeValue: CustomerType) => {
@@ -495,14 +537,14 @@ function CustomersContent() {
       let updatedSubContractor = editedCustomer.subContractor;
 
       if (currentTypes.includes(typeValue)) {
-        newTypes = currentTypes.filter((t) => t !== typeValue);
+        newTypes = currentTypes.filter((type) => type !== typeValue);
         if (typeValue === "3rd party") {
           updatedSubContractor = undefined;
         }
       } else {
         newTypes.push(typeValue);
         if (typeValue === "3rd party" && !updatedSubContractor) {
-          updatedSubContractor = { name: "" };
+          updatedSubContractor = { name: "", email: "", phone: "" };
         }
       }
 
@@ -514,7 +556,7 @@ function CustomersContent() {
     }
   };
 
-  const recalculateSummaryData = (customers: Customer[]) => {
+  const recalculateSummaryData = (customers: CustomerData[]) => {
     const exhibitorCustomers = customers.filter((c) =>
       c.type.includes("Exhibitors")
     );
@@ -634,6 +676,19 @@ function CustomersContent() {
     }
     router.push("/customers", { scroll: false });
     showNameInputRef.current?.blur();
+  };
+
+  const handleEditCustomer = (editedCustomer: EditedCustomer) => {
+    const customerIndex = mockCustomers.findIndex(customer => customer.id === editedCustomer.id);
+    if (customerIndex !== -1) {
+      mockCustomers[customerIndex] = { ...editedCustomer };
+    }
+    recalculateSummaryData(mockCustomers);
+  };
+
+  // Update the address rendering to use string type
+  const formatAddress = (address: CustomerData['address']): string => {
+    return `${address.street}, ${address.city}, ${address.state} ${address.zip}, ${address.country}`;
   };
 
   return (
@@ -877,17 +932,8 @@ function CustomersContent() {
                         <div className="font-semibold text-base mb-1">
                           Address
                         </div>
-                        <div className="flex items-start gap-1">
-                          <span className="text-gray-700 font-semibold pr-2">
-                            Street:
-                          </span>
-                          <span>{customer.address}</span>
-                        </div>
-                        <div className="flex items-start gap-1">
-                          <span className="text-gray-700 font-semibold pr-2">
-                            City/St/Zip:
-                          </span>
-                          <span>{customer.cityStateZip}</span>
+                        <div className="text-gray-600">
+                          {formatAddress(customer.address)}
                         </div>
                         <div className="flex items-start gap-1 mt-1">
                           <span className="text-gray-700 font-semibold pr-2">
@@ -913,8 +959,16 @@ function CustomersContent() {
                           <div className="font-semibold text-base mb-1">
                             Booth Info
                           </div>
-                          <div className="text-sm text-gray-800">
-                            {customer.facilityId}
+                          <div className="space-y-2">
+                            <div className="text-sm text-gray-800">
+                              <span className="font-medium">Facility ID:</span> {customer.facilityId}
+                            </div>
+                            <div className="text-sm text-gray-800">
+                              <span className="font-medium">Project #:</span> {mockShows.find(show => show.showId === customer.showId)?.projectNumber || 'N/A'}
+                            </div>
+                            <div className="text-sm text-gray-800">
+                              <span className="font-medium">Booth #:</span> {customer.boothNumber}
+                            </div>
                           </div>
                         </div>
                         <div className="flex items-center justify-end text-sm text-gray-600 hover:text-blue-600 mt-2">
@@ -1009,159 +1063,153 @@ function CustomersContent() {
                                 <Table className="min-w-full table-fixed divide-y divide-gray-300">
                                   <TableHeader className="bg-gray-50">
                                     <TableRow>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
                                         Project #
                                       </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Facility
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
+                                        Facility ID
                                       </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
                                         Booth #
                                       </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Booth Type
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[40%]">
+                                        Location
                                       </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
                                         Service Issue
                                       </TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody className="divide-y divide-gray-200 bg-white">
-                                    {filteredCustomers.map((customer) => (
-                                      <React.Fragment key={customer.id}>
-                                        <TableRow
-                                          onClick={() =>
-                                            handleRowClick(customer.id)
-                                          }
-                                          className="cursor-pointer"
-                                        >
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.showId}
-                                          >
-                                            <span
-                                              className={
-                                                customer.showId === "AWS23"
-                                                  ? "font-semibold"
-                                                  : ""
-                                              }
+                                    {(() => {
+                                      // Group customers by project number
+                                      const projectGroups = filteredCustomers.reduce((groups, customer) => {
+                                        const projectNumber = mockShows.find(show => show.showId === customer.showId)?.projectNumber;
+                                        if (!projectNumber) return groups;
+                                        
+                                        if (!groups[projectNumber]) {
+                                          groups[projectNumber] = [];
+                                        }
+                                        groups[projectNumber].push(customer);
+                                        return groups;
+                                      }, {} as Record<string, CustomerData[]>);
+
+                                      return Object.entries(projectGroups).map(([projectNumber, projectCustomers]) => {
+                                        // Sort customers by booth number
+                                        const sortedCustomers = [...projectCustomers].sort((a, b) => 
+                                          a.boothNumber.localeCompare(b.boothNumber)
+                                        );
+
+                                        // Get facility info for the project
+                                        const firstCustomer = sortedCustomers[0];
+                                        const facility = mockFacilityData.find(f => f.facilityId === firstCustomer.facilityId);
+                                        const location = facility ? `${facility.location1}, ${facility.location2}` : 'N/A';
+
+                                        return (
+                                          <React.Fragment key={projectNumber}>
+                                            {/* First row with project details */}
+                                            <TableRow
+                                              onClick={() => handleRowClick(firstCustomer.id)}
+                                              className="cursor-pointer hover:bg-gray-50"
                                             >
-                                              {customer.showId}
-                                            </span>
-                                          </TableCell>
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.facilityName}
-                                          >
-                                            {customer.facilityName}
-                                          </TableCell>
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.boothNumber}
-                                          >
-                                            {customer.boothNumber}
-                                          </TableCell>
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.boothType || "N/A"}
-                                          >
-                                            {customer.boothType || "N/A"}
-                                          </TableCell>
-                                          <TableCell className="whitespace-nowrap px-3 py-4 text-sm truncate">
-                                            {customer.serviceIssue &&
-                                            customer.serviceIssue.toLowerCase() !==
-                                              "none" ? (
-                                              <span className="font-medium text-green-600">
-                                                ACTIVE
-                                              </span>
-                                            ) : (
-                                              <span className="font-medium text-gray-500">
-                                                INACTIVE
-                                              </span>
-                                            )}
-                                          </TableCell>
-                                        </TableRow>
-                                        {expandedRow === customer.id && (
-                                          <TableRow>
-                                            <TableCell
-                                              colSpan={5}
-                                              className="px-3 py-4"
-                                            >
-                                              <div className="bg-gray-50 p-4 rounded-md shadow-sm">
-                                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
-                                                  <div>
-                                                    <strong>First Name:</strong>{" "}
-                                                    {customer.firstName}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Last Name:</strong>{" "}
-                                                    {customer.lastName}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Email Id:</strong>{" "}
-                                                    {customer.email}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Country:</strong>{" "}
-                                                    {customer.country === "USA"
-                                                      ? "+1"
-                                                      : customer.country}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Contact Type:
-                                                    </strong>{" "}
-                                                    {customer.contactType}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Contact Role:
-                                                    </strong>{" "}
-                                                    {customer.contactRole}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Shared Booth:
-                                                    </strong>{" "}
-                                                    {customer.sharedBooth
-                                                      ? "Yes"
-                                                      : "No"}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Operation Zone:
-                                                    </strong>{" "}
-                                                    {customer.operationZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Service Zone:
-                                                    </strong>{" "}
-                                                    {customer.serviceZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Target Zone:
-                                                    </strong>{" "}
-                                                    {customer.targetZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Empty Zone:</strong>{" "}
-                                                    {customer.emptyZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Service Issue:
-                                                    </strong>{" "}
-                                                    {customer.serviceIssue}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </TableCell>
-                                          </TableRow>
-                                        )}
-                                      </React.Fragment>
-                                    ))}
+                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                                {projectNumber}
+                                              </TableCell>
+                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                                {firstCustomer.facilityId}
+                                              </TableCell>
+                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                {firstCustomer.boothNumber}
+                                              </TableCell>
+                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                                {location}
+                                              </TableCell>
+                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                <span className="font-medium text-gray-500">INACTIVE</span>
+                                              </TableCell>
+                                            </TableRow>
+
+                                            {/* Remaining rows with only booth number and service issue */}
+                                            {sortedCustomers.slice(1).map(customer => (
+                                              <React.Fragment key={customer.id}>
+                                                <TableRow
+                                                  onClick={() => handleRowClick(customer.id)}
+                                                  className="cursor-pointer hover:bg-gray-50"
+                                                >
+                                                  <TableCell className="px-3 py-4" />
+                                                  <TableCell className="px-3 py-4" />
+                                                  <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                    {customer.boothNumber}
+                                                  </TableCell>
+                                                  <TableCell className="px-3 py-4" />
+                                                  <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                                    <span className="font-medium text-gray-500">INACTIVE</span>
+                                                  </TableCell>
+                                                </TableRow>
+                                                {expandedRow === customer.id && (
+                                                  <TableRow>
+                                                    <TableCell colSpan={5} className="px-3 py-4">
+                                                      <div className="bg-gray-50 p-4 rounded-md shadow-sm">
+                                                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+                                                          <div>
+                                                            <strong>First Name:</strong>{" "}
+                                                            {customer.firstName}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Last Name:</strong>{" "}
+                                                            {customer.lastName}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Email Id:</strong>{" "}
+                                                            {customer.email}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Country:</strong>{" "}
+                                                            {customer.country === "USA" ? "+1" : customer.country}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Contact Type:</strong>{" "}
+                                                            {customer.contactType}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Contact Role:</strong>{" "}
+                                                            {customer.contactRole}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Shared Booth:</strong>{" "}
+                                                            {customer.sharedBooth ? "Yes" : "No"}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Operation Zone:</strong>{" "}
+                                                            {customer.operationZone}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Service Zone:</strong>{" "}
+                                                            {customer.serviceZone}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Target Zone:</strong>{" "}
+                                                            {customer.targetZone}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Empty Zone:</strong>{" "}
+                                                            {customer.emptyZone}
+                                                          </div>
+                                                          <div>
+                                                            <strong>Service Issue:</strong>{" "}
+                                                            {customer.serviceIssue}
+                                                          </div>
+                                                        </div>
+                                                      </div>
+                                                    </TableCell>
+                                                  </TableRow>
+                                                )}
+                                              </React.Fragment>
+                                            ))}
+                                          </React.Fragment>
+                                        );
+                                      });
+                                    })()}
                                   </TableBody>
                                 </Table>
                               </div>
@@ -1224,7 +1272,7 @@ function CustomersContent() {
                             id="customerName"
                             value={editedCustomer?.customerName || ""}
                             onChange={(e) =>
-                              handleInputChange("customerName", e.target.value)
+                              handleInputChange(e)
                             }
                             className={
                               errors.customerName ? "border-red-500" : ""
@@ -1247,7 +1295,7 @@ function CustomersContent() {
                             id="customerId"
                             value={editedCustomer?.customerId || ""}
                             onChange={(e) =>
-                              handleInputChange("customerId", e.target.value)
+                              handleInputChange(e)
                             }
                             className={
                               errors.customerId ? "border-red-500" : ""
@@ -1268,10 +1316,7 @@ function CustomersContent() {
                               editedCustomer?.isActive ? "active" : "inactive"
                             }
                             onChange={(e) =>
-                              handleInputChange(
-                                "isActive",
-                                e.target.value === "active"
-                              )
+                              handleInputChange(e)
                             }
                           >
                             <option value="active">Active</option>
@@ -1290,7 +1335,7 @@ function CustomersContent() {
                             type="email"
                             value={editedCustomer?.email || ""}
                             onChange={(e) =>
-                              handleInputChange("email", e.target.value)
+                              handleInputChange(e)
                             }
                             className={errors.email ? "border-red-500" : ""}
                           />
@@ -1311,7 +1356,7 @@ function CustomersContent() {
                             id="phone"
                             value={editedCustomer?.phone || ""}
                             onChange={(e) =>
-                              handleInputChange("phone", e.target.value)
+                              handleInputChange(e)
                             }
                             className={errors.phone ? "border-red-500" : ""}
                           />
@@ -1325,9 +1370,9 @@ function CustomersContent() {
                           <Label htmlFor="address">Address</Label>
                           <Input
                             id="address"
-                            value={editedCustomer?.address || ""}
+                            value={editedCustomer?.address?.street || ""}
                             onChange={(e) =>
-                              handleInputChange("address", e.target.value)
+                              handleInputChange(e)
                             }
                           />
                         </div>
@@ -1342,7 +1387,7 @@ function CustomersContent() {
                             id="facilityId"
                             value={editedCustomer?.facilityId || ""}
                             onChange={(e) =>
-                              handleInputChange("facilityId", e.target.value)
+                              handleInputChange(e)
                             }
                             className={
                               errors.facilityId ? "border-red-500" : ""
@@ -1365,7 +1410,7 @@ function CustomersContent() {
                             id="boothNumber"
                             value={editedCustomer?.boothNumber || ""}
                             onChange={(e) =>
-                              handleInputChange("boothNumber", e.target.value)
+                              handleInputChange(e)
                             }
                             className={
                               errors.boothNumber ? "border-red-500" : ""
@@ -1383,7 +1428,7 @@ function CustomersContent() {
                             id="zone"
                             value={editedCustomer?.zone || ""}
                             onChange={(e) =>
-                              handleInputChange("zone", e.target.value)
+                              handleInputChange(e)
                             }
                           />
                         </div>
@@ -1432,10 +1477,7 @@ function CustomersContent() {
                                 id="subContractorName"
                                 value={editedCustomer.subContractor?.name || ""}
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.name",
-                                    e.target.value
-                                  )
+                                  handleInputChange(e)
                                 }
                                 placeholder="Subcontractor company name"
                                 className={
@@ -1461,10 +1503,7 @@ function CustomersContent() {
                                   ""
                                 }
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.contactName",
-                                    e.target.value
-                                  )
+                                  handleInputChange(e)
                                 }
                                 placeholder="Contact person name"
                               />
@@ -1486,10 +1525,7 @@ function CustomersContent() {
                                   editedCustomer.subContractor?.phone || ""
                                 }
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.phone",
-                                    e.target.value
-                                  )
+                                  handleInputChange(e)
                                 }
                                 placeholder="Subcontractor phone"
                                 className={
@@ -1522,10 +1558,7 @@ function CustomersContent() {
                                   editedCustomer.subContractor?.email || ""
                                 }
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.email",
-                                    e.target.value
-                                  )
+                                  handleInputChange(e)
                                 }
                                 placeholder="Subcontractor email"
                                 className={

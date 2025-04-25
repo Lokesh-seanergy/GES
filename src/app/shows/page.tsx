@@ -1281,7 +1281,7 @@ export default function ShowsPage() {
                       </div>
                       <div className="overflow-x-auto">
                         <Table>
-                          <TableHeader className="bg-gray-50 sticky top-0">
+                          <TableHeader className="bg-[#E6F0FA] sticky top-0">
                             <TableRow className="border-b border-gray-200">
                               <TableHead
                                 className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
@@ -1387,12 +1387,17 @@ export default function ShowsPage() {
                                 {!selectedShow && (
                                   <>
                                     <TableCell className="text-center py-2 px-4">
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-[#0A0C10] text-white hover:bg-[#0A0C10]/90 px-2 py-0.5 text-xs"
-                                      >
-                                        {show.occrType}
-                                      </Badge>
+                                      {(() => {
+                                        let badgeColor = 'bg-slate-200 text-slate-800';
+                                        if (show.occrType.toLowerCase().includes('upcoming')) badgeColor = 'bg-yellow-100 text-yellow-800';
+                                        else if (show.occrType.toLowerCase().includes('ongoing')) badgeColor = 'bg-green-100 text-green-800';
+                                        else if (show.occrType.toLowerCase().includes('conference')) badgeColor = 'bg-blue-100 text-blue-800';
+                                        else if (show.occrType.toLowerCase().includes('exhibition')) badgeColor = 'bg-purple-100 text-purple-800';
+                                        else if (show.occrType.toLowerCase().includes('workshop')) badgeColor = 'bg-pink-100 text-pink-800';
+                                        return (
+                                          <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeColor}`}>{show.occrType}</span>
+                                        );
+                                      })()}
                                     </TableCell>
                                     <TableCell className="text-center py-2 px-4">
                                       {show.marketType}

@@ -163,23 +163,27 @@ function CustomersContent() {
     );
 
     // Calculate total booth sizes for each type
-    const calculateTotalBoothSize = (customers: CustomerData[]) =>
-      customers.reduce((total, c) => total + parseInt(c.boothSize || "0"), 0);
+    const calculateTotalBoothArea = (customers: CustomerData[]) =>
+      customers.reduce((total, c) => {
+        const length = parseFloat(c.boothLength || '0');
+        const width = parseFloat(c.boothWidth || '0');
+        return total + (isNaN(length) || isNaN(width) ? 0 : length * width);
+      }, 0);
 
     setSummaryData({
       exhibitor: {
         customerCount: exhibitorCustomers.length,
-        metric2: calculateTotalBoothSize(exhibitorCustomers),
+        metric2: calculateTotalBoothArea(exhibitorCustomers),
         metric3: exhibitorCustomers.reduce((total, c) => total + c.orders, 0),
       },
       ee: {
         customerCount: eeCustomers.length,
-        metric2: calculateTotalBoothSize(eeCustomers),
+        metric2: calculateTotalBoothArea(eeCustomers),
         metric3: eeCustomers.reduce((total, c) => total + c.orders, 0),
       },
       thirdParty: {
         customerCount: thirdPartyCustomers.length,
-        metric2: calculateTotalBoothSize(thirdPartyCustomers),
+        metric2: calculateTotalBoothArea(thirdPartyCustomers),
         metric3: thirdPartyCustomers.reduce((total, c) => total + c.orders, 0),
       },
     });
@@ -1063,153 +1067,49 @@ function CustomersContent() {
                                 <Table className="min-w-full table-fixed divide-y divide-gray-300">
                                   <TableHeader className="bg-gray-50">
                                     <TableRow>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
-                                        Project #
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
-                                        Facility ID
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
-                                        Booth #
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[40%]">
-                                        Location
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 w-[15%]">
-                                        Service Issue
-                                      </TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project #</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Facility</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth #</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Type</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Length</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Width</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Service Issue</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody className="divide-y divide-gray-200 bg-white">
-                                    {(() => {
-                                      // Group customers by project number
-                                      const projectGroups = filteredCustomers.reduce((groups, customer) => {
-                                        const projectNumber = mockShows.find(show => show.showId === customer.showId)?.projectNumber;
-                                        if (!projectNumber) return groups;
-                                        
-                                        if (!groups[projectNumber]) {
-                                          groups[projectNumber] = [];
-                                        }
-                                        groups[projectNumber].push(customer);
-                                        return groups;
-                                      }, {} as Record<string, CustomerData[]>);
-
-                                      return Object.entries(projectGroups).map(([projectNumber, projectCustomers]) => {
-                                        // Sort customers by booth number
-                                        const sortedCustomers = [...projectCustomers].sort((a, b) => 
-                                          a.boothNumber.localeCompare(b.boothNumber)
-                                        );
-
-                                        // Get facility info for the project
-                                        const firstCustomer = sortedCustomers[0];
-                                        const facility = mockFacilityData.find(f => f.facilityId === firstCustomer.facilityId);
-                                        const location = facility ? `${facility.location1}, ${facility.location2}` : 'N/A';
-
-                                        return (
-                                          <React.Fragment key={projectNumber}>
-                                            {/* First row with project details */}
-                                            <TableRow
-                                              onClick={() => handleRowClick(firstCustomer.id)}
-                                              className="cursor-pointer hover:bg-gray-50"
-                                            >
-                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                                                {projectNumber}
-                                              </TableCell>
-                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                                                {firstCustomer.facilityId}
-                                              </TableCell>
-                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                {firstCustomer.boothNumber}
-                                              </TableCell>
-                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                                                {location}
-                                              </TableCell>
-                                              <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                <span className="font-medium text-gray-500">INACTIVE</span>
-                                              </TableCell>
-                                            </TableRow>
-
-                                            {/* Remaining rows with only booth number and service issue */}
-                                            {sortedCustomers.slice(1).map(customer => (
-                                              <React.Fragment key={customer.id}>
-                                                <TableRow
-                                                  onClick={() => handleRowClick(customer.id)}
-                                                  className="cursor-pointer hover:bg-gray-50"
-                                                >
-                                                  <TableCell className="px-3 py-4" />
-                                                  <TableCell className="px-3 py-4" />
-                                                  <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    {customer.boothNumber}
-                                                  </TableCell>
-                                                  <TableCell className="px-3 py-4" />
-                                                  <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                                    <span className="font-medium text-gray-500">INACTIVE</span>
-                                                  </TableCell>
-                                                </TableRow>
-                                                {expandedRow === customer.id && (
-                                                  <TableRow>
-                                                    <TableCell colSpan={5} className="px-3 py-4">
-                                                      <div className="bg-gray-50 p-4 rounded-md shadow-sm">
-                                                        <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
-                                                          <div>
-                                                            <strong>First Name:</strong>{" "}
-                                                            {customer.firstName}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Last Name:</strong>{" "}
-                                                            {customer.lastName}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Email Id:</strong>{" "}
-                                                            {customer.email}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Country:</strong>{" "}
-                                                            {customer.country === "USA" ? "+1" : customer.country}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Contact Type:</strong>{" "}
-                                                            {customer.contactType}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Contact Role:</strong>{" "}
-                                                            {customer.contactRole}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Shared Booth:</strong>{" "}
-                                                            {customer.sharedBooth ? "Yes" : "No"}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Operation Zone:</strong>{" "}
-                                                            {customer.operationZone}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Service Zone:</strong>{" "}
-                                                            {customer.serviceZone}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Target Zone:</strong>{" "}
-                                                            {customer.targetZone}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Empty Zone:</strong>{" "}
-                                                            {customer.emptyZone}
-                                                          </div>
-                                                          <div>
-                                                            <strong>Service Issue:</strong>{" "}
-                                                            {customer.serviceIssue}
-                                                          </div>
-                                                        </div>
-                                                      </div>
-                                                    </TableCell>
-                                                  </TableRow>
-                                                )}
-                                              </React.Fragment>
-                                            ))}
-                                          </React.Fragment>
-                                        );
-                                      });
-                                    })()}
+                                    {customerForDetailView ? (
+                                      <TableRow>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.projectNumber || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.facilityId || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                          {customerForDetailView.boothNumber || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.boothType || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.boothLength || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.boothWidth || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                          {customerForDetailView.serviceIssue && customerForDetailView.serviceIssue.toLowerCase() !== 'none' ? (
+                                            <span className="font-medium text-green-600">ACTIVE</span>
+                                          ) : (
+                                            <span className="font-medium text-gray-500">INACTIVE</span>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ) : (
+                                      <TableRow>
+                                        <TableCell colSpan={7} className="text-center text-gray-400 py-8">Select a customer to view booth/zone details.</TableCell>
+                                      </TableRow>
+                                    )}
                                   </TableBody>
                                 </Table>
                               </div>
@@ -1217,14 +1117,44 @@ function CustomersContent() {
                           </div>
                         </div>
 
-                        <div className="mt-6 pt-4 border-t">
+                        {/* Project Details Section */}
+                        {customerForDetailView && (
+                          <div className="mt-8 bg-gray-50 p-6 rounded-md shadow-sm">
+                            <h4 className="font-semibold text-base mb-4 text-gray-800">Project Details</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+                              <div><strong>First Name:</strong> {customerForDetailView.firstName || 'N/A'}</div>
+                              <div><strong>Last Name:</strong> {customerForDetailView.lastName || 'N/A'}</div>
+                              <div><strong>Email Id:</strong> {customerForDetailView.email || 'N/A'}</div>
+                              <div><strong>Contact Type:</strong> {customerForDetailView.contactType || 'N/A'}</div>
+                              <div><strong>Contact Role:</strong> {customerForDetailView.contactRole || 'N/A'}</div>
+                              <div><strong>Shared Booth:</strong> {customerForDetailView.sharedBooth ? 'Yes' : 'No'}</div>
+                              <div><strong>Service Zone:</strong> {customerForDetailView.serviceZone || 'N/A'}</div>
+                              <div><strong>Target Zone:</strong> {customerForDetailView.targetZone || 'N/A'}</div>
+                              <div><strong>Empty Zone:</strong> {customerForDetailView.emptyZone || 'N/A'}</div>
+                              <div className="col-span-2">
+                                <strong>Service Issue:</strong> {customerForDetailView.serviceIssue || 'N/A'}<br />
+                                <strong>Description:</strong> {(!customerForDetailView.serviceIssue || customerForDetailView.serviceIssue.toLowerCase() === 'inactive' || customerForDetailView.serviceIssue.toLowerCase() === 'none') ? '----' : customerForDetailView.serviceIssue}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="mt-6 pt-4 border-t flex gap-2">
                           <Button
-                            variant="outline"
+                            variant="default"
                             onClick={() =>
                               openEditDialog(customerForDetailView)
                             }
                           >
                             Edit Customer
+                          </Button>
+                          <Button
+                            variant="default"
+                            onClick={() => {
+                              // TODO: Implement order functionality
+                              alert('Order functionality coming soon!');
+                            }}
+                          >
+                            Order
                           </Button>
                         </div>
                       </Card>

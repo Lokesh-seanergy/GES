@@ -1,5 +1,3 @@
-import { MicrosoftAuthProvider } from "@azure/msal-browser";
-
 export const msalConfig = {
   auth: {
     clientId: process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || "",

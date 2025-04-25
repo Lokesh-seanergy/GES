@@ -1,68 +1,69 @@
-import { useState, useEffect } from 'react';
-import { auth } from '@/lib/firebase/config';
-import { PhoneAuthProvider, signInWithPhoneNumber, ConfirmationResult } from 'firebase/auth';
-import { setupRecaptcha } from '@/lib/firebase/recaptcha';
-import { useAuthStore } from '@/store/authStore';
-import { useRouter } from 'next/navigation';
-import { 
-  checkRateLimit, 
-  getRemainingAttempts, 
-  resetRateLimit, 
-  sanitizeInput, 
+import { useState, useEffect } from "react";
+import { auth } from "@/lib/firebase/config";
+import { signInWithPhoneNumber } from "firebase/auth";
+import type { ConfirmationResult } from "firebase/auth";
+import { setupRecaptcha } from "@/lib/firebase/recaptcha";
+import { useAuthStore } from "@/store/authStore";
+import { useRouter } from "next/navigation";
+import {
+  checkRateLimit,
+  resetRateLimit,
+  sanitizeInput,
   logSecurityEvent,
-  RATE_LIMIT_WINDOW 
-} from '@/lib/auth/security';
+  RATE_LIMIT_WINDOW,
+} from "@/lib/auth/security";
 
 // Common country codes with flags
 const countries = [
-  { code: 'SG', dialCode: '+62', flag: '🇸🇬', name: 'Singapore' },
-  { code: 'AU', dialCode: '+61', flag: '🇦🇺', name: 'Australia' },
-  { code: 'US', dialCode: '+1', flag: '🇺🇸', name: 'United States' },
-  { code: 'GB', dialCode: '+44', flag: '🇬🇧', name: 'United Kingdom' },
-  { code: 'IN', dialCode: '+91', flag: '🇮🇳', name: 'India' },
+  { code: "SG", dialCode: "+62", flag: "🇸🇬", name: "Singapore" },
+  { code: "AU", dialCode: "+61", flag: "🇦🇺", name: "Australia" },
+  { code: "US", dialCode: "+1", flag: "🇺🇸", name: "United States" },
+  { code: "GB", dialCode: "+44", flag: "🇬🇧", name: "United Kingdom" },
+  { code: "IN", dialCode: "+91", flag: "🇮🇳", name: "India" },
   // Add more countries as needed
 ];
 
 export default function PhoneAuth() {
   const [selectedCountry, setSelectedCountry] = useState(countries[0]);
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [showCountryList, setShowCountryList] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
-  const [error, setError] = useState('');
+  const [verificationCode, setVerificationCode] = useState("");
+  const [confirmationResult, setConfirmationResult] =
+    useState<ConfirmationResult | null>(null);
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthStore();
   const router = useRouter();
 
   useEffect(() => {
-    setupRecaptcha('recaptcha-container');
-    localStorage.removeItem('phoneAuthData');
+    setupRecaptcha("recaptcha-container");
+    localStorage.removeItem("phoneAuthData");
   }, []);
 
   useEffect(() => {
     return () => {
-      setPhoneNumber('');
-      setVerificationCode('');
+      setPhoneNumber("");
+      setVerificationCode("");
       setConfirmationResult(null);
-      setError('');
+      setError("");
     };
   }, []);
 
   const validatePhoneNumber = (number: string) => {
     const phoneRegex = /^\d{1,14}$/;
-    const sanitizedNumber = sanitizeInput(number.replace(/\D/g, ''));
+    const sanitizedNumber = sanitizeInput(number.replace(/\D/g, ""));
     return {
       isValid: phoneRegex.test(sanitizedNumber),
-      sanitized: selectedCountry.dialCode + sanitizedNumber
+      sanitized: selectedCountry.dialCode + sanitizedNumber,
     };
   };
 
   const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, '');
+    const value = e.target.value.replace(/\D/g, "");
     setPhoneNumber(value);
   };
 
-  const handleCountrySelect = (country: typeof countries[0]) => {
+  const handleCountrySelect = (country: (typeof countries)[0]) => {
     setSelectedCountry(country);
     setShowCountryList(false);
   };
@@ -70,51 +71,60 @@ export default function PhoneAuth() {
   const handleSendCode = async () => {
     const identifier = `phone-${phoneNumber}`; // Use phone number as rate limit identifier
     if (checkRateLimit(identifier)) {
-      const remaining = getRemainingAttempts(identifier);
-      setError(`Too many attempts. Please try again in ${Math.ceil(RATE_LIMIT_WINDOW / 60000)} minutes.`);
+      setError(
+        `Too many attempts. Please try again in ${Math.ceil(
+          RATE_LIMIT_WINDOW / 60000
+        )} minutes.`
+      );
       logSecurityEvent({
-        type: 'rate-limit',
-        status: 'failure',
-        details: 'Phone auth rate limit exceeded',
-        identifier
+        type: "rate-limit",
+        status: "failure",
+        details: "Phone auth rate limit exceeded",
+        identifier,
       });
       return;
     }
 
     const validation = validatePhoneNumber(phoneNumber);
     if (!validation.isValid) {
-      setError('Please enter a valid phone number in international format (e.g., +1234567890)');
+      setError(
+        "Please enter a valid phone number in international format (e.g., +1234567890)"
+      );
       return;
     }
 
     try {
       setIsLoading(true);
-      setError('');
-      
+      setError("");
+
       const confirmation = await signInWithPhoneNumber(
         auth,
         validation.sanitized,
         window.recaptchaVerifier
       );
-      
+
       setConfirmationResult(confirmation);
-      setError('Verification code sent successfully!');
-      
+      setError("Verification code sent successfully!");
+
       logSecurityEvent({
-        type: 'auth',
-        status: 'success',
-        details: 'Phone verification code sent',
-        identifier
+        type: "auth",
+        status: "success",
+        details: "Phone verification code sent",
+        identifier,
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logSecurityEvent({
-        type: 'auth',
-        status: 'failure',
-        details: `Failed to send verification code: ${err.message}`,
-        identifier
+        type: "auth",
+        status: "failure",
+        details: `Failed to send verification code: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`,
+        identifier,
       });
-      setError(err.message || 'Failed to send verification code');
-      console.error('Phone auth error:', err);
+      setError(
+        err instanceof Error ? err.message : "Failed to send verification code"
+      );
+      console.error("Phone auth error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -123,44 +133,48 @@ export default function PhoneAuth() {
   const handleVerifyCode = async () => {
     const identifier = `phone-${phoneNumber}`;
     if (!confirmationResult || !verificationCode) {
-      setError('Please enter the verification code');
+      setError("Please enter the verification code");
       return;
     }
 
     try {
       setIsLoading(true);
-      setError('');
+      setError("");
 
       const sanitizedCode = sanitizeInput(verificationCode);
       const result = await confirmationResult.confirm(sanitizedCode);
-      
+
       if (result.user) {
         resetRateLimit(identifier); // Reset rate limit on successful verification
-        
+
         logSecurityEvent({
-          type: 'auth',
-          status: 'success',
-          details: 'Phone authentication successful',
-          identifier: result.user.uid
+          type: "auth",
+          status: "success",
+          details: "Phone authentication successful",
+          identifier: result.user.uid,
         });
 
         // Clear all phone-related data before login
-        setPhoneNumber('');
-        setVerificationCode('');
+        setPhoneNumber("");
+        setVerificationCode("");
         setConfirmationResult(null);
 
         login(result.user.uid);
-        router.push('/ges-workbench/dashboard');
+        router.push("/ges-workbench/dashboard");
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       logSecurityEvent({
-        type: 'auth',
-        status: 'failure',
-        details: `Phone verification failed: ${err.message}`,
-        identifier
+        type: "auth",
+        status: "failure",
+        details: `Phone verification failed: ${
+          err instanceof Error ? err.message : "Unknown error"
+        }`,
+        identifier,
       });
-      setError(err.message || 'Invalid verification code');
-      console.error('Phone verification error:', err);
+      setError(
+        err instanceof Error ? err.message : "Invalid verification code"
+      );
+      console.error("Phone verification error:", err);
     } finally {
       setIsLoading(false);
     }
@@ -169,7 +183,10 @@ export default function PhoneAuth() {
   return (
     <div className="space-y-6">
       <div>
-        <label htmlFor="phone" className="block text-sm font-medium text-gray-600">
+        <label
+          htmlFor="phone"
+          className="block text-sm font-medium text-gray-600"
+        >
           Phone number
         </label>
         <div className="mt-1 flex">
@@ -210,14 +227,19 @@ export default function PhoneAuth() {
 
       {confirmationResult ? (
         <div>
-          <label htmlFor="code" className="block text-sm font-medium text-gray-600">
+          <label
+            htmlFor="code"
+            className="block text-sm font-medium text-gray-600"
+          >
             Verification Code
           </label>
           <input
             type="text"
             id="code"
             value={verificationCode}
-            onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+            onChange={(e) =>
+              setVerificationCode(e.target.value.replace(/\D/g, ""))
+            }
             className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             placeholder="Enter verification code"
             disabled={isLoading}
@@ -229,11 +251,13 @@ export default function PhoneAuth() {
       ) : null}
 
       {error && (
-        <div className={`p-3 rounded text-sm ${
-          error.includes('successfully') 
-            ? 'bg-green-100 text-green-700' 
-            : 'bg-red-100 text-red-700'
-        }`}>
+        <div
+          className={`p-3 rounded text-sm ${
+            error.includes("successfully")
+              ? "bg-green-100 text-green-700"
+              : "bg-red-100 text-red-700"
+          }`}
+        >
           {error}
         </div>
       )}
@@ -243,16 +267,14 @@ export default function PhoneAuth() {
         disabled={isLoading || (!confirmationResult && !phoneNumber)}
         className="w-full py-2 px-4 bg-[#6366F1] text-white rounded-md font-medium hover:bg-[#5558E3] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
       >
-        {isLoading ? (
-          "Processing..."
-        ) : confirmationResult ? (
-          "Verify Code"
-        ) : (
-          "Send OTP"
-        )}
+        {isLoading
+          ? "Processing..."
+          : confirmationResult
+          ? "Verify Code"
+          : "Send OTP"}
       </button>
 
       <div id="recaptcha-container" className="mt-4"></div>
     </div>
   );
-} 
+}

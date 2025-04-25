@@ -1,9 +1,9 @@
 declare module 'react-csv' {
-    import { ComponentType, ReactNode } from 'react';
+    import type { ComponentType, ReactNode } from 'react';
     
     export interface CSVProps {
-        data: any[];
-        headers?: any[];
+        data: Record<string, unknown>[];
+        headers?: { label: string; key: string }[];
         filename?: string;
         separator?: string;
         target?: string;

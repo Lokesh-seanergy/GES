@@ -6,7 +6,6 @@ import { useState } from "react";
 import {
   LayoutDashboard,
   Ticket,
-  Image as ImageIcon,
   Users,
   BarChart,
   Settings,
@@ -25,10 +24,19 @@ interface MenuItem {
 
 export default function Sidemenu() {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  // Sidebar is expanded by default on dashboard, collapsed otherwise
+  const isDashboard = pathname === "/dashboard";
+  const [isCollapsed, setIsCollapsed] = useState(!isDashboard);
+  const [isHovered, setIsHovered] = useState(false);
 
-  const toggleSidebar = () => {
-    setIsCollapsed(!isCollapsed);
+  // Sidebar is expanded if hovered or always on dashboard
+  const expanded = isDashboard || isHovered;
+
+  // Collapse sidebar when menu item is clicked (except dashboard)
+  const handleMenuClick = (href: string) => {
+    if (href !== "/dashboard") {
+      setIsCollapsed(true); // This line is now redundant but kept for future click-collapse if needed
+    }
   };
 
   const menuItems: MenuItem[] = [
@@ -50,16 +58,16 @@ export default function Sidemenu() {
       icon: <ShoppingCart size={20} />,
       href: "/orders",
     },
-    {
-      id: "exhibits",
-      label: "EXHIBITS",
-      icon: <ImageIcon size={20} />,
-      href: "/exhibits",
-      hasChildren: true,
-    },
+    // {
+    //   id: "exhibits",
+    //   label: "EXHIBITS",
+    //   icon: <ImageIcon size={20} />,
+    //   href: "/exhibits",
+    //   hasChildren: true,
+    // },
     {
       id: "customers",
-      label: "CUSTOMERS",
+      label: "EXHIBITORS",
       icon: <Users size={20} />,
       href: "/customers",
       hasChildren: true,
@@ -81,92 +89,45 @@ export default function Sidemenu() {
 
   return (
     <aside
-      className={`h-screen ${
-        isCollapsed ? "w-16" : "w-56"
-      } text-white flex flex-col transition-all duration-300 overflow-hidden`}
+      className={`h-screen ${expanded ? "w-56" : "w-16"} text-white flex flex-col transition-all duration-300 overflow-hidden`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{ cursor: !expanded && !isDashboard ? 'pointer' : 'default' }}
     >
-      {/* Logo section with light blue background */}
-      <div
-        className={`h-16 flex items-center bg-[#88c5cf] transition-all duration-300 ${
-          isCollapsed ? "justify-center" : "justify-between px-4"
-        }`}
-      >
-        <div
-          className={`flex items-center h-full overflow-hidden ${
-            isCollapsed ? "w-full justify-center" : ""
-          }`}
-        >
-          <div className="flex items-center justify-center">
-            <Image
-              src="/ges-workbench/ges_logo.png"
-              alt="GES Logo"
-              width={40}
-              height={40}
-              className="object-contain"
-              priority
-            />
-          </div>
-          <div
-            className={`ml-2 whitespace-nowrap transition-all duration-300 ${
-              isCollapsed
-                ? "opacity-0 w-0 overflow-hidden"
-                : "opacity-100 w-auto"
-            }`}
-          >
-            <span className="text-[#07334b] font-bold text-xl">GES</span>
-          </div>
-        </div>
-        <button
-          className={`text-black transition-all duration-300 ${
-            isCollapsed
-              ? "opacity-0 w-0 overflow-hidden absolute"
-              : "opacity-100 w-auto relative"
-          }`}
-          onClick={toggleSidebar}
-          aria-label="Collapse menu"
-        >
-          <Menu size={24} />
-        </button>
-        {isCollapsed && (
-          <button
-            className="absolute left-0 top-0 w-16 h-16 opacity-0"
-            onClick={toggleSidebar}
-            aria-label="Expand menu"
-          />
-        )}
+      {/* Logo section */}
+      <div className={`relative bg-[#88c5cf] w-full h-16 p-0 m-0 flex items-center justify-center overflow-hidden transition-all duration-300`}> 
+        <img
+          src={expanded ? "/ges-workbench/ges_logo.png" : "/ges-workbench/geslogo.png"}
+          alt="GES Logo"
+          className={expanded ? "w-full h-full object-cover" : "h-10 w-10 rounded-full object-cover border-2 border-white shadow"}
+          style={{ display: 'block', transition: 'all 0.3s' }}
+        />
       </div>
-
       {/* Menu items with dark blue background */}
       <nav className="bg-[#07334b] flex-grow">
         <ul className="w-full">
           {menuItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
-
             return (
               <li
                 key={item.id}
-                className={`border-b border-[#07334b] ${
-                  isActive ? "bg-[#0a4763]" : ""
-                }`}
+                className={`border-b border-[#07334b] ${isActive ? "bg-[#0a4763]" : ""}`}
               >
                 <Link
                   href={item.href}
-                  className={`flex items-center h-14 ${
-                    isCollapsed ? "justify-center" : "px-6"
-                  } text-white hover:bg-[#0a4763] transition-colors`}
-                  title={isCollapsed ? item.label : ""}
+                  className={`flex items-center h-14 ${expanded ? "px-6" : "justify-center"} text-white hover:bg-[#0a4763] transition-colors`}
+                  title={!expanded ? item.label : ""}
+                  onClick={() => handleMenuClick(item.href)}
                 >
                   <span className="flex items-center justify-center min-w-[24px]">
                     {item.icon}
                   </span>
                   <span
-                    className={`ml-3 font-medium text-sm transition-opacity duration-300 whitespace-nowrap ${
-                      isCollapsed ? "opacity-0 w-0" : "opacity-100 w-auto"
-                    }`}
+                    className={`ml-3 font-medium text-sm transition-opacity duration-300 whitespace-nowrap ${!expanded ? "opacity-0 w-0" : "opacity-100 w-auto"}`}
                   >
                     {item.label}
                   </span>
-                  {item.hasChildren && !isCollapsed && (
+                  {item.hasChildren && expanded && (
                     <ChevronRight className="w-4 h-4 ml-auto" />
                   )}
                 </Link>

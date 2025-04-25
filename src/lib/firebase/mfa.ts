@@ -4,7 +4,7 @@ import {
   PhoneAuthProvider, 
   PhoneMultiFactorGenerator 
 } from './config';
-import { User } from 'firebase/auth';
+import type { User } from 'firebase/auth';
 
 export const isMFAEnabled = async (user: User) => {
   const enrolledFactors = await multiFactor(user).enrolledFactors;

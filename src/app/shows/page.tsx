@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import MainLayout from "@/components/mainlayout/MainLayout";
-
+import { useRouter } from "next/navigation";
 import type { BreadcrumbItem } from "@/components/mainlayout/Breadcrumb";
 
 import {
@@ -17,8 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, ChevronLeft, ArrowUp } from "lucide-react";
-import { ArrowUpDown, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, ArrowUp, ArrowUpDown, ArrowDown, ChevronRight } from "lucide-react";
 import { create } from "zustand";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -45,18 +43,28 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import MainLayout from "@/components/mainlayout/MainLayout";
+import { mockShows, mockProjectData, mockFacilityData, mockShowDetails, ShowKeyDate, ShowMeasurements, ShowOptions, ShowComments } from "@/lib/mockData";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface ShowData {
-  id: string;
-  name: string;
+  showId: string;
+  showName: string;
   occrId: string;
   occrType: string;
   marketType: string;
-  project: string;
+  projectNumber: string;
   cityOrg: string;
   yrmo: string;
+  project?: string; // Making project optional for backward compatibility
+  name?: string; // Making name optional for backward compatibility
 }
 
 interface ProjectData {
@@ -84,7 +92,7 @@ interface FilterState {
   occrId: string;
   occrType: string;
   marketType: string;
-  project: string;
+  projectNumber: string;
   cityOrg: string;
   yrmoStart: string;
   yrmoEnd: string;
@@ -110,15 +118,7 @@ const MARKET_TYPES = [
   "Education",
 ];
 
-type SortField =
-  | "id"
-  | "name"
-  | "occrId"
-  | "occrType"
-  | "marketType"
-  | "project"
-  | "cityOrg"
-  | "yrmo";
+type SortField = 'showId' | 'showName' | 'occrId' | 'occrType' | 'marketType' | 'projectNumber' | 'cityOrg' | 'yrmo';
 type SortDirection = "asc" | "desc";
 
 // Basic store for search
@@ -144,89 +144,12 @@ function useDebounce<T>(value: T, delay: number = 500): T {
   return debouncedValue;
 }
 
-// Mock data
-const mockShows: ShowData[] = [
-  {
-    id: "AWS23",
-    name: "AWS re:Invent 2024",
-    occrId: "AWS23-LV",
-    occrType: "Annual Conference",
-    marketType: "Cloud & Enterprise",
-    project: "P2024-001",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-11",
-  },
-  {
-    id: "CES24",
-    name: "CES 2024",
-    occrId: "CES24-LV",
-    occrType: "Trade Show",
-    marketType: "Consumer Electronics",
-    project: "P2024-005",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-01",
-  },
-  {
-    id: "GGL24",
-    name: "Google I/O 2024",
-    occrId: "IO24-SF",
-    occrType: "Developer Conference",
-    marketType: "Technology",
-    project: "P2024-003",
-    cityOrg: "San Francisco, CA",
-    yrmo: "2024-05",
-  },
-  {
-    id: "MSFT24",
-    name: "Microsoft Build 2024",
-    occrId: "BUILD24-SEA",
-    occrType: "Developer Conference",
-    marketType: "Software Development",
-    project: "P2024-002",
-    cityOrg: "Seattle, WA",
-    yrmo: "2024-05",
-  },
-  {
-    id: "WWDC24",
-    name: "Apple WWDC 2024",
-    occrId: "WWDC24-CUP",
-    occrType: "Developer Conference",
-    marketType: "Software & Hardware",
-    project: "P2024-004",
-    cityOrg: "Cupertino, CA",
-    yrmo: "2024-06",
-  },
-];
-
-const mockProjectData: ProjectData = {
-  projectName: "Trade Show Setup 2024",
-  projectNumber: "P2024-001",
-  projectType: "Exhibition",
-  status: "Active",
-  productionCity: "Las Vegas",
-  facilityId: "LV001",
-};
-
-const mockFacilityData: FacilityData[] = [
-  {
-    facilityId: "F001",
-    facilityName: "Main Exhibition Hall",
-    hall: "Hall A",
-    location1: "North Wing",
-    location2: "Level 1",
-    areaCode: "702",
-    phone: "555-0101",
-  },
-  {
-    facilityId: "F002",
-    facilityName: "Conference Center",
-    hall: "Hall B",
-    location1: "South Wing",
-    location2: "Level 2",
-    areaCode: "702",
-    phone: "555-0102",
-  },
-];
+// Add pagination interface
+interface PaginationState {
+  currentPage: number;
+  itemsPerPage: number;
+  totalItems: number;
+}
 
 // Main component
 export default function ShowsPage() {
@@ -245,7 +168,7 @@ export default function ShowsPage() {
     occrId: "",
     occrType: "",
     marketType: "",
-    project: "",
+    projectNumber: "",
     cityOrg: "",
     yrmoStart: "",
     yrmoEnd: "",
@@ -253,10 +176,8 @@ export default function ShowsPage() {
   const [activeFilters, setActiveFilters] = useState<Partial<FilterState>>({});
 
   // Sort state
-  const [sortField, setSortField] = useState<SortField>("id");
-
+  const [sortField, setSortField] = useState<SortField>("showId");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-
 
   // Update search store with debounced value
   useEffect(() => {
@@ -273,20 +194,29 @@ export default function ShowsPage() {
   };
 
   // Filtered and sorted shows
-  const [shows, setShows] = useState<ShowData[]>(mockShows);
+  const [shows, setShows] = useState<ShowData[]>(mockShows.map(show => ({
+    showId: show.showId,
+    showName: show.showName,
+    occrId: show.occrId,
+    occrType: show.occrType,
+    marketType: show.marketType,
+    projectNumber: show.projectNumber,
+    cityOrg: show.cityOrg,
+    yrmo: show.yrmo
+  })));
   const [selectedShow, setSelectedShow] = useState<ShowData | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isNewShowOpen, setIsNewShowOpen] = useState(false);
   const [isNewOccrOpen, setIsNewOccrOpen] = useState(false);
-  const [newShow, setNewShow] = useState({
-    id: "",
-    name: "",
-    occrId: "",
-    occrType: "",
-    marketType: "",
-    project: "",
-    cityOrg: "",
-    yrmo: "",
+  const [newShow, setNewShow] = useState<ShowData>({
+    showId: '',
+    showName: '',
+    occrId: '',
+    occrType: '',
+    marketType: '',
+    projectNumber: '',
+    cityOrg: '',
+    yrmo: ''
   });
 
   const [newOccr, setNewOccr] = useState({
@@ -301,18 +231,22 @@ export default function ShowsPage() {
     facilityId: "",
   });
 
+  const [showDialog, setShowDialog] = useState(false);
+
+  const [selectedShowDetails, setSelectedShowDetails] = useState<(typeof mockShowDetails)[0] | null>(null);
+
   const filteredAndSortedShows = useMemo(() => {
     return [...shows]
       .filter((show) => {
         // Search filter
         if (debouncedSearch) {
           const searchFields = [
-            show.id,
-            show.name,
+            show.showId,
+            show.showName,
             show.occrId,
             show.occrType,
             show.marketType,
-            show.project,
+            show.projectNumber,
             show.cityOrg,
             show.yrmo,
           ].map((field) => field.toLowerCase());
@@ -330,13 +264,13 @@ export default function ShowsPage() {
         // Active filters
         if (
           activeFilters.showId &&
-          !show.id.toLowerCase().includes(activeFilters.showId.toLowerCase())
+          !show.showId.toLowerCase().includes(activeFilters.showId.toLowerCase())
         ) {
           return false;
         }
         if (
           activeFilters.showName &&
-          !show.name
+          !show.showName
             .toLowerCase()
             .includes(activeFilters.showName.toLowerCase())
         ) {
@@ -363,10 +297,10 @@ export default function ShowsPage() {
           return false;
         }
         if (
-          activeFilters.project &&
-          !show.project
+          activeFilters.projectNumber &&
+          !show.projectNumber
             .toLowerCase()
-            .includes(activeFilters.project.toLowerCase())
+            .includes(activeFilters.projectNumber.toLowerCase())
         ) {
           return false;
         }
@@ -398,7 +332,6 @@ export default function ShowsPage() {
   }, [debouncedSearch, sortField, sortDirection, shows, activeFilters]);
 
   // Sort handlers
-
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -441,75 +374,46 @@ export default function ShowsPage() {
       setNewOccr((prev) => ({ ...prev, [field]: e.target.value }));
     };
 
-  const createShow = () => {
-    setShows((prev) => [
-      ...prev,
-      {
-        id: newShow.id,
-        name: newShow.name,
-        occrId: newShow.occrId,
-        occrType: newShow.occrType,
-        marketType: newShow.marketType,
-        project: newShow.project,
-        cityOrg: newShow.cityOrg,
-        yrmo: newShow.yrmo,
-      },
-    ]);
+  const handleAddShow = () => {
+    // Add the new show to the shows array
+    setShows((prevShows) => [...prevShows, newShow]);
+    // Reset the newShow state
     setNewShow({
-      id: "",
-      name: "",
+      showId: "",
+      showName: "",
       occrId: "",
       occrType: "",
       marketType: "",
-      project: "",
+      projectNumber: "",
       cityOrg: "",
       yrmo: "",
     });
+    // Close the dialog
+    setShowDialog(false);
     setIsNewShowOpen(false);
-  };
-
-
-  const createOccr = () => {
-    // Here you would typically update both the shows and occurrences
-    // For now, we'll just close the form
-    setNewOccr({
-      showId: "",
-      occrId: "",
-      occrType: "",
-      description: "",
-      open: "",
-      close: "",
-      timezone: "",
-      projectNumber: "",
-      facilityId: "",
-
-    });
-    setIsNewOccrOpen(false);
   };
 
   // Handle show selection for editing
   const handleShowSelect = (show: ShowData) => {
     setSelectedShow(show);
+    const details = mockShowDetails.find(details => details.showId === show.showId);
+    setSelectedShowDetails(details || null);
   };
 
   // Delete show
-  const handleDeleteShow = (show: ShowData) => {
-    setSelectedShow(show);
-
-    setShowDeleteDialog(true);
-
+  const handleDeleteShow = (showId: string) => {
+    setShows(prev => prev.filter(show => show.showId !== showId));
   };
 
   const confirmDelete = () => {
     if (!selectedShow) return;
 
     setShows((prevShows) =>
-      prevShows.filter((show) => show.id !== selectedShow.id)
+      prevShows.filter((show) => show.showId !== selectedShow.showId)
     );
     setShowDeleteDialog(false);
     setSelectedShow(null);
   };
-
 
   const [activeTab, setActiveTab] = useState("projectInfo");
 
@@ -532,7 +436,6 @@ export default function ShowsPage() {
       const month = cleaned.slice(4, 6);
       const validMonth = validateMonth(month);
       formattedValue = month ? `${year}-${validMonth}` : year;
-
     }
 
     // Format as a range if there's enough digits
@@ -591,7 +494,7 @@ export default function ShowsPage() {
       occrId: "",
       occrType: "",
       marketType: "",
-      project: "",
+      projectNumber: "",
       cityOrg: "",
       yrmoStart: "",
       yrmoEnd: "",
@@ -647,20 +550,32 @@ export default function ShowsPage() {
     }
   };
 
-  // Add pagination constants
-  const ITEMS_PER_PAGE = 10;
-
   // Add pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationState>({
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 150
+  });
 
-  // Calculate paginated shows
+  // Update filtered and sorted shows with pagination
   const paginatedShows = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
+    const endIndex = startIndex + pagination.itemsPerPage;
     return filteredAndSortedShows.slice(startIndex, endIndex);
-  }, [filteredAndSortedShows, currentPage]);
+  }, [filteredAndSortedShows, pagination.currentPage, pagination.itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredAndSortedShows.length / ITEMS_PER_PAGE);
+  // Add pagination handlers
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setPagination(prev => ({
+      ...prev,
+      itemsPerPage: parseInt(value),
+      currentPage: 1 // Reset to first page when changing items per page
+    }));
+  };
 
   // Back to Top button visibility state and functionality
   const [showBackToTop, setShowBackToTop] = useState(false);
@@ -690,7 +605,6 @@ export default function ShowsPage() {
             scrollContainer.removeEventListener("scroll", handleScroll);
           }
         };
-
       }
     }, 0);
 
@@ -720,16 +634,20 @@ export default function ShowsPage() {
   useEffect(() => {
     if (selectedShow) {
       const newBreadcrumbs: BreadcrumbItem[] = [
-        { label: "Shows", href: "#", onClick: () => {
-          setSelectedShow(null);
-          setShowProjectFacilities(false);
-        }},
+        {
+          label: "Shows",
+          href: "#",
+          onClick: () => {
+            setSelectedShow(null);
+            setShowProjectFacilities(false);
+          },
+        },
       ];
 
       // Add the selected show
-      newBreadcrumbs.push({ 
-        label: selectedShow.name, 
-        href: "#" 
+      newBreadcrumbs.push({
+        label: selectedShow.showName,
+        href: "#",
       });
 
       // Add project facilities if needed
@@ -737,15 +655,13 @@ export default function ShowsPage() {
         newBreadcrumbs.push({
           label: "Project Facilities",
           href: "#",
-          onClick: () => setShowProjectFacilities(false)
+          onClick: () => setShowProjectFacilities(false),
         });
       }
 
       setBreadcrumbs(newBreadcrumbs);
     } else {
-      setBreadcrumbs([
-        { label: "Shows", href: "#" },
-      ]);
+      setBreadcrumbs([{ label: "Shows", href: "#" }]);
     }
   }, [selectedShow, showProjectFacilities]);
 
@@ -758,10 +674,18 @@ export default function ShowsPage() {
     restDelta: 0.001, // More precise stopping point
   };
 
+  const handleCustomerButtonClick = () => {
+    if (selectedShowDetails && selectedShow) {
+      router.push(`/customers?showId=${selectedShowDetails.showId}&showName=${encodeURIComponent(selectedShow.showName)}&occrId=${encodeURIComponent(selectedShow.occrId)}`);
+    }
+  };
+
+  const handleCloseShowDialog = () => {
+    setIsNewShowOpen(false);
+  };
+
   return (
-    <MainLayout
-      breadcrumbs={breadcrumbs}
-    >
+    <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
         {/* Main content container with improved transitions */}
         <div className="flex h-full relative transition-all duration-500 ease-out">
@@ -805,13 +729,13 @@ export default function ShowsPage() {
                     <div>
                       <Label className="text-xs text-gray-500">Show ID</Label>
                       <div className="text-sm font-medium mt-1">
-                        {(selectedShow as ShowData).id}
+                        {selectedShow.showId}
                       </div>
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">Occr ID</Label>
                       <div className="text-sm font-medium mt-1">
-                        {(selectedShow as ShowData).occrId}
+                        {selectedShow.occrId}
                       </div>
                     </div>
                   </div>
@@ -851,7 +775,6 @@ export default function ShowsPage() {
                         "text-white"
                       )}
                       onClick={toggleNewShow}
-
                     >
                       <Plus
                         className={`h-4 w-4 transition-transform ${
@@ -969,9 +892,9 @@ export default function ShowsPage() {
                           Project #
                         </Label>
                         <Input
-                          value={filters.project}
+                          value={filters.projectNumber}
                           onChange={(e) =>
-                            handleFilterChange("project", e.target.value)
+                            handleFilterChange("projectNumber", e.target.value)
                           }
                           placeholder="Filter by Project #"
                           className="h-9"
@@ -1019,7 +942,6 @@ export default function ShowsPage() {
                       >
                         Apply Filters
                       </Button>
-
                     </div>
                   </motion.div>
 
@@ -1063,8 +985,8 @@ export default function ShowsPage() {
                             <Input
                               placeholder="Enter showId"
                               className="h-9"
-                              value={newShow.id}
-                              onChange={handleNewShowChange("id")}
+                              value={newShow.showId}
+                              onChange={handleNewShowChange("showId")}
                             />
                           </div>
                           <div className="space-y-2">
@@ -1074,8 +996,8 @@ export default function ShowsPage() {
                             <Input
                               placeholder="Enter showName"
                               className="h-9"
-                              value={newShow.name}
-                              onChange={handleNewShowChange("name")}
+                              value={newShow.showName}
+                              onChange={handleNewShowChange("showName")}
                             />
                           </div>
                           <div className="space-y-2">
@@ -1118,8 +1040,8 @@ export default function ShowsPage() {
                             <Input
                               placeholder="Enter projectNumber"
                               className="h-9"
-                              value={newShow.project}
-                              onChange={handleNewShowChange("project")}
+                              value={newShow.projectNumber}
+                              onChange={handleNewShowChange("projectNumber")}
                             />
                           </div>
                           <div className="space-y-2">
@@ -1151,7 +1073,7 @@ export default function ShowsPage() {
                           </Button>
                           <Button
                             className="bg-blue-600 text-white hover:bg-blue-700"
-                            onClick={createShow}
+                            onClick={handleAddShow}
                           >
                             Create Show
                           </Button>
@@ -1269,7 +1191,7 @@ export default function ShowsPage() {
                           </Button>
                           <Button
                             className="bg-blue-600 text-white hover:bg-blue-700"
-                            onClick={createOccr}
+                            onClick={handleAddShow}
                           >
                             Create Occurrence
                           </Button>
@@ -1277,7 +1199,6 @@ export default function ShowsPage() {
                       </CardContent>
                     </Card>
                   )}
-
 
                   {/* Shows Table */}
                   <Card
@@ -1316,26 +1237,68 @@ export default function ShowsPage() {
                     <CardContent
                       className={cn("px-0", selectedShow ? "py-2" : "py-3")}
                     >
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-500">Show</span>
+                          <Select
+                            value={pagination.itemsPerPage.toString()}
+                            onValueChange={handleItemsPerPageChange}
+                          >
+                            <SelectTrigger className="h-8 w-[70px]">
+                              <SelectValue placeholder={pagination.itemsPerPage} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="10">10</SelectItem>
+                              <SelectItem value="20">20</SelectItem>
+                              <SelectItem value="50">50</SelectItem>
+                              <SelectItem value="100">100</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <span className="text-sm text-gray-500">entries</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(pagination.currentPage - 1)}
+                            disabled={pagination.currentPage === 1}
+                          >
+                            <ChevronLeft className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm">
+                            Page {pagination.currentPage} of {Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
+                          </span>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handlePageChange(pagination.currentPage + 1)}
+                            disabled={pagination.currentPage === Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
+                          >
+                            <ChevronRight className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
                       <div className="overflow-x-auto">
                         <Table>
-                          <TableHeader className="bg-gray-50 sticky top-0">
+                          <TableHeader className="bg-[#E6F0FA] sticky top-0">
                             <TableRow className="border-b border-gray-200">
                               <TableHead
                                 className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                onClick={() => handleSort("id")}
+                                onClick={() => handleSort("showId")}
                               >
                                 <div className="flex items-center justify-center gap-2">
-                                  Show ID {getSortIcon("id")}
+                                  Show ID {getSortIcon("showId")}
                                 </div>
                               </TableHead>
                               {!selectedShow && (
                                 <>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                    onClick={() => handleSort("name")}
+                                    onClick={() => handleSort("showName")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
-                                      Show Name {getSortIcon("name")}
+                                      Show Name {getSortIcon("showName")}
                                     </div>
                                   </TableHead>
                                 </>
@@ -1368,10 +1331,10 @@ export default function ShowsPage() {
                                   </TableHead>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                    onClick={() => handleSort("project")}
+                                    onClick={() => handleSort("projectNumber")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
-                                      Project# {getSortIcon("project")}
+                                      Project# {getSortIcon("projectNumber")}
                                     </div>
                                   </TableHead>
                                   <TableHead
@@ -1402,20 +1365,20 @@ export default function ShowsPage() {
                           <TableBody>
                             {paginatedShows.map((show) => (
                               <TableRow
-                                key={show.id}
+                                key={show.showId}
                                 className={cn(
                                   "cursor-pointer hover:bg-gray-50",
-                                  (selectedShow as unknown as ShowData)?.id ===
-                                    show.id && "bg-blue-50 hover:bg-blue-50"
+                                  (selectedShow as unknown as ShowData)?.showId ===
+                                    show.showId && "bg-blue-50 hover:bg-blue-50"
                                 )}
                                 onClick={() => handleShowSelect(show)}
                               >
                                 <TableCell className="text-center py-2 px-4">
-                                  {show.id}
+                                  {show.showId}
                                 </TableCell>
                                 {!selectedShow && (
                                   <TableCell className="text-center py-2 px-4">
-                                    {show.name}
+                                    {show.showName}
                                   </TableCell>
                                 )}
                                 <TableCell className="text-center py-2 px-4">
@@ -1424,18 +1387,23 @@ export default function ShowsPage() {
                                 {!selectedShow && (
                                   <>
                                     <TableCell className="text-center py-2 px-4">
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-[#0A0C10] text-white hover:bg-[#0A0C10]/90 px-2 py-0.5 text-xs"
-                                      >
-                                        {show.occrType}
-                                      </Badge>
+                                      {(() => {
+                                        let badgeColor = 'bg-slate-200 text-slate-800';
+                                        if (show.occrType.toLowerCase().includes('upcoming')) badgeColor = 'bg-yellow-100 text-yellow-800';
+                                        else if (show.occrType.toLowerCase().includes('ongoing')) badgeColor = 'bg-green-100 text-green-800';
+                                        else if (show.occrType.toLowerCase().includes('conference')) badgeColor = 'bg-blue-100 text-blue-800';
+                                        else if (show.occrType.toLowerCase().includes('exhibition')) badgeColor = 'bg-purple-100 text-purple-800';
+                                        else if (show.occrType.toLowerCase().includes('workshop')) badgeColor = 'bg-pink-100 text-pink-800';
+                                        return (
+                                          <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeColor}`}>{show.occrType}</span>
+                                        );
+                                      })()}
                                     </TableCell>
                                     <TableCell className="text-center py-2 px-4">
                                       {show.marketType}
                                     </TableCell>
                                     <TableCell className="text-center py-2 px-4">
-                                      {show.project}
+                                      {show.projectNumber}
                                     </TableCell>
                                     <TableCell className="text-center py-2 px-4">
                                       {show.cityOrg}
@@ -1461,7 +1429,7 @@ export default function ShowsPage() {
                                           size="sm"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDeleteShow(show);
+                                            handleDeleteShow(show.showId);
                                           }}
                                           className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
@@ -1469,7 +1437,6 @@ export default function ShowsPage() {
                                         </Button>
                                       </div>
                                     </TableCell>
-
                                   </>
                                 )}
                               </TableRow>
@@ -1477,64 +1444,6 @@ export default function ShowsPage() {
                           </TableBody>
                         </Table>
                       </div>
-
-                      {/* Pagination */}
-                      {!selectedShow && filteredAndSortedShows.length > 0 && (
-                        <div className="flex justify-between items-center px-6 py-4 text-sm border-t">
-                          <div>
-                            SHOWING{" "}
-                            {Math.min(
-                              currentPage * ITEMS_PER_PAGE,
-                              filteredAndSortedShows.length
-                            )}{" "}
-                            OF {filteredAndSortedShows.length} RESULTS
-                          </div>
-                          <div className="flex space-x-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setCurrentPage((prev) => Math.max(1, prev - 1))
-                              }
-                              disabled={currentPage === 1}
-                              className="w-8 h-8 p-0"
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            {[...Array(totalPages)].map((_, i) => (
-                              <Button
-                                key={i + 1}
-                                variant={
-                                  currentPage === i + 1 ? "default" : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setCurrentPage(i + 1)}
-                                className={cn(
-                                  "w-8 h-8 p-0",
-                                  currentPage === i + 1 &&
-                                    "bg-blue-500 text-white hover:bg-blue-600"
-                                )}
-                              >
-                                {i + 1}
-                              </Button>
-                            ))}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setCurrentPage((prev) =>
-                                  Math.min(totalPages, prev + 1)
-                                )
-                              }
-                              disabled={currentPage === totalPages}
-                              className="w-8 h-8 p-0"
-                            >
-                              <ChevronLeft className="h-4 w-4 rotate-180" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
                     </CardContent>
                   </Card>
                 </div>
@@ -1580,7 +1489,7 @@ export default function ShowsPage() {
                             Show Name
                           </Label>
                           <div className="text-sm font-medium mt-1">
-                            {selectedShow.name}
+                            {selectedShow.showName}
                           </div>
                         </div>
                         <div>
@@ -1594,7 +1503,7 @@ export default function ShowsPage() {
                             Project Number
                           </Label>
                           <div className="text-sm font-medium mt-1">
-                            {selectedShow.project}
+                            {selectedShow.projectNumber}
                           </div>
                         </div>
                       </div>
@@ -1617,12 +1526,11 @@ export default function ShowsPage() {
                             </Button>
                             <span className="mx-2">•</span>
                             <span className="font-medium text-gray-900">
-                              {selectedShow.name}
+                              {selectedShow.showName}
                             </span>
                             <span className="mx-2">•</span>
-                            <span>{selectedShow.id}</span>
+                            <span>{selectedShow.showId}</span>
                           </div>
-
                         </div>
 
                         {/* Show Occurrences Content */}
@@ -1642,7 +1550,7 @@ export default function ShowsPage() {
                                       Show Name
                                     </Label>
                                     <Input
-                                      value={selectedShow.name}
+                                      value={selectedShow.showName}
                                       readOnly
                                       className="h-9 px-3 w-full md:w-3/4"
                                     />
@@ -1652,7 +1560,7 @@ export default function ShowsPage() {
                                       Show ID
                                     </Label>
                                     <Input
-                                      value={selectedShow.id}
+                                      value={selectedShow.showId}
                                       readOnly
                                       className="h-9 px-3 w-full md:w-3/4"
                                     />
@@ -1693,14 +1601,16 @@ export default function ShowsPage() {
                                         placeholder="Enter timezone"
                                         className="h-9 px-3 w-full md:w-3/4"
                                       />
-                                      <Button className="h-9 bg-blue-600 text-white hover:bg-blue-700">
+                                      <Button
+                                        className="h-9 bg-blue-600 text-white hover:bg-blue-700"
+                                        onClick={handleCustomerButtonClick}
+                                      >
                                         Customers
                                       </Button>
                                     </div>
                                   </div>
                                 </div>
                               </div>
-
                             </CardContent>
                           </Card>
 
@@ -1743,55 +1653,33 @@ export default function ShowsPage() {
                                       <Table>
                                         <TableHeader className="bg-white">
                                           <TableRow className="border-b border-gray-200">
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Name
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Number
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Type
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Status
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Production City
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Facility ID
-                                            </TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Project Name</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Project Number</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Project Type</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Status</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Production City</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Facility ID</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                          <TableRow className="hover:bg-white/50">
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.projectName}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.projectNumber}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.projectType}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.status}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.productionCity}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.facilityId}
-                                            </TableCell>
-                                          </TableRow>
+                                          {mockProjectData && mockProjectData.map((project, index) => (
+                                            project.projectNumber === selectedShow?.projectNumber && (
+                                              <TableRow key={index} className="hover:bg-white/50">
+                                                <TableCell className="py-2 text-sm">{project.projectName}</TableCell>
+                                                <TableCell className="py-2 text-sm">{project.projectNumber}</TableCell>
+                                                <TableCell className="py-2 text-sm">{project.projectType}</TableCell>
+                                                <TableCell className="py-2 text-sm">{project.status}</TableCell>
+                                                <TableCell className="py-2 text-sm">{project.productionCity}</TableCell>
+                                                <TableCell className="py-2 text-sm">{project.facilityId}</TableCell>
+                                              </TableRow>
+                                            )
+                                          ))}
                                         </TableBody>
                                       </Table>
                                     </div>
                                     <div className="flex justify-end gap-2">
                                       <Button
-                                        onClick={() =>
-                                          setShowProjectFacilities(true)
-                                        }
+                                        onClick={() => setShowProjectFacilities(true)}
                                         className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4"
                                       >
                                         Project Facilities
@@ -1810,60 +1698,31 @@ export default function ShowsPage() {
                                     <div className="bg-gray-50 rounded-md p-4">
                                       <div className="flex items-center gap-4 mb-4">
                                         <Label className="text-sm text-gray-500">
-                                          Show Dates for
+                                          Show Dates
                                         </Label>
-                                        <Select>
-                                          <SelectTrigger className="w-[180px] h-9">
-                                            <SelectValue placeholder="Select dates" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="option1">
-                                              Option 1
-                                            </SelectItem>
-                                            <SelectItem value="option2">
-                                              Option 2
-                                            </SelectItem>
-                                          </SelectContent>
-                                        </Select>
                                       </div>
                                       <Table>
                                         <TableHeader className="bg-white">
                                           <TableRow className="border-b border-gray-200">
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Date Type
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Number
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Facility ID
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Date/time
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Notes
-                                            </TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Date Type</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Project Number</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Facility ID</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Date/time</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700">Notes</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                          <TableRow>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                          </TableRow>
+                                          {selectedShowDetails?.keyDates.map((date, index) => (
+                                            <TableRow key={index}>
+                                              <TableCell className="py-2 text-sm">{date.dateType}</TableCell>
+                                              <TableCell className="py-2 text-sm">{date.projectNumber}</TableCell>
+                                              <TableCell className="py-2 text-sm">{date.facilityId}</TableCell>
+                                              <TableCell className="py-2 text-sm">
+                                                {new Date(date.dateTime).toLocaleString()}
+                                              </TableCell>
+                                              <TableCell className="py-2 text-sm">{date.notes}</TableCell>
+                                            </TableRow>
+                                          ))}
                                         </TableBody>
                                       </Table>
                                     </div>
@@ -1879,52 +1738,62 @@ export default function ShowsPage() {
                                       <div className="space-y-4">
                                         <Card className="shadow-sm">
                                           <CardHeader className="py-3 px-4">
-                                            <CardTitle className="text-sm font-semibold">
-                                              Measurements
-                                            </CardTitle>
+                                            <CardTitle className="text-sm font-semibold">Measurements</CardTitle>
                                           </CardHeader>
                                           <CardContent className="p-4">
                                             <div className="space-y-4">
                                               <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Total Sq Ft (Projected)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Total Sq Ft (Projected)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.totalSqFtProjected} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Total Sq Ft (Actual)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
-                                                </div>
-                                              </div>
-                                              <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Freight (Projected)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Freight (Actual)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Total Sq Ft (Actual)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.totalSqFtActual} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                               </div>
                                               <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Graphics (Projected)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Freight (Projected)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.freightProjected} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Graphics (Actual)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Freight (Actual)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.freightActual} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
+                                                </div>
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                  <Label className="text-sm text-gray-500">Graphics (Projected)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.graphicsProjected} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
+                                                </div>
+                                                <div className="space-y-2">
+                                                  <Label className="text-sm text-gray-500">Graphics (Actual)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.graphicsActual} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                               </div>
                                             </div>
@@ -1936,115 +1805,91 @@ export default function ShowsPage() {
                                       <div className="space-y-4">
                                         <Card className="shadow-sm">
                                           <CardHeader className="py-3 px-4">
-                                            <CardTitle className="text-sm font-semibold">
-                                              Show Options
-                                            </CardTitle>
+                                            <CardTitle className="text-sm font-semibold">Show Options</CardTitle>
                                           </CardHeader>
                                           <CardContent className="p-4">
                                             <div className="space-y-4">
                                               <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="flooring"
+                                                  <Checkbox 
+                                                    id="flooring" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.flooringMandatory}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="flooring"
-                                                    className="text-sm"
-                                                  >
-                                                    Flooring Mandatory
-                                                  </Label>
+                                                  <Label htmlFor="flooring" className="text-sm">Flooring Mandatory</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="targeted"
+                                                  <Checkbox 
+                                                    id="targeted" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.targetedShow}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="targeted"
-                                                    className="text-sm"
-                                                  >
-                                                    Targeted Show
-                                                  </Label>
+                                                  <Label htmlFor="targeted" className="text-sm">Targeted Show</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="marshalling"
+                                                  <Checkbox 
+                                                    id="marshalling" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.marshalling}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="marshalling"
-                                                    className="text-sm"
-                                                  >
-                                                    Marshalling
-                                                  </Label>
+                                                  <Label htmlFor="marshalling" className="text-sm">Marshalling</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="rtw"
+                                                  <Checkbox 
+                                                    id="rtw" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.noRTW}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="rtw"
-                                                    className="text-sm"
-                                                  >
-                                                    No RTW
-                                                  </Label>
+                                                  <Label htmlFor="rtw" className="text-sm">No RTW</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="ops"
+                                                  <Checkbox 
+                                                    id="ops" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.natlOpsTeam}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="ops"
-                                                    className="text-sm"
-                                                  >
-                                                    Natl Ops Team
-                                                  </Label>
+                                                  <Label htmlFor="ops" className="text-sm">Natl Ops Team</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="design"
+                                                  <Checkbox 
+                                                    id="design" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.designCollaboration}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="design"
-                                                    className="text-sm"
-                                                  >
-                                                    Design Collaboration
-                                                  </Label>
+                                                  <Label htmlFor="design" className="text-sm">Design Collaboration</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="clean"
+                                                  <Checkbox 
+                                                    id="clean" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.cleanFloorPolicy}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="clean"
-                                                    className="text-sm"
-                                                  >
-                                                    Clean Floor Policy
-                                                  </Label>
+                                                  <Label htmlFor="clean" className="text-sm">Clean Floor Policy</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="booth"
+                                                  <Checkbox 
+                                                    id="booth" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.showOrgBoothPkg}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="booth"
-                                                    className="text-sm"
-                                                  >
-                                                    Show Org Booth Pkg
-                                                  </Label>
+                                                  <Label htmlFor="booth" className="text-sm">Show Org Booth Pkg</Label>
                                                 </div>
                                               </div>
                                               <div className="space-y-2">
-                                                <Label className="text-sm text-gray-500">
-                                                  Tier Pricing
-                                                </Label>
-                                                <Input className="h-9 px-3" />
+                                                <Label className="text-sm text-gray-500">Tier Pricing</Label>
+                                                <Input 
+                                                  value={selectedShowDetails?.showOptions.tierPricing} 
+                                                  className="h-9 px-3" 
+                                                  readOnly
+                                                />
                                               </div>
                                             </div>
                                           </CardContent>
@@ -2056,41 +1901,47 @@ export default function ShowsPage() {
                                     <div className="grid grid-cols-1 gap-4">
                                       <Card className="shadow-sm">
                                         <CardHeader className="py-3 px-4">
-                                          <CardTitle className="text-sm font-semibold">
-                                            Comments
-                                          </CardTitle>
+                                          <CardTitle className="text-sm font-semibold">Comments</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4">
                                           <div className="space-y-2">
-                                            <Label className="text-sm text-gray-500">
-                                              Freight Info
-                                            </Label>
-                                            <Textarea className="min-h-[80px] px-3 py-2" />
+                                            <Label className="text-sm text-gray-500">Freight Info</Label>
+                                            <Textarea 
+                                              value={selectedShowDetails?.comments.freightInfo} 
+                                              className="min-h-[80px] px-3 py-2" 
+                                              readOnly
+                                            />
                                           </div>
                                         </CardContent>
                                       </Card>
 
                                       <Card className="shadow-sm">
                                         <CardHeader className="py-3 px-4">
-                                          <CardTitle className="text-sm font-semibold">
-                                            Show Package
-                                          </CardTitle>
+                                          <CardTitle className="text-sm font-semibold">Show Package</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4">
                                           <div className="space-y-4">
-                                            <Textarea className="min-h-[80px] px-3 py-2" />
+                                            <Textarea 
+                                              value={selectedShowDetails?.comments.showPackage} 
+                                              className="min-h-[80px] px-3 py-2" 
+                                              readOnly
+                                            />
                                             <div className="grid grid-cols-2 gap-4">
                                               <div className="space-y-2">
-                                                <Label className="text-sm text-gray-500">
-                                                  Specify Logo
-                                                </Label>
-                                                <Input className="h-9 px-3" />
+                                                <Label className="text-sm text-gray-500">Specify Logo</Label>
+                                                <Input 
+                                                  value={selectedShowDetails?.comments.specifyLogo} 
+                                                  className="h-9 px-3" 
+                                                  readOnly
+                                                />
                                               </div>
                                               <div className="space-y-2">
-                                                <Label className="text-sm text-gray-500">
-                                                  Send Exhibitor Survey
-                                                </Label>
-                                                <Input className="h-9 px-3" />
+                                                <Label className="text-sm text-gray-500">Send Exhibitor Survey</Label>
+                                                <Input 
+                                                  value={selectedShowDetails?.comments.exhibitorSurvey} 
+                                                  className="h-9 px-3" 
+                                                  readOnly
+                                                />
                                               </div>
                                             </div>
                                           </div>
@@ -2103,7 +1954,6 @@ export default function ShowsPage() {
                             </CardContent>
                           </Card>
                         </div>
-
                       </div>
                     </div>
                   )}
@@ -2161,21 +2011,17 @@ export default function ShowsPage() {
                         {/* Project Info */}
                         <div className="grid grid-cols-2 gap-4 mb-6">
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Number
-                            </Label>
+                            <Label className="text-sm text-gray-500">Project Number</Label>
                             <Input
-                              value={mockProjectData.projectNumber}
+                              value={selectedShow?.projectNumber || ''}
                               readOnly
                               className="h-9"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Name
-                            </Label>
+                            <Label className="text-sm text-gray-500">Project Name</Label>
                             <Input
-                              value={mockProjectData.projectName}
+                              value={mockProjectData.find(p => p.projectNumber === selectedShow?.projectNumber)?.projectName || ''}
                               readOnly
                               className="h-9"
                             />
@@ -2196,55 +2042,34 @@ export default function ShowsPage() {
                         <Table>
                           <TableHeader>
                             <TableRow>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Facility ID
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Facility Name
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Hall
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Location
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Location
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Area Code
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Phone
-                              </TableHead>
+                              <TableHead className="text-xs font-semibold text-gray-700">Facility ID</TableHead>
+                              <TableHead className="text-xs font-semibold text-gray-700">Facility Name</TableHead>
+                              <TableHead className="text-xs font-semibold text-gray-700">Hall</TableHead>
+                              <TableHead className="text-xs font-semibold text-gray-700">Location</TableHead>
+                              <TableHead className="text-xs font-semibold text-gray-700">Location</TableHead>
+                              <TableHead className="text-xs font-semibold text-gray-700">Area Code</TableHead>
+                              <TableHead className="text-xs font-semibold text-gray-700">Phone</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {mockFacilityData.map((facility) => (
-                              <TableRow key={facility.facilityId}>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.facilityId}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.facilityName}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.hall}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.location1}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.location2}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.areaCode}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.phone}
-                                </TableCell>
-                              </TableRow>
-                            ))}
+                            {mockFacilityData
+                              .filter(facility => 
+                                mockProjectData.find(p => 
+                                  p.projectNumber === selectedShow?.projectNumber && 
+                                  p.facilityId === facility.facilityId
+                                )
+                              )
+                              .map((facility) => (
+                                <TableRow key={facility.facilityId}>
+                                  <TableCell className="py-2 text-sm">{facility.facilityId}</TableCell>
+                                  <TableCell className="py-2 text-sm">{facility.facilityName}</TableCell>
+                                  <TableCell className="py-2 text-sm">{facility.hall}</TableCell>
+                                  <TableCell className="py-2 text-sm">{facility.location1}</TableCell>
+                                  <TableCell className="py-2 text-sm">{facility.location2}</TableCell>
+                                  <TableCell className="py-2 text-sm">{facility.areaCode}</TableCell>
+                                  <TableCell className="py-2 text-sm">{facility.phone}</TableCell>
+                                </TableRow>
+                              ))}
                           </TableBody>
                         </Table>
 
@@ -2340,6 +2165,116 @@ export default function ShowsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Show Dialog */}
+      <Dialog 
+        open={showDialog} 
+        onOpenChange={(open) => setShowDialog(open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Show</DialogTitle>
+            <DialogDescription>
+              Fill in the details to add a new show.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="showId" className="text-right">
+                Show ID
+              </Label>
+              <Input
+                id="showId"
+                value={newShow.showId}
+                onChange={(e) => setNewShow({ ...newShow, showId: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="showName" className="text-right">
+                Show Name
+              </Label>
+              <Input
+                id="showName"
+                value={newShow.showName}
+                onChange={(e) => setNewShow({ ...newShow, showName: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="occrId" className="text-right">
+                Occr ID
+              </Label>
+              <Input
+                id="occrId"
+                value={newShow.occrId}
+                onChange={(e) => setNewShow({ ...newShow, occrId: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="occrType" className="text-right">
+                Occr Type
+              </Label>
+              <Input
+                id="occrType"
+                value={newShow.occrType}
+                onChange={(e) => setNewShow({ ...newShow, occrType: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="marketType" className="text-right">
+                Market Type
+              </Label>
+              <Input
+                id="marketType"
+                value={newShow.marketType}
+                onChange={(e) => setNewShow({ ...newShow, marketType: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="projectNumber" className="text-right">
+                Project Number
+              </Label>
+              <Input
+                id="projectNumber"
+                value={newShow.projectNumber}
+                onChange={(e) => setNewShow({ ...newShow, projectNumber: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cityOrg" className="text-right">
+                City Org
+              </Label>
+              <Input
+                id="cityOrg"
+                value={newShow.cityOrg}
+                onChange={(e) => setNewShow({ ...newShow, cityOrg: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="yrmo" className="text-right">
+                YRMO
+              </Label>
+              <Input
+                id="yrmo"
+                value={newShow.yrmo}
+                onChange={(e) => setNewShow({ ...newShow, yrmo: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleAddShow}>
+              Add Show
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
   );
 }

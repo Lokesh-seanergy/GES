@@ -44,7 +44,7 @@ const updateSettings = async (settings: Partial<Settings>): Promise<Settings> =>
 
 export const useSettings = () => {
   const queryClient = useQueryClient();
-  const { setTheme, setLanguage, setTimezone, toggleNotification } = useSettingsStore();
+  const { setTheme, setLanguage, setTimezone } = useSettingsStore();
 
   const { data: settings, isLoading } = useQuery({
     queryKey: ['settings'],

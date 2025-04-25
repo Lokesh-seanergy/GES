@@ -1,7 +1,7 @@
-import { LoginCredentials, SocialProvider, AuthResponse, SocialLoginResponse } from '@/types/auth';
+import type { LoginCredentials, SocialProvider, AuthResponse, SocialLoginResponse } from '@/types/auth';
 
 // Simulated email login function
-export const loginWithEmail = async (credentials: LoginCredentials): Promise<AuthResponse> => {
+export const loginWithEmail = async (_credentials: LoginCredentials): Promise<AuthResponse> => {
   // This is a mock implementation. Replace with actual API call.
   return new Promise((resolve) => {
     setTimeout(() => {

@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, ChevronLeft, ArrowUp, ArrowUpDown, ArrowDown, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, ArrowUp, ArrowUpDown, ArrowDown, ChevronRight, X } from "lucide-react";
 import { create } from "zustand";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -736,7 +736,7 @@ export default function ShowsPage() {
                           isNewOccrOpen ? "rotate-45" : ""
                         }`}
                       />
-                      <span>New Occr</span>
+                      <span>New Occurrence</span>
                     </Button>
                   </div>
 
@@ -847,7 +847,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">YRMO Range</Label>
+                        <Label className="text-sm text-gray-500">Year/Month Range</Label>
                         <Input
                           type="text"
                           value={formatYrmoRange(
@@ -900,223 +900,284 @@ export default function ShowsPage() {
 
                   {/* New Show Form */}
                   <motion.div
+                    style={{ marginTop: "0px" }}
                     className={cn(
-                      "absolute z-20 top-[4.5rem] right-0 bg-white w-full",
+                      "fixed inset-0 w-[500px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
                       "transition-all duration-300 ease-in-out",
                       isNewShowOpen
-                        ? "opacity-100 translate-x-0"
-                        : "opacity-0 translate-x-full pointer-events-none"
+                        ? "translate-x-0"
+                        : "translate-x-full"
                     )}
                   >
-                    <Card className="shadow-lg">
-                      <CardHeader className="pb-3">
-                        <CardTitle>New Show</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-4 gap-4">
+                    <div className="border-b bg-white sticky top-0 z-10">
+                      <div className="flex items-center justify-between p-4">
+                        <h2 className="text-xl font-semibold">New Show</h2>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCloseShowDialog}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                      <div className="p-6 space-y-4">
+                        <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Show ID</Label>
+                            <Label>Show ID</Label>
                             <Input
-                              placeholder="Enter showId"
-                              className="h-9"
                               value={newShow.showId}
                               onChange={handleNewShowChange("showId")}
+                              placeholder="Enter Show ID"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Show Name</Label>
+                            <Label>Show Name</Label>
                             <Input
-                              placeholder="Enter showName"
-                              className="h-9"
                               value={newShow.showName}
                               onChange={handleNewShowChange("showName")}
+                              placeholder="Enter Show Name"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Occr ID</Label>
-                            <Input
-                              placeholder="Enter occrId"
-                              className="h-9"
-                              value={newShow.occrId}
-                              onChange={handleNewShowChange("occrId")}
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Occr ID</Label>
+                              <Input
+                                value={newShow.occrId}
+                                onChange={handleNewShowChange("occrId")}
+                                placeholder="Enter Occr ID"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Occr Type</Label>
+                              <Select
+                                value={newShow.occrType}
+                                onValueChange={(value) =>
+                                  setNewShow((prev) => ({ ...prev, occrType: value }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Occr Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {OCCR_TYPES.map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Occr Type</Label>
-                            <Input
-                              placeholder="Enter occrType"
-                              className="h-9"
-                              value={newShow.occrType}
-                              onChange={handleNewShowChange("occrType")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Market Type</Label>
-                            <Input
-                              placeholder="Enter marketType"
-                              className="h-9"
+                            <Label>Market Type</Label>
+                            <Select
                               value={newShow.marketType}
-                              onChange={handleNewShowChange("marketType")}
-                            />
+                              onValueChange={(value) =>
+                                setNewShow((prev) => ({ ...prev, marketType: value }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Market Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MARKET_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Project Number</Label>
+                              <Input
+                                value={newShow.projectNumber}
+                                onChange={handleNewShowChange("projectNumber")}
+                                placeholder="Enter Project Number"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>City Org</Label>
+                              <Input
+                                value={newShow.cityOrg}
+                                onChange={handleNewShowChange("cityOrg")}
+                                placeholder="Enter City Org"
+                              />
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Project Number</Label>
+                            <Label>Year/Month</Label>
                             <Input
-                              placeholder="Enter projectNumber"
-                              className="h-9"
-                              value={newShow.projectNumber}
-                              onChange={handleNewShowChange("projectNumber")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">City Org</Label>
-                            <Input
-                              placeholder="Enter cityOrg"
-                              className="h-9"
-                              value={newShow.cityOrg}
-                              onChange={handleNewShowChange("cityOrg")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">YRMO</Label>
-                            <Input
-                              placeholder="Enter yrmo"
-                              className="h-9"
                               value={newShow.yrmo}
                               onChange={handleNewShowChange("yrmo")}
+                              placeholder="YYYY-MM"
                             />
                           </div>
                         </div>
-                        <div className="flex justify-end gap-4 mt-4">
-                          <Button variant="outline" onClick={toggleNewShow}>
-                            Cancel
-                          </Button>
-                          <Button variant="success" onClick={handleAddShow}>
-                            Create Show
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
+                    <div className="border-t p-6">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={handleCloseShowDialog}>
+                          Cancel
+                        </Button>
+                        <Button variant="success" onClick={handleAddShow}>
+                          Create Show
+                        </Button>
+                      </div>
+                    </div>
                   </motion.div>
 
-                  {/* New Occr Form */}
+                  {/* New Occurrence Form */}
                   <motion.div
+                    style={{ marginTop: "0px" }}
                     className={cn(
-                      "absolute z-20 top-[4.5rem] right-0 bg-white w-full",
+                      "fixed inset-0 w-[500px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
                       "transition-all duration-300 ease-in-out",
                       isNewOccrOpen
-                        ? "opacity-100 translate-x-0"
-                        : "opacity-0 translate-x-full pointer-events-none"
+                        ? "translate-x-0"
+                        : "translate-x-full"
                     )}
                   >
-                    <Card className="shadow-lg">
-                      <CardHeader className="pb-3">
-                        <CardTitle>New Occurrence</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-4 gap-4">
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Show ID</Label>
-                            <Input
-                              placeholder="Enter showId"
-                              className="h-9"
-                              value={newOccr.showId}
-                              onChange={handleNewOccrChange("showId")}
-                            />
+                    <div className="border-b bg-white sticky top-0 z-10">
+                      <div className="flex items-center justify-between p-4">
+                        <h2 className="text-xl font-semibold">New Occurrence</h2>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsNewOccrOpen(false)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                      <div className="p-6 space-y-4">
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Show ID</Label>
+                              <Input
+                                value={newOccr.showId}
+                                onChange={handleNewOccrChange("showId")}
+                                placeholder="Enter Show ID"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Occr ID</Label>
+                              <Input
+                                value={newOccr.occrId}
+                                onChange={handleNewOccrChange("occrId")}
+                                placeholder="Enter Occr ID"
+                              />
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Occr ID</Label>
-                            <Input
-                              placeholder="Enter occrId"
-                              className="h-9"
-                              value={newOccr.occrId}
-                              onChange={handleNewOccrChange("occrId")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Occr Type</Label>
-                            <Input
-                              placeholder="Enter occrType"
-                              className="h-9"
+                            <Label>Occr Type</Label>
+                            <Select
                               value={newOccr.occrType}
-                              onChange={handleNewOccrChange("occrType")}
-                            />
+                              onValueChange={(value) =>
+                                setNewOccr((prev) => ({ ...prev, occrType: value }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Occr Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {OCCR_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Description</Label>
-                            <Input
-                              placeholder="Enter description"
-                              className="h-9"
+                            <Label>Description</Label>
+                            <Textarea
                               value={newOccr.description}
-                              onChange={handleNewOccrChange("description")}
+                              onChange={(e) =>
+                                setNewOccr((prev) => ({
+                                  ...prev,
+                                  description: e.target.value,
+                                }))
+                              }
+                              placeholder="Enter Description"
+                              className="h-20"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Open</Label>
-                            <Input
-                              type="text"
-                              placeholder="MM/DD/YYYY"
-                              className="h-9 px-3 w-full md:w-3/4"
-                              value={dayjs().format('MM/DD/YYYY')}
-                              onChange={(e) => {
-                                const date = dayjs(e.target.value, 'MM/DD/YYYY');
-                                if (date.isValid()) {
-                                  // Handle date change
-                                }
-                              }}
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Open Date</Label>
+                              <Input
+                                type="text"
+                                placeholder="MM/DD/YYYY"
+                                value={dayjs().format('MM/DD/YYYY')}
+                                onChange={(e) => {
+                                  const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                  if (date.isValid()) {
+                                    setNewOccr((prev) => ({
+                                      ...prev,
+                                      open: e.target.value,
+                                    }));
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Close Date</Label>
+                              <Input
+                                type="text"
+                                placeholder="MM/DD/YYYY"
+                                value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+                                onChange={(e) => {
+                                  const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                  if (date.isValid()) {
+                                    setNewOccr((prev) => ({
+                                      ...prev,
+                                      close: e.target.value,
+                                    }));
+                                  }
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Close</Label>
-                            <Input
-                              type="text"
-                              placeholder="MM/DD/YYYY"
-                              className="h-9 px-3 w-full md:w-3/4"
-                              value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
-                              onChange={(e) => {
-                                const date = dayjs(e.target.value, 'MM/DD/YYYY');
-                                if (date.isValid()) {
-                                  // Handle date change
-                                }
-                              }}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Timezone</Label>
-                            <Input
-                              placeholder="Enter timezone"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Project Number</Label>
-                            <Input
-                              placeholder="Enter projectNumber"
-                              className="h-9"
-                              value={newOccr.projectNumber}
-                              onChange={handleNewOccrChange("projectNumber")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Facility ID</Label>
-                            <Input
-                              placeholder="Enter facilityId"
-                              className="h-9"
-                              value={newOccr.facilityId}
-                              onChange={handleNewOccrChange("facilityId")}
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Project Number</Label>
+                              <Input
+                                value={newOccr.projectNumber}
+                                onChange={handleNewOccrChange("projectNumber")}
+                                placeholder="Enter Project Number"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Facility ID</Label>
+                              <Input
+                                value={newOccr.facilityId}
+                                onChange={handleNewOccrChange("facilityId")}
+                                placeholder="Enter Facility ID"
+                              />
+                            </div>
                           </div>
                         </div>
-                        <div className="flex justify-end gap-4 mt-4">
-                          <Button variant="outline" onClick={toggleNewOccr}>
-                            Cancel
-                          </Button>
-                          <Button variant="success" onClick={handleAddShow}>
-                            Create Occurrence
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </div>
+                    <div className="border-t p-6">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsNewOccrOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button variant="success" onClick={handleAddShow}>
+                          Create Occurrence
+                        </Button>
+                      </div>
+                    </div>
                   </motion.div>
 
                   {/* Shows Table */}
@@ -1139,73 +1200,73 @@ export default function ShowsPage() {
                           <TableHeader className="bg-[#E6F0FA] sticky top-0">
                             <TableRow className="border-b border-gray-200">
                               <TableHead
-                                className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                 onClick={() => handleSort("showId")}
                               >
-                                <div className="flex items-center justify-center gap-2">
+                                <div className="flex items-center gap-2">
                                   Show ID {getSortIcon("showId")}
                                 </div>
                               </TableHead>
                               {!selectedShow && (
                                 <>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("showName")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Show Name {getSortIcon("showName")}
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("occrId")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Occurrence ID {getSortIcon("occrId")}
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("occrType")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Occurrence Type {getSortIcon("occrType")}
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("marketType")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Market Type {getSortIcon("marketType")}
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("projectNumber")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Project# {getSortIcon("projectNumber")}
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("cityOrg")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Show Location {getSortIcon("cityOrg")}
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("yrmo")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Year/Month {getSortIcon("yrmo")}
                                     </div>
                                   </TableHead>
-                                  <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3 text-center">
-                                    <div className="flex items-center justify-center">
+                                  <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3">
+                                    <div className="flex items-center gap-2">
                                       Actions
                                     </div>
                                   </TableHead>
@@ -1224,12 +1285,12 @@ export default function ShowsPage() {
                                 )}
                                 onClick={() => handleShowSelect(show)}
                               >
-                                <TableCell className="py-2 px-4 text-center">{show.showId}</TableCell>
+                                <TableCell className="py-2 px-4">{show.showId}</TableCell>
                                 {!selectedShow && (
                                   <>
-                                    <TableCell className="py-2 px-4 text-center">{show.showName}</TableCell>
-                                    <TableCell className="py-2 px-4 text-center">{show.occrId}</TableCell>
-                                    <TableCell className="py-2 px-4 text-center">
+                                    <TableCell className="py-2 px-4">{show.showName}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.occrId}</TableCell>
+                                    <TableCell className="py-2 px-4">
                                       <span className={cn(
                                         'rounded px-2 py-0.5 text-xs font-medium',
                                         show.occrType.toLowerCase().includes('upcoming') && 'bg-yellow-100 text-yellow-800',
@@ -1242,12 +1303,12 @@ export default function ShowsPage() {
                                         {show.occrType}
                                       </span>
                                     </TableCell>
-                                    <TableCell className="py-2 px-4 text-center">{show.marketType}</TableCell>
-                                    <TableCell className="py-2 px-4 text-center">{show.projectNumber}</TableCell>
-                                    <TableCell className="py-2 px-4 text-center">{show.cityOrg}</TableCell>
-                                    <TableCell className="py-2 px-4 text-center">{show.yrmo}</TableCell>
-                                    <TableCell className="py-2 px-4 text-center">
-                                      <div className="flex items-center justify-center gap-2">
+                                    <TableCell className="py-2 px-4">{show.marketType}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.projectNumber}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.cityOrg}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.yrmo}</TableCell>
+                                    <TableCell className="py-2 px-4">
+                                      <div className="flex items-center gap-2">
                                         <Button
                                           variant="ghost"
                                           size="sm"

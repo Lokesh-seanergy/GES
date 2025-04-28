@@ -36,6 +36,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CustomPagination } from "@/components/ui/pagination";
+import { PageSizeSelector } from "@/components/ui/page-size-selector";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 interface SummaryData {
   exhibitor: {
@@ -170,21 +173,26 @@ function CustomersContent() {
         return total + (isNaN(length) || isNaN(width) ? 0 : length * width);
       }, 0);
 
+    const exhibitorOrderCount = exhibitorCustomers.reduce((total, c) => total + c.orders, 0);
+    const eeOrderCount = eeCustomers.reduce((total, c) => total + c.orders, 0);
+    const thirdPartyOrderCount = thirdPartyCustomers.reduce((total, c) => total + c.orders, 0);
+    const totalOrders = exhibitorOrderCount + eeOrderCount + thirdPartyOrderCount;
+
     setSummaryData({
       exhibitor: {
         customerCount: exhibitorCustomers.length,
         metric2: calculateTotalBoothArea(exhibitorCustomers),
-        metric3: exhibitorCustomers.reduce((total, c) => total + c.orders, 0),
+        metric3: totalOrders,
       },
       ee: {
         customerCount: eeCustomers.length,
         metric2: calculateTotalBoothArea(eeCustomers),
-        metric3: eeCustomers.reduce((total, c) => total + c.orders, 0),
+        metric3: 0,
       },
       thirdParty: {
         customerCount: thirdPartyCustomers.length,
         metric2: calculateTotalBoothArea(thirdPartyCustomers),
-        metric3: thirdPartyCustomers.reduce((total, c) => total + c.orders, 0),
+        metric3: 0,
       },
     });
   };
@@ -785,7 +793,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.exhibitor.customerCount}
                     </p>
-                    <p className="text-xs text-gray-500">Customers</p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
                   <div title="Booth Measurements">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
@@ -794,7 +802,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.exhibitor.metric2}
                     </p>
-                    <p className="text-xs text-gray-500">Booths</p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
                   <div title="Orders">
                     <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
@@ -819,7 +827,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.ee.customerCount}
                     </p>
-                    <p className="text-xs text-gray-500">Customers</p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
                   <div title="Booth Measurements">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
@@ -828,16 +836,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.ee.metric2}
                     </p>
-                    <p className="text-xs text-gray-500">Booths</p>
-                  </div>
-                  <div title="Orders">
-                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
-                      <FileText className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <p className="text-lg font-semibold">
-                      {summaryData.ee.metric3}
-                    </p>
-                    <p className="text-xs text-gray-500">Orders</p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
                 </div>
               </Card>
@@ -853,7 +852,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.thirdParty.customerCount}
                     </p>
-                    <p className="text-xs text-gray-500">Customers</p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
                   <div title="Booth Measurements">
                     <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
@@ -862,16 +861,7 @@ function CustomersContent() {
                     <p className="text-lg font-semibold">
                       {summaryData.thirdParty.metric2}
                     </p>
-                    <p className="text-xs text-gray-500">Booths</p>
-                  </div>
-                  <div title="Orders">
-                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
-                      <FileText className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <p className="text-lg font-semibold">
-                      {summaryData.thirdParty.metric3}
-                    </p>
-                    <p className="text-xs text-gray-500">Orders</p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
                 </div>
               </Card>
@@ -1535,41 +1525,24 @@ function CustomersContent() {
             )}
 
             <div className="flex justify-end items-center mt-4">
-              <span className="mr-2">Rows per page:</span>
-              <select
-                value={rowsPerPage}
-                onChange={handleRowsPerPageChange}
-                className="border rounded-md"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-              </select>
-              <span className="ml-4">
-                {currentPage} of{" "}
-                {Math.ceil(filteredCustomers.length / rowsPerPage)}
-              </span>
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="ml-2"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={
-                  currentPage ===
-                  Math.ceil(filteredCustomers.length / rowsPerPage)
-                }
-                className="ml-2"
-              >
-                Next
-              </button>
+              <PageSizeSelector
+                pageSize={rowsPerPage}
+                setPageSize={(value) => {
+                  setRowsPerPage(value);
+                  setCurrentPage(1); // Reset to first page when changing items per page
+                }}
+              />
+              <CustomPagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredCustomers.length / rowsPerPage)}
+                onPageChange={handlePageChange}
+                className="ml-4"
+              />
             </div>
           </>
         )}
       </div>
+      <ScrollToTop />
     </MainLayout>
   );
 }

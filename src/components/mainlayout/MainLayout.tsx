@@ -23,7 +23,7 @@ export default function MainLayout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />
-        <main className="flex-1 overflow-auto p-6 bg-[#f0f1f5]">
+        <main className="flex-1 overflow-y-auto p-6 bg-[#f0f1f5] relative">
           {breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} />}
           {children}
         </main>

@@ -1,6 +1,6 @@
 import type { Order } from "@/types/orders";
 import OrderDetailsClient from "./OrderDetailsClient";
-import { mockOrders } from "../data";
+import { mockOrders } from "@/lib/mockData";
 
 interface PageProps {
   params: Promise<{

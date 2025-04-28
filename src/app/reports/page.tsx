@@ -15,9 +15,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, Search } from "lucide-react";
-import { mockOrders } from "../orders/data";
+import { mockOrders } from "@/lib/mockData";
 import { formatDate } from "@/lib/utils";
 import type { Order } from "@/types/orders";
+import { CustomPagination } from "@/components/ui/pagination";
+import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import {
   BarChart,
   Bar,
@@ -34,6 +36,8 @@ import {
   Line,
 } from "recharts";
 import { CSVLink } from "react-csv";
+import UnderDevelopment from "../under-development";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 interface ChartData {
   name: string;
@@ -63,6 +67,8 @@ const COLORS = ["#0088FE", "#00C49F", "#FFBB28", "#FF8042", "#8884D8"];
 
 export default function ReportsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   // Filter orders based on search query
   const filteredOrders = mockOrders.filter((order) => {
@@ -118,8 +124,20 @@ export default function ReportsPage() {
   // Get recent orders from filtered data
   const recentOrders = filteredOrders.slice(0, 10);
 
+  // Get paginated orders from filtered data
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+  };
+
   return (
     <MainLayout breadcrumbs={[{ label: "Reports" }]}>
+      <UnderDevelopment />
+      <ScrollToTop />
       {/* Search Bar */}
       <div className="mb-6">
         <div className="relative">
@@ -379,7 +397,7 @@ export default function ReportsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {recentOrders.map((order) => (
+                  {paginatedOrders.map((order) => (
                     <TableRow key={order.orderId}>
                       <TableCell>{order.orderId}</TableCell>
                       <TableCell>{order.showId}</TableCell>
@@ -393,6 +411,21 @@ export default function ReportsPage() {
                   ))}
                 </TableBody>
               </Table>
+
+              <div className="flex items-center justify-between mt-4">
+                <PageSizeSelector
+                  pageSize={itemsPerPage}
+                  setPageSize={(value) => {
+                    setItemsPerPage(value);
+                    setCurrentPage(1);
+                  }}
+                />
+                <CustomPagination
+                  currentPage={currentPage}
+                  totalPages={Math.ceil(filteredOrders.length / itemsPerPage)}
+                  onPageChange={handlePageChange}
+                />
+              </div>
             </CardContent>
           </Card>
         </div>

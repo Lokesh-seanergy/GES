@@ -867,3 +867,222 @@ export const mockShowDetails = mockShows.slice(0, 20).map((show, index) => ({
   showOptions: generateShowOptions(),
   comments: generateComments(show.showId)
 }));
+
+// Order Types and Data
+export interface Order {
+  orderId: string;
+  showId: string;
+  occurrenceId: string;
+  subTotal: number;
+  salesChannel: string;
+  terms: string;
+  tax: number;
+  orderType: string;
+  customerPO: string;
+  cancelCharge: number;
+  source: string;
+  project: string;
+  orderDate: string;
+  boothInfo: string;
+  billingAddress: string;
+  total: number;
+  items: OrderItem[];
+}
+
+export interface OrderItem {
+  serialNo: number;
+  orderedItem: string;
+  itemDescription: string;
+  quantity: number;
+  cancellationFee: number;
+  quantityCancelled: number;
+  uom: string;
+  kitPrice: number;
+  newPrice: number;
+  discount: number;
+  extendedPrice: number;
+  userItemDescription: string;
+  dff: string;
+  orderReceivedDate: string;
+  status: string;
+  itemType: string;
+  ato: boolean;
+  lineType: string;
+  documentNumber: string;
+  industryInformation: string;
+}
+
+export const mockOrders: Order[] = [
+  {
+    orderId: "ORD-001",
+    showId: "AWS23",
+    occurrenceId: "AWS23-LV",
+    subTotal: 15000,
+    salesChannel: "Direct",
+    terms: "Net 30",
+    tax: 1500,
+    orderType: "New",
+    customerPO: "PO-12345",
+    cancelCharge: 0,
+    source: "Web",
+    project: "P2024-001",
+    orderDate: "2024-03-20",
+    boothInfo: "Booth #A12",
+    billingAddress: "123 Main St, New York, NY 10001",
+    total: 16500,
+    items: [
+      {
+        serialNo: 1,
+        orderedItem: "Booth Package A",
+        itemDescription: "Standard 10x10 Booth",
+        quantity: 1,
+        cancellationFee: 0,
+        quantityCancelled: 0,
+        uom: "EA",
+        kitPrice: 3000,
+        newPrice: 3000,
+        discount: 0,
+        extendedPrice: 3000,
+        userItemDescription: "Standard booth with basic setup",
+        dff: "N/A",
+        orderReceivedDate: "2024-03-20",
+        status: "Confirmed",
+        itemType: "Booth",
+        ato: false,
+        lineType: "Standard",
+        documentNumber: "DOC-001",
+        industryInformation: "Technology",
+      },
+      {
+        serialNo: 2,
+        orderedItem: "LED Screen",
+        itemDescription: "55-inch LED Display",
+        quantity: 2,
+        cancellationFee: 500,
+        quantityCancelled: 0,
+        uom: "EA",
+        kitPrice: 2000,
+        newPrice: 2000,
+        discount: 0,
+        extendedPrice: 4000,
+        userItemDescription: "High-resolution display for presentations",
+        dff: "N/A",
+        orderReceivedDate: "2024-03-20",
+        status: "Confirmed",
+        itemType: "Equipment",
+        ato: false,
+        lineType: "Standard",
+        documentNumber: "DOC-002",
+        industryInformation: "Technology",
+      },
+      {
+        serialNo: 3,
+        orderedItem: "Furniture Package",
+        itemDescription: "Basic Booth Furniture Set",
+        quantity: 1,
+        cancellationFee: 200,
+        quantityCancelled: 0,
+        uom: "SET",
+        kitPrice: 8000,
+        newPrice: 8000,
+        discount: 0,
+        extendedPrice: 8000,
+        userItemDescription: "Includes table, chairs, and storage",
+        dff: "N/A",
+        orderReceivedDate: "2024-03-20",
+        status: "Confirmed",
+        itemType: "Furniture",
+        ato: false,
+        lineType: "Standard",
+        documentNumber: "DOC-003",
+        industryInformation: "Technology",
+      }
+    ]
+  },
+  {
+    orderId: "ORD-002",
+    showId: "MSFT24",
+    occurrenceId: "BUILD24-SEA",
+    subTotal: 25000,
+    salesChannel: "Partner",
+    terms: "Net 45",
+    tax: 2500,
+    orderType: "New",
+    customerPO: "PO-23456",
+    cancelCharge: 0,
+    source: "Email",
+    project: "P2024-002",
+    orderDate: "2024-03-21",
+    boothInfo: "Booth #B15",
+    billingAddress: "456 Tech Ave, Seattle, WA 98101",
+    total: 27500,
+    items: [
+      {
+        serialNo: 1,
+        orderedItem: "Premium Booth Package",
+        itemDescription: "20x20 Premium Booth",
+        quantity: 1,
+        cancellationFee: 1000,
+        quantityCancelled: 0,
+        uom: "EA",
+        kitPrice: 12000,
+        newPrice: 12000,
+        discount: 0,
+        extendedPrice: 12000,
+        userItemDescription: "Premium booth with custom branding",
+        dff: "N/A",
+        orderReceivedDate: "2024-03-21",
+        status: "Confirmed",
+        itemType: "Booth",
+        ato: false,
+        lineType: "Premium",
+        documentNumber: "DOC-004",
+        industryInformation: "Software",
+      },
+      {
+        serialNo: 2,
+        orderedItem: "AV Package",
+        itemDescription: "Complete Audio-Visual Setup",
+        quantity: 1,
+        cancellationFee: 800,
+        quantityCancelled: 0,
+        uom: "SET",
+        kitPrice: 8000,
+        newPrice: 8000,
+        discount: 0,
+        extendedPrice: 8000,
+        userItemDescription: "Includes sound system and projectors",
+        dff: "N/A",
+        orderReceivedDate: "2024-03-21",
+        status: "Confirmed",
+        itemType: "Equipment",
+        ato: false,
+        lineType: "Premium",
+        documentNumber: "DOC-005",
+        industryInformation: "Software",
+      },
+      {
+        serialNo: 3,
+        orderedItem: "Server Rack",
+        itemDescription: "Enterprise Server Rack",
+        quantity: 2,
+        cancellationFee: 800,
+        quantityCancelled: 0,
+        uom: "EA",
+        kitPrice: 8000,
+        newPrice: 8000,
+        discount: 0,
+        extendedPrice: 16000,
+        userItemDescription: "Enterprise-grade server racks",
+        dff: "N/A",
+        orderReceivedDate: "2024-03-21",
+        status: "Confirmed",
+        itemType: "Equipment",
+        ato: false,
+        lineType: "Premium",
+        documentNumber: "DOC-006",
+        industryInformation: "Cloud Computing",
+      }
+    ]
+  }
+];

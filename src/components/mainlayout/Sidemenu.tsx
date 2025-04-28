@@ -24,13 +24,12 @@ interface MenuItem {
 
 export default function Sidemenu() {
   const pathname = usePathname();
-  // Sidebar is expanded by default on dashboard, collapsed otherwise
-  const isDashboard = pathname === "/dashboard";
-  const [isCollapsed, setIsCollapsed] = useState(!isDashboard);
+  // Sidebar is collapsed by default everywhere, expands on hover
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [isHovered, setIsHovered] = useState(false);
 
-  // Sidebar is expanded if hovered or always on dashboard
-  const expanded = isDashboard || isHovered;
+  // Sidebar is expanded if hovered
+  const expanded = isHovered;
 
   // Collapse sidebar when menu item is clicked (except dashboard)
   const handleMenuClick = (href: string) => {
@@ -92,7 +91,7 @@ export default function Sidemenu() {
       className={`h-screen ${expanded ? "w-56" : "w-16"} text-white flex flex-col transition-all duration-300 overflow-hidden`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
-      style={{ cursor: !expanded && !isDashboard ? 'pointer' : 'default' }}
+      style={{ cursor: !expanded ? 'pointer' : 'default' }}
     >
       {/* Logo section */}
       <div className={`relative bg-[#88c5cf] w-full h-16 p-0 m-0 flex items-center justify-center overflow-hidden transition-all duration-300`}> 

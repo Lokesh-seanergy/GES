@@ -55,6 +55,7 @@ import {
 } from '@/components/ui/dialog';
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
+import dayjs from "dayjs";
 
 interface ShowData {
   showId: string;
@@ -690,55 +691,49 @@ export default function ShowsPage() {
     <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
         {/* Main content container with improved transitions */}
-        <div className="flex h-full relative transition-all duration-500 ease-out">
-          {/* Master View (Show Information) */}
+        <div className="flex h-full w-full relative transition-all duration-500 ease-out">
+          {/* Show Details sidebar */}
           <motion.div
             className={cn(
-              "bg-white border-r border-gray-200",
-              getContainerWidths().showInfo
+              "bg-white border-r border-gray-200 overflow-hidden shrink-0",
+              showProjectFacilities ? "w-[180px]" : selectedShow ? "w-[180px]" : "w-full"
             )}
             initial={false}
             animate={{
               width: showProjectFacilities
-                ? "15%"
+                ? "180px"
                 : selectedShow
-                ? "15%"
+                ? "180px"
                 : "100%",
               transition: containerTransition,
             }}
-            layout // Add layout prop for smoother size changes
+            layout
           >
-            <div
-              className={cn(
-                "h-full overflow-y-auto overflow-x-hidden scroll-smooth",
-                selectedShow ? "p-2" : "p-6"
-              )}
-            >
+            <div className={cn(
+              "h-full overflow-y-auto overflow-x-hidden scroll-smooth",
+              selectedShow ? "p-2" : "px-4 py-6"
+            )}>
               {selectedShow ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between pb-2 border-b">
                     <h2 className="text-sm font-semibold">Show Details</h2>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleBackToShows}
-                      className="h-8 w-8 p-0"
+                      className="h-7 w-7 p-0"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div>
                       <Label className="text-xs text-gray-500">Show ID</Label>
-                      <div className="text-sm font-medium mt-1">
-                        {selectedShow.showId}
-                      </div>
+                      <div className="text-sm font-medium truncate">{selectedShow.showId}</div>
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">Occr ID</Label>
-                      <div className="text-sm font-medium mt-1">
-                        {selectedShow.occrId}
-                      </div>
+                      <div className="text-sm font-medium truncate">{selectedShow.occrId}</div>
                     </div>
                   </div>
                 </div>
@@ -1136,8 +1131,16 @@ export default function ShowsPage() {
                               Open
                             </Label>
                             <Input
-                              type="datetime-local"
+                              type="text"
+                              placeholder="MM/DD/YYYY"
                               className="h-9 px-3 w-full md:w-3/4"
+                              value={dayjs().format('MM/DD/YYYY')}
+                              onChange={(e) => {
+                                const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                if (date.isValid()) {
+                                  // Handle date change
+                                }
+                              }}
                             />
                           </div>
                           <div className="space-y-2">
@@ -1145,8 +1148,16 @@ export default function ShowsPage() {
                               Close
                             </Label>
                             <Input
-                              type="datetime-local"
+                              type="text"
+                              placeholder="MM/DD/YYYY"
                               className="h-9 px-3 w-full md:w-3/4"
+                              value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+                              onChange={(e) => {
+                                const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                if (date.isValid()) {
+                                  // Handle date change
+                                }
+                              }}
                             />
                           </div>
                           <div className="space-y-2">
@@ -1207,16 +1218,16 @@ export default function ShowsPage() {
                       className={cn("px-0", selectedShow ? "py-2" : "py-3")}
                     >
                       {/* Section Title above the table */}
-                      <div className="flex items-center justify-between pb-2">
-                        <h2 className="text-lg font-semibold">Show Information</h2>
+                      <div className="flex items-center justify-between px-4 pb-4">
+                        <h2 className="text-lg font-semibold text-gray-900">Show Information</h2>
                       </div>
-                      <div className="border-b border-gray-200 mb-4" />
-                      <div className="overflow-x-auto">
+                      <div className="border-b border-gray-200" />
+                      <div className="overflow-x-auto px-4 mt-4">
                         <Table>
                           <TableHeader className="bg-[#E6F0FA] sticky top-0">
                             <TableRow className="border-b border-gray-200">
                               <TableHead
-                                className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
                                 onClick={() => handleSort("showId")}
                               >
                                 <div className="flex items-center justify-center gap-2">
@@ -1226,27 +1237,23 @@ export default function ShowsPage() {
                               {!selectedShow && (
                                 <>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
                                     onClick={() => handleSort("showName")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
                                       Show Name {getSortIcon("showName")}
                                     </div>
                                   </TableHead>
-                                </>
-                              )}
-                              <TableHead
-                                className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                onClick={() => handleSort("occrId")}
-                              >
-                                <div className="flex items-center justify-center gap-2">
-                                  Occurrence ID {getSortIcon("occrId")}
-                                </div>
-                              </TableHead>
-                              {!selectedShow && (
-                                <>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
+                                    onClick={() => handleSort("occrId")}
+                                  >
+                                    <div className="flex items-center justify-center gap-2">
+                                      Occurrence ID {getSortIcon("occrId")}
+                                    </div>
+                                  </TableHead>
+                                  <TableHead
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
                                     onClick={() => handleSort("occrType")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
@@ -1254,7 +1261,7 @@ export default function ShowsPage() {
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
                                     onClick={() => handleSort("marketType")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
@@ -1262,7 +1269,7 @@ export default function ShowsPage() {
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
                                     onClick={() => handleSort("projectNumber")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
@@ -1270,7 +1277,7 @@ export default function ShowsPage() {
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
                                     onClick={() => handleSort("cityOrg")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
@@ -1278,14 +1285,14 @@ export default function ShowsPage() {
                                     </div>
                                   </TableHead>
                                   <TableHead
-                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3 text-center"
                                     onClick={() => handleSort("yrmo")}
                                   >
                                     <div className="flex items-center justify-center gap-2">
                                       Year/Month {getSortIcon("yrmo")}
                                     </div>
                                   </TableHead>
-                                  <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3">
+                                  <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3 text-center">
                                     <div className="flex items-center justify-center">
                                       Actions
                                     </div>
@@ -1305,45 +1312,29 @@ export default function ShowsPage() {
                                 )}
                                 onClick={() => handleShowSelect(show)}
                               >
-                                <TableCell className="text-center py-2 px-4">
-                                  {show.showId}
-                                </TableCell>
-                                {!selectedShow && (
-                                  <TableCell className="text-center py-2 px-4">
-                                    {show.showName}
-                                  </TableCell>
-                                )}
-                                <TableCell className="text-center py-2 px-4">
-                                  {show.occrId}
-                                </TableCell>
+                                <TableCell className="py-2 px-4 text-center">{show.showId}</TableCell>
                                 {!selectedShow && (
                                   <>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {(() => {
-                                        let badgeColor = 'bg-slate-200 text-slate-800';
-                                        if (show.occrType.toLowerCase().includes('upcoming')) badgeColor = 'bg-yellow-100 text-yellow-800';
-                                        else if (show.occrType.toLowerCase().includes('ongoing')) badgeColor = 'bg-green-100 text-green-800';
-                                        else if (show.occrType.toLowerCase().includes('conference')) badgeColor = 'bg-blue-100 text-blue-800';
-                                        else if (show.occrType.toLowerCase().includes('exhibition')) badgeColor = 'bg-purple-100 text-purple-800';
-                                        else if (show.occrType.toLowerCase().includes('workshop')) badgeColor = 'bg-pink-100 text-pink-800';
-                                        return (
-                                          <span className={`rounded px-2 py-0.5 text-xs font-medium ${badgeColor}`}>{show.occrType}</span>
-                                        );
-                                      })()}
+                                    <TableCell className="py-2 px-4 text-center">{show.showName}</TableCell>
+                                    <TableCell className="py-2 px-4 text-center">{show.occrId}</TableCell>
+                                    <TableCell className="py-2 px-4 text-center">
+                                      <span className={cn(
+                                        'rounded px-2 py-0.5 text-xs font-medium',
+                                        show.occrType.toLowerCase().includes('upcoming') && 'bg-yellow-100 text-yellow-800',
+                                        show.occrType.toLowerCase().includes('ongoing') && 'bg-green-100 text-green-800',
+                                        show.occrType.toLowerCase().includes('conference') && 'bg-blue-100 text-blue-800',
+                                        show.occrType.toLowerCase().includes('exhibition') && 'bg-purple-100 text-purple-800',
+                                        show.occrType.toLowerCase().includes('workshop') && 'bg-pink-100 text-pink-800',
+                                        !show.occrType.toLowerCase().match(/(upcoming|ongoing|conference|exhibition|workshop)/) && 'bg-slate-200 text-slate-800'
+                                      )}>
+                                        {show.occrType}
+                                      </span>
                                     </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.marketType}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.projectNumber}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.cityOrg}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.yrmo}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
+                                    <TableCell className="py-2 px-4 text-center">{show.marketType}</TableCell>
+                                    <TableCell className="py-2 px-4 text-center">{show.projectNumber}</TableCell>
+                                    <TableCell className="py-2 px-4 text-center">{show.cityOrg}</TableCell>
+                                    <TableCell className="py-2 px-4 text-center">{show.yrmo}</TableCell>
+                                    <TableCell className="py-2 px-4 text-center">
                                       <div className="flex items-center justify-center gap-2">
                                         <Button
                                           variant="ghost"
@@ -1406,14 +1397,14 @@ export default function ShowsPage() {
             {selectedShow && (
               <motion.div
                 className={cn(
-                  "bg-white border-r border-gray-200",
-                  getContainerWidths().occurrences
+                  "bg-white border-r border-gray-200 overflow-hidden shrink-0",
+                  showProjectFacilities ? "w-[200px]" : "flex-1"
                 )}
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{
                   x: 0,
                   opacity: 1,
-                  width: showProjectFacilities ? "25%" : "75%",
+                  width: showProjectFacilities ? "200px" : "auto",
                 }}
                 exit={{
                   x: "100%",
@@ -1426,58 +1417,51 @@ export default function ShowsPage() {
                 transition={containerTransition}
                 layout
               >
-                <div className="h-full overflow-y-auto overflow-x-hidden scroll-smooth">
+                <div className="h-full w-full overflow-y-auto overflow-x-hidden scroll-smooth">
                   {showProjectFacilities ? (
                     // Minimized view when facilities are shown
-                    <div className="p-4 space-y-4">
+                    <div className="p-3 space-y-2">
                       <div className="pb-2 border-b">
                         <h2 className="text-sm font-semibold">Show Summary</h2>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div>
-                          <Label className="text-xs text-gray-500">
-                            Show Name
-                          </Label>
-                          <div className="text-sm font-medium mt-1">
+                          <Label className="text-xs text-gray-500">Show Name</Label>
+                          <div 
+                            className="text-sm font-medium truncate cursor-default" 
+                            title={selectedShow.showName}
+                          >
                             {selectedShow.showName}
                           </div>
                         </div>
                         <div>
                           <Label className="text-xs text-gray-500">YRMO</Label>
-                          <div className="text-sm font-medium mt-1">
-                            {selectedShow.yrmo}
-                          </div>
+                          <div className="text-sm font-medium">{selectedShow.yrmo}</div>
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-500">
-                            Project Number
-                          </Label>
-                          <div className="text-sm font-medium mt-1">
-                            {selectedShow.projectNumber}
-                          </div>
+                          <Label className="text-xs text-gray-500">Project Number</Label>
+                          <div className="text-sm font-medium truncate">{selectedShow.projectNumber}</div>
                         </div>
                       </div>
                     </div>
                   ) : (
                     // Full view
-                    <div className="p-4">
-                      <div className="max-w-5xl mx-auto">
+                    <div className="p-3">
+                      <div className="max-w-full mx-auto">
                         {/* Breadcrumb */}
-                        <div className="flex items-center justify-between pb-2 mb-4 border-b">
+                        <div className="flex items-center justify-between pb-2 mb-3 border-b">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={handleBackToShows}
-                              className="h-8 px-2"
+                              className="h-7 px-2"
                             >
                               <ChevronLeft className="h-4 w-4 mr-1" />
                               Back to Shows
                             </Button>
                             <span className="mx-2">•</span>
-                            <span className="font-medium text-gray-900">
-                              {selectedShow.showName}
-                            </span>
+                            <span className="font-medium text-gray-900">{selectedShow.showName}</span>
                             <span className="mx-2">•</span>
                             <span>{selectedShow.showId}</span>
                           </div>
@@ -1529,8 +1513,16 @@ export default function ShowsPage() {
                                       Open
                                     </Label>
                                     <Input
-                                      type="datetime-local"
+                                      type="text"
+                                      placeholder="MM/DD/YYYY"
                                       className="h-9 px-3 w-full md:w-3/4"
+                                      value={dayjs().format('MM/DD/YYYY')}
+                                      onChange={(e) => {
+                                        const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                        if (date.isValid()) {
+                                          // Handle date change
+                                        }
+                                      }}
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -1538,8 +1530,16 @@ export default function ShowsPage() {
                                       Close
                                     </Label>
                                     <Input
-                                      type="datetime-local"
+                                      type="text"
+                                      placeholder="MM/DD/YYYY"
                                       className="h-9 px-3 w-full md:w-3/4"
+                                      value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+                                      onChange={(e) => {
+                                        const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                        if (date.isValid()) {
+                                          // Handle date change
+                                        }
+                                      }}
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -1604,24 +1604,24 @@ export default function ShowsPage() {
                                       <Table>
                                         <TableHeader className="bg-white">
                                           <TableRow className="border-b border-gray-200">
-                                            <TableHead className="text-xs font-semibold text-gray-700">Project Name</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Project Number</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Project Type</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Status</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Production City</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Facility ID</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Name</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Number</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Type</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Status</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Production City</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility ID</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                           {mockProjectData && mockProjectData.map((project, index) => (
                                             project.projectNumber === selectedShow?.projectNumber && (
                                               <TableRow key={index} className="hover:bg-white/50">
-                                                <TableCell className="py-2 text-sm">{project.projectName}</TableCell>
-                                                <TableCell className="py-2 text-sm">{project.projectNumber}</TableCell>
-                                                <TableCell className="py-2 text-sm">{project.projectType}</TableCell>
-                                                <TableCell className="py-2 text-sm">{project.status}</TableCell>
-                                                <TableCell className="py-2 text-sm">{project.productionCity}</TableCell>
-                                                <TableCell className="py-2 text-sm">{project.facilityId}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.projectName}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.projectNumber}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.projectType}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.status}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.productionCity}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.facilityId}</TableCell>
                                               </TableRow>
                                             )
                                           ))}
@@ -1655,23 +1655,23 @@ export default function ShowsPage() {
                                       <Table>
                                         <TableHeader className="bg-white">
                                           <TableRow className="border-b border-gray-200">
-                                            <TableHead className="text-xs font-semibold text-gray-700">Date Type</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Project Number</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Facility ID</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Date/time</TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">Notes</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Date Type</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Number</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility ID</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Date/time</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Notes</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
                                           {selectedShowDetails?.keyDates.map((date, index) => (
                                             <TableRow key={index}>
-                                              <TableCell className="py-2 text-sm">{date.dateType}</TableCell>
-                                              <TableCell className="py-2 text-sm">{date.projectNumber}</TableCell>
-                                              <TableCell className="py-2 text-sm">{date.facilityId}</TableCell>
-                                              <TableCell className="py-2 text-sm">
+                                              <TableCell className="py-2 text-sm text-center">{date.dateType}</TableCell>
+                                              <TableCell className="py-2 text-sm text-center">{date.projectNumber}</TableCell>
+                                              <TableCell className="py-2 text-sm text-center">{date.facilityId}</TableCell>
+                                              <TableCell className="py-2 text-sm text-center">
                                                 {new Date(date.dateTime).toLocaleString()}
                                               </TableCell>
-                                              <TableCell className="py-2 text-sm">{date.notes}</TableCell>
+                                              <TableCell className="py-2 text-sm text-center">{date.notes}</TableCell>
                                             </TableRow>
                                           ))}
                                         </TableBody>
@@ -1917,7 +1917,7 @@ export default function ShowsPage() {
           <AnimatePresence mode="wait">
             {showProjectFacilities && (
               <motion.div
-                className={cn("bg-white", getContainerWidths().facilities)}
+                className="bg-white flex-1 overflow-hidden"
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{
                   x: 0,
@@ -1934,8 +1934,8 @@ export default function ShowsPage() {
                 transition={containerTransition}
                 layout
               >
-                <div className="h-full overflow-y-auto overflow-x-hidden scroll-smooth">
-                  <div className="p-4 max-w-[1200px] mx-auto">
+                <div className="h-full w-full overflow-y-auto overflow-x-hidden scroll-smooth">
+                  <div className="p-4 w-full">
                     <div className="flex items-center justify-between pb-3 mb-4 border-b">
                       <h2 className="text-lg font-semibold">
                         Project Facilities
@@ -1953,120 +1953,129 @@ export default function ShowsPage() {
 
                     {/* Project Facility content */}
                     <Card className="shadow-sm">
-                      <CardHeader className="py-3 px-4">
+                      <CardHeader className="py-2 px-4">
                         <CardTitle className="text-sm font-semibold">
                           Project Facility Details
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-4">
                         {/* Project Info */}
-                        <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="grid grid-cols-2 gap-4 mb-4">
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Project Number</Label>
+                            <Label className="text-xs text-gray-500">Project Number</Label>
                             <Input
                               value={selectedShow?.projectNumber || ''}
                               readOnly
-                              className="h-9"
+                              className="h-8"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">Project Name</Label>
+                            <Label className="text-xs text-gray-500">Project Name</Label>
                             <Input
                               value={mockProjectData.find(p => p.projectNumber === selectedShow?.projectNumber)?.projectName || ''}
                               readOnly
-                              className="h-9"
+                              className="h-8"
                             />
                           </div>
                         </div>
 
-                        {/* Registration Header */}
-                        <div className="flex justify-end mb-4">
-                          <Label className="text-sm font-medium">
-                            Registration:
-                          </Label>
-                          <span className="ml-2 text-sm">
-                            ----------------Servicecenter(TM)----------------
-                          </span>
-                        </div>
-
-                        {/* Facilities Table */}
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="text-xs font-semibold text-gray-700">Facility ID</TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">Facility Name</TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">Hall</TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">Location</TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">Location</TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">Area Code</TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">Phone</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mockFacilityData
-                              .filter(facility => 
-                                mockProjectData.find(p => 
-                                  p.projectNumber === selectedShow?.projectNumber && 
-                                  p.facilityId === facility.facilityId
-                                )
-                              )
-                              .map((facility) => (
-                                <TableRow key={facility.facilityId}>
-                                  <TableCell className="py-2 text-sm">{facility.facilityId}</TableCell>
-                                  <TableCell className="py-2 text-sm">{facility.facilityName}</TableCell>
-                                  <TableCell className="py-2 text-sm">{facility.hall}</TableCell>
-                                  <TableCell className="py-2 text-sm">{facility.location1}</TableCell>
-                                  <TableCell className="py-2 text-sm">{facility.location2}</TableCell>
-                                  <TableCell className="py-2 text-sm">{facility.areaCode}</TableCell>
-                                  <TableCell className="py-2 text-sm">{facility.phone}</TableCell>
+                        {/* Split tables into two sections side by side */}
+                        <div className="grid grid-cols-[2fr,1fr] gap-6">
+                          {/* Main Facility Info */}
+                          <div>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility ID</TableHead>
+                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility Name</TableHead>
+                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Hall</TableHead>
+                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Registration Location</TableHead>
                                 </TableRow>
-                              ))}
-                          </TableBody>
-                        </Table>
+                              </TableHeader>
+                              <TableBody>
+                                {mockFacilityData
+                                  .filter(facility => 
+                                    mockProjectData.find(p => 
+                                      p.projectNumber === selectedShow?.projectNumber && 
+                                      p.facilityId === facility.facilityId
+                                    )
+                                  )
+                                  .map((facility) => (
+                                    <TableRow key={facility.facilityId}>
+                                      <TableCell className="py-2 text-sm text-center">{facility.facilityId}</TableCell>
+                                      <TableCell className="py-2 text-sm text-center">{facility.facilityName}</TableCell>
+                                      <TableCell className="py-2 text-sm text-center">{facility.hall}</TableCell>
+                                      <TableCell className="py-2 text-sm text-center">{facility.location1}</TableCell>
+                                    </TableRow>
+                                  ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+
+                          {/* Servicecenter Info */}
+                          <div>
+                            <div className="flex justify-end mb-2">
+                              <span className="text-sm font-medium">Servicecenter(TM)</span>
+                            </div>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Location</TableHead>
+                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Area Code</TableHead>
+                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Phone</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {mockFacilityData
+                                  .filter(facility => 
+                                    mockProjectData.find(p => 
+                                      p.projectNumber === selectedShow?.projectNumber && 
+                                      p.facilityId === facility.facilityId
+                                    )
+                                  )
+                                  .map((facility) => (
+                                    <TableRow key={facility.facilityId}>
+                                      <TableCell className="py-2 text-sm text-center">{facility.location2}</TableCell>
+                                      <TableCell className="py-2 text-sm text-center">{facility.areaCode}</TableCell>
+                                      <TableCell className="py-2 text-sm text-center">{facility.phone}</TableCell>
+                                    </TableRow>
+                                  ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        </div>
 
                         {/* Notes and Comments */}
-                        <div className="grid grid-cols-3 gap-4 mt-6">
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Notes
-                            </Label>
-                            <Input placeholder="Enter notes" className="h-9" />
+                        <div className="grid grid-cols-3 gap-4 mt-4">
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-500">Notes</Label>
+                            <Input placeholder="Enter notes" className="h-8" />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Comments
-                            </Label>
-                            <Input
-                              placeholder="Enter comments"
-                              className="h-9"
-                            />
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-500">Comments</Label>
+                            <Input placeholder="Enter comments" className="h-8" />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Special Instructions
-                            </Label>
-                            <Input
-                              placeholder="Enter special instructions"
-                              className="h-9"
-                            />
+                          <div className="space-y-1">
+                            <Label className="text-xs text-gray-500">Special Instructions</Label>
+                            <Input placeholder="Enter special instructions" className="h-8" />
                           </div>
                         </div>
 
                         {/* Action Buttons */}
-                        <div className="flex justify-between items-center mt-6">
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
+                        <div className="flex justify-between items-center mt-4">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
                             Auto-Out
                           </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
                             Details
                           </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
                             Schedule
                           </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
                             Material Handling
                           </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-4 h-9">
+                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
                             Vendor Info
                           </Button>
                         </div>

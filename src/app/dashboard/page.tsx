@@ -23,6 +23,8 @@ import {
 } from "recharts";
 import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 
 export default function DashboardPage() {
   // This will automatically redirect to login if not authenticated
@@ -652,6 +654,40 @@ export default function DashboardPage() {
               ))}
             </TableBody>
           </Table>
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500">
+            Open
+          </Label>
+          <Input
+            type="text"
+            placeholder="MM/DD/YYYY"
+            className="h-9 px-3 w-full md:w-3/4"
+            value={dayjs().format('MM/DD/YYYY')}
+            onChange={(e) => {
+              const date = dayjs(e.target.value, 'MM/DD/YYYY');
+              if (date.isValid()) {
+                // Handle date change
+              }
+            }}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-sm text-gray-500">
+            Close
+          </Label>
+          <Input
+            type="text"
+            placeholder="MM/DD/YYYY"
+            className="h-9 px-3 w-full md:w-3/4"
+            value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+            onChange={(e) => {
+              const date = dayjs(e.target.value, 'MM/DD/YYYY');
+              if (date.isValid()) {
+                // Handle date change
+              }
+            }}
+          />
         </div>
       </div>
     </MainLayout>

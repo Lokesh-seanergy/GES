@@ -15,7 +15,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, Search } from "lucide-react";
-import { mockOrders } from "../orders/data";
+import { mockOrders } from "@/lib/mockData";
 import { formatDate } from "@/lib/utils";
 import type { Order } from "@/types/orders";
 import { CustomPagination } from "@/components/ui/pagination";

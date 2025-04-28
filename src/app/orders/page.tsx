@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Search, X } from "lucide-react";
-import { mockOrders } from "./data";
+import { mockOrders } from "@/lib/mockData";
 import type { Order, OrderItem } from "@/types/orders";
 import {
   Dialog,

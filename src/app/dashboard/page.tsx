@@ -2,8 +2,7 @@
 
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
-import { mockShows, mockProjectData } from "@/lib/mockData";
-import { mockOrders } from "@/app/orders/data";
+import { mockShows, mockProjectData, mockOrders } from "@/lib/mockData";
 import {
   Table,
   TableBody,
@@ -17,12 +16,13 @@ import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, Activity, Users, MapPin, DollarSign } from "lucide-react";
+import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  BarChart, Bar
+  BarChart as RechartsBarChart, Bar
 } from "recharts";
 import dayjs from "dayjs";
+import type { TooltipProps } from 'recharts';
 
 export default function DashboardPage() {
   // This will automatically redirect to login if not authenticated
@@ -37,10 +37,12 @@ export default function DashboardPage() {
     currentPage * itemsPerPage
   );
 
-  // Add some ongoing shows for demo
-  const demoOngoingShows = mockShows.map((show, idx) =>
-    idx < 3 ? { ...show, occrType: "Ongoing" } : show
-  );
+  // Assign statuses: first 3 as Ongoing, next 7 as Complete, rest as Upcoming
+  const demoOngoingShows = mockShows.map((show, idx) => {
+    if (idx < 3) return { ...show, occrType: "Ongoing" };
+    if (idx < 10) return { ...show, occrType: "Complete" };
+    return { ...show, occrType: "Upcoming" };
+  });
 
   // Generate additional mock orders with future dates for demo
   const futureOrderBaseDate = dayjs().add(1, 'day');
@@ -317,10 +319,18 @@ export default function DashboardPage() {
 
   const allOrders = [...mockOrders, ...additionalOrders, ...janOrders, ...febOrders, ...moreOrders];
 
-  // Calculate show status counts
-  const ongoingCount = demoOngoingShows.filter(s => s.occrType === "Ongoing").length;
+  // Calculate show status counts using demoOngoingShows for consistency
   const completedCount = demoOngoingShows.filter(s => s.occrType === "Complete").length;
+  const ongoingCount = demoOngoingShows.filter(s => s.occrType === "Ongoing").length;
   const upcomingCount = demoOngoingShows.length - ongoingCount - completedCount;
+
+  // Table of all closed shows
+  const closedShowsTable = demoOngoingShows.filter(s => s.occrType === "Complete").map(show => ({
+    id: show.showId,
+    name: show.showName,
+    date: show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo,
+    location: show.cityOrg,
+  }));
 
   // Only consider ongoing shows for these stats
   const ongoingShowIds = demoOngoingShows
@@ -347,7 +357,7 @@ export default function DashboardPage() {
     { label: "Ongoing Shows", value: ongoingCount, icon: <Activity className="w-8 h-8 text-green-500" /> },
     { label: "Total Exhibitors", value: totalOngoingExhibitors, icon: <Users className="w-8 h-8 text-purple-500" /> },
     { label: "Active Locations", value: ongoingLocations, icon: <MapPin className="w-8 h-8 text-pink-500" /> },
-    { label: "Total Revenue", value: `$${ongoingRevenue.toLocaleString()}` , icon: <DollarSign className="w-8 h-8 text-yellow-500" /> },
+    { label: "Closed Shows", value: completedCount, icon: <CheckCircle className="w-8 h-8 text-gray-500" /> },
   ];
   const showTasks = {
     todo: [
@@ -365,13 +375,21 @@ export default function DashboardPage() {
     ],
   };
   // Table data from demoOngoingShows (first 5 for example)
-  const showsTable = demoOngoingShows.slice(0, 5).map(show => ({
-    id: show.showId,
-    name: show.showName,
-    date: show.yrmo,
-    location: show.cityOrg,
-    status: ["Exhibition", "Workshop"].includes(show.occrType) ? "Upcoming" : (show.occrType || "Upcoming")
-  }));
+  const currentYear = dayjs().year();
+  const showsTable = demoOngoingShows.slice(0, 5).map(show => {
+    let dateStr = show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo;
+    // Replace the year with the current year if dateStr is in YYYY-MM-DD format
+    if (dateStr && dateStr.length === 10) {
+      dateStr = `${currentYear}${dateStr.slice(4)}`;
+    }
+    return {
+      id: show.showId,
+      name: show.showName,
+      date: dateStr,
+      location: show.cityOrg,
+      status: ["Exhibition", "Workshop"].includes(show.occrType) ? "Upcoming" : (show.occrType || "Upcoming")
+    };
+  });
   // Chart data from demoOngoingShows and mockOrders (example logic)
   const chartData = {
     labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
@@ -412,22 +430,37 @@ export default function DashboardPage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
-  // Create a mapping from showId to the first 3 letters of the show name (uppercase)
+  // Create a mapping from showId to the 3-letter shortcut and to the full show name
   const showShortcuts = Object.fromEntries(
     mockShows.map(show => [
       show.showId,
       show.showName ? show.showName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() : show.showId
     ])
   );
+  const showNames = Object.fromEntries(
+    mockShows.map(show => [
+      showShortcuts[show.showId] || show.showId,
+      show.showName || show.showId
+    ])
+  );
 
-  const barData = {
-    labels: topShows.map(([showId]) => showShortcuts[showId] || showId),
-    datasets: [
-      {
-        label: "Orders",
-        data: topShows.map(([, count]) => count),
-      },
-    ],
+  const barData = topShows.map(([showId, count]) => ({
+    name: showShortcuts[showId] || showId, // 3-letter code for Y-axis
+    Orders: count,
+  }));
+
+  // Custom Tooltip for BarChart
+  const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
+    if (active && payload && payload.length && label) {
+      const fullName = showNames[label as string] || label;
+      return (
+        <div className="bg-white p-2 rounded shadow text-xs">
+          <div className="font-bold">{fullName}</div>
+          <div>Orders: {payload[0].value}</div>
+        </div>
+      );
+    }
+    return null;
   };
 
   const handlePageChange = (newPage: number) => {
@@ -459,8 +492,11 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="font-semibold">SHOWS & EXHIBITS BY MONTH</div>
-              <div className="text-xs text-gray-400">Jan - Jun 2024</div>
+              <div className="flex items-center gap-2 font-semibold">
+                <LineChart className="w-5 h-5 text-blue-500" />
+                SHOWS & EXHIBITS BY MONTH
+              </div>
+              <div className="text-xs text-gray-400">Jan - Jun {dayjs().year()}</div>
             </div>
             <div className="h-56 bg-white rounded-lg shadow border p-4">
               <ResponsiveContainer width="100%" height="100%">
@@ -492,16 +528,16 @@ export default function DashboardPage() {
           </Card>
           <Card className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="font-semibold">ORDERS FOR UPCOMING SHOWS</div>
+              <div className="flex items-center gap-2 font-semibold">
+                <BarChart className="w-5 h-5 text-green-500 animate-pulse" />
+                ORDERS FOR UPCOMING SHOWS
+              </div>
               <div className="text-xs text-green-600 font-semibold">+12.5% from last month</div>
             </div>
             <div className="h-64 bg-white rounded-lg shadow border p-4">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={barData.labels.slice(0, 3).map((label, i) => ({
-                    name: label,
-                    Orders: barData.datasets[0].data[i],
-                  }))}
+                <RechartsBarChart
+                  data={barData}
                   layout="vertical"
                   barCategoryGap="30%"
                 >
@@ -518,9 +554,9 @@ export default function DashboardPage() {
                     axisLine={false}
                     tickLine={false}
                   />
-                  <Tooltip />
-                  <Bar dataKey="Orders" fill="#60a5fa" barSize={32} radius={[16, 16, 16, 16]} />
-                </BarChart>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="Orders" fill="#60a5fa" barSize={32} radius={[16, 16, 16, 16]} activeBar={false} />
+                </RechartsBarChart>
               </ResponsiveContainer>
             </div>
           </Card>
@@ -578,7 +614,7 @@ export default function DashboardPage() {
               <TableRow className="bg-blue-50">
                 <TableHead>SHOW ID</TableHead>
                 <TableHead>SHOW NAME</TableHead>
-                <TableHead>OCCURRENCE DATE</TableHead>
+                <TableHead>DATE</TableHead>
                 <TableHead>LOCATION</TableHead>
                 <TableHead>STATUS</TableHead>
                 <TableHead>ACTIONS</TableHead>
@@ -588,20 +624,25 @@ export default function DashboardPage() {
               {showsTable.map((show) => (
                 <TableRow key={show.id}>
                   <TableCell>{show.id}</TableCell>
-                  <TableCell>{show.name}</TableCell>
-                  <TableCell>{show.date}</TableCell>
+                  <TableCell>{show.name.split(' - ')[0]}</TableCell>
+                  <TableCell>
+                    {show.status === "Ongoing"
+                      ? dayjs().format('MM/DD/YYYY')
+                      : (dayjs(show.date).isValid() ? dayjs(show.date).format('MM/DD/YYYY') : show.date)
+                    }
+                  </TableCell>
                   <TableCell>{show.location}</TableCell>
                   <TableCell>
                     <span
                       className={`px-2 py-1 rounded text-xs font-semibold
                         ${show.status === "Ongoing"
                           ? "bg-green-100 text-green-800"
-                          : show.status === "Upcoming"
-                          ? "bg-yellow-100 text-yellow-800"
-                          : "bg-gray-100 text-gray-800"}
+                          : show.status === "Complete"
+                          ? "bg-orange-100 text-orange-800"
+                          : "bg-yellow-100 text-yellow-800"}
                       `}
                     >
-                      {show.status}
+                      {show.status === "Complete" ? "Upcoming" : show.status}
                     </span>
                   </TableCell>
                   <TableCell>

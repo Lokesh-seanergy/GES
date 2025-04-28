@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import MainLayout from '@/components/mainlayout/MainLayout';
 import { CustomPagination } from '@/components/ui/pagination';
 import { PageSizeSelector } from '@/components/ui/page-size-selector';
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 const ProductsPage: React.FC = () => {
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -29,6 +30,7 @@ const ProductsPage: React.FC = () => {
           onPageChange={handlePageChange}
         />
       </div>
+      <ScrollToTop />
     </MainLayout>
   );
 };

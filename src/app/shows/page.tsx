@@ -56,6 +56,7 @@ import {
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import dayjs from "dayjs";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 interface ShowData {
   showId: string;
@@ -580,54 +581,6 @@ export default function ShowsPage() {
     }));
   };
 
-  // Back to Top button visibility state and functionality
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  // Scroll handler with proper cleanup
-  useEffect(() => {
-    let scrollContainer: HTMLDivElement | null = null;
-
-    // Wait for component to mount and DOM to be ready
-    setTimeout(() => {
-      scrollContainer = document.querySelector(
-        ".h-\\[calc\\(100vh-4rem\\)\\]"
-      ) as HTMLDivElement;
-
-      if (scrollContainer) {
-        const handleScroll = () => {
-          if (scrollContainer) {
-            setShowBackToTop(scrollContainer.scrollTop > 400);
-          }
-        };
-
-        scrollContainer.addEventListener("scroll", handleScroll);
-
-        // Return cleanup function
-        return () => {
-          if (scrollContainer) {
-            scrollContainer.removeEventListener("scroll", handleScroll);
-          }
-        };
-      }
-    }, 0);
-
-    // Cleanup in case component unmounts before setTimeout
-    return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("scroll", () => {});
-      }
-    };
-  }, []);
-
-  const scrollToTop = () => {
-    const scrollContainer = document.querySelector(
-      ".h-\\[calc\\(100vh-4rem\\)\\]"
-    ) as HTMLDivElement;
-    if (scrollContainer) {
-      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  };
-
   // Breadcrumb state
   const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
     { label: "Shows", href: "#" },
@@ -790,14 +743,14 @@ export default function ShowsPage() {
                   {/* Filter Panel */}
                   <motion.div
                     className={cn(
-                      "bg-muted border rounded-md p-4 space-y-3",
-                      "transition-all duration-300 ease-in-out",
+                      "bg-muted border rounded-md p-4",
+                      "transition-all duration-300 ease-in-out absolute z-10 w-full",
                       showFilters
                         ? "max-h-[500px] opacity-100"
                         : "max-h-0 opacity-0 overflow-hidden"
                     )}
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label className="text-sm text-gray-500">Show ID</Label>
                         <Input
@@ -810,9 +763,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Show Name
-                        </Label>
+                        <Label className="text-sm text-gray-500">Show Name</Label>
                         <Input
                           value={filters.showName}
                           onChange={(e) =>
@@ -834,9 +785,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Occr Type
-                        </Label>
+                        <Label className="text-sm text-gray-500">Occr Type</Label>
                         <Select
                           value={filters.occrType}
                           onValueChange={(value) =>
@@ -855,11 +804,8 @@ export default function ShowsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Market Type
-                        </Label>
+                        <Label className="text-sm text-gray-500">Market Type</Label>
                         <Select
                           value={filters.marketType}
                           onValueChange={(value) =>
@@ -879,9 +825,7 @@ export default function ShowsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Project #
-                        </Label>
+                        <Label className="text-sm text-gray-500">Project #</Label>
                         <Input
                           value={filters.projectNumber}
                           onChange={(e) =>
@@ -892,9 +836,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          City Org
-                        </Label>
+                        <Label className="text-sm text-gray-500">City Org</Label>
                         <Input
                           value={filters.cityOrg}
                           onChange={(e) =>
@@ -905,9 +847,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          YRMO Range
-                        </Label>
+                        <Label className="text-sm text-gray-500">YRMO Range</Label>
                         <Input
                           type="text"
                           value={formatYrmoRange(
@@ -927,10 +867,7 @@ export default function ShowsPage() {
                       <Button variant="outline" onClick={resetFilters}>
                         Reset Filters
                       </Button>
-                      <Button
-                        variant="success"
-                        onClick={applyFilters}
-                      >
+                      <Button variant="success" onClick={applyFilters}>
                         Apply Filters
                       </Button>
                     </div>
@@ -962,17 +899,23 @@ export default function ShowsPage() {
                   )}
 
                   {/* New Show Form */}
-                  {isNewShowOpen && (
-                    <Card className="shadow-sm">
+                  <motion.div
+                    className={cn(
+                      "absolute z-20 top-[4.5rem] right-0 bg-white w-full",
+                      "transition-all duration-300 ease-in-out",
+                      isNewShowOpen
+                        ? "opacity-100 translate-x-0"
+                        : "opacity-0 translate-x-full pointer-events-none"
+                    )}
+                  >
+                    <Card className="shadow-lg">
                       <CardHeader className="pb-3">
                         <CardTitle>New Show</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="grid grid-cols-4 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Show ID
-                            </Label>
+                            <Label className="text-sm text-gray-500">Show ID</Label>
                             <Input
                               placeholder="Enter showId"
                               className="h-9"
@@ -981,9 +924,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Show Name
-                            </Label>
+                            <Label className="text-sm text-gray-500">Show Name</Label>
                             <Input
                               placeholder="Enter showName"
                               className="h-9"
@@ -992,9 +933,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr ID
-                            </Label>
+                            <Label className="text-sm text-gray-500">Occr ID</Label>
                             <Input
                               placeholder="Enter occrId"
                               className="h-9"
@@ -1003,9 +942,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr Type
-                            </Label>
+                            <Label className="text-sm text-gray-500">Occr Type</Label>
                             <Input
                               placeholder="Enter occrType"
                               className="h-9"
@@ -1014,9 +951,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Market Type
-                            </Label>
+                            <Label className="text-sm text-gray-500">Market Type</Label>
                             <Input
                               placeholder="Enter marketType"
                               className="h-9"
@@ -1025,9 +960,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Number
-                            </Label>
+                            <Label className="text-sm text-gray-500">Project Number</Label>
                             <Input
                               placeholder="Enter projectNumber"
                               className="h-9"
@@ -1036,9 +969,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              City Org
-                            </Label>
+                            <Label className="text-sm text-gray-500">City Org</Label>
                             <Input
                               placeholder="Enter cityOrg"
                               className="h-9"
@@ -1047,9 +978,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              YRMO
-                            </Label>
+                            <Label className="text-sm text-gray-500">YRMO</Label>
                             <Input
                               placeholder="Enter yrmo"
                               className="h-9"
@@ -1058,33 +987,36 @@ export default function ShowsPage() {
                             />
                           </div>
                         </div>
-                        <div className="flex justify-end gap-4 mt-6">
+                        <div className="flex justify-end gap-4 mt-4">
                           <Button variant="outline" onClick={toggleNewShow}>
                             Cancel
                           </Button>
-                          <Button
-                            variant="success"
-                            onClick={handleAddShow}
-                          >
+                          <Button variant="success" onClick={handleAddShow}>
                             Create Show
                           </Button>
                         </div>
                       </CardContent>
                     </Card>
-                  )}
+                  </motion.div>
 
                   {/* New Occr Form */}
-                  {isNewOccrOpen && (
-                    <Card className="shadow-sm">
+                  <motion.div
+                    className={cn(
+                      "absolute z-20 top-[4.5rem] right-0 bg-white w-full",
+                      "transition-all duration-300 ease-in-out",
+                      isNewOccrOpen
+                        ? "opacity-100 translate-x-0"
+                        : "opacity-0 translate-x-full pointer-events-none"
+                    )}
+                  >
+                    <Card className="shadow-lg">
                       <CardHeader className="pb-3">
                         <CardTitle>New Occurrence</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="grid grid-cols-3 gap-6">
+                        <div className="grid grid-cols-4 gap-4">
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Show ID
-                            </Label>
+                            <Label className="text-sm text-gray-500">Show ID</Label>
                             <Input
                               placeholder="Enter showId"
                               className="h-9"
@@ -1093,9 +1025,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr ID
-                            </Label>
+                            <Label className="text-sm text-gray-500">Occr ID</Label>
                             <Input
                               placeholder="Enter occrId"
                               className="h-9"
@@ -1104,9 +1034,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr Type
-                            </Label>
+                            <Label className="text-sm text-gray-500">Occr Type</Label>
                             <Input
                               placeholder="Enter occrType"
                               className="h-9"
@@ -1115,9 +1043,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Description
-                            </Label>
+                            <Label className="text-sm text-gray-500">Description</Label>
                             <Input
                               placeholder="Enter description"
                               className="h-9"
@@ -1125,11 +1051,8 @@ export default function ShowsPage() {
                               onChange={handleNewOccrChange("description")}
                             />
                           </div>
-
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Open
-                            </Label>
+                            <Label className="text-sm text-gray-500">Open</Label>
                             <Input
                               type="text"
                               placeholder="MM/DD/YYYY"
@@ -1144,9 +1067,7 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Close
-                            </Label>
+                            <Label className="text-sm text-gray-500">Close</Label>
                             <Input
                               type="text"
                               placeholder="MM/DD/YYYY"
@@ -1161,51 +1082,42 @@ export default function ShowsPage() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Timezone
-                            </Label>
+                            <Label className="text-sm text-gray-500">Timezone</Label>
                             <Input
                               placeholder="Enter timezone"
-                              className="h-9 px-3 w-full md:w-3/4"
+                              className="h-9"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Number
-                            </Label>
+                            <Label className="text-sm text-gray-500">Project Number</Label>
                             <Input
                               placeholder="Enter projectNumber"
-                              className="h-9 px-3 w-full md:w-3/4"
+                              className="h-9"
                               value={newOccr.projectNumber}
                               onChange={handleNewOccrChange("projectNumber")}
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Facility ID
-                            </Label>
+                            <Label className="text-sm text-gray-500">Facility ID</Label>
                             <Input
                               placeholder="Enter facilityId"
-                              className="h-9 px-3 w-full md:w-3/4"
+                              className="h-9"
                               value={newOccr.facilityId}
                               onChange={handleNewOccrChange("facilityId")}
                             />
                           </div>
                         </div>
-                        <div className="flex justify-end gap-4 mt-6">
+                        <div className="flex justify-end gap-4 mt-4">
                           <Button variant="outline" onClick={toggleNewOccr}>
                             Cancel
                           </Button>
-                          <Button
-                            variant="success"
-                            onClick={handleAddShow}
-                          >
+                          <Button variant="success" onClick={handleAddShow}>
                             Create Occurrence
                           </Button>
                         </div>
                       </CardContent>
                     </Card>
-                  )}
+                  </motion.div>
 
                   {/* Shows Table */}
                   <Card
@@ -2088,19 +2000,9 @@ export default function ShowsPage() {
           </AnimatePresence>
 
           {/* Back to Top Button */}
-          <AnimatePresence>
-            {showBackToTop && (
-              <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                onClick={scrollToTop}
-                className="fixed bottom-8 right-8 bg-green-400 text-white rounded-full p-3 shadow-lg hover:bg-green-300 transition-colors z-50"
-              >
-                <ArrowUp className="h-5 w-5" />
-              </motion.button>
-            )}
-          </AnimatePresence>
+          <div className="relative">
+            <ScrollToTop />
+          </div>
         </div>
       </div>
 

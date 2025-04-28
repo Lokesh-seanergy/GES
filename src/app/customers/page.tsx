@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/table";
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 interface SummaryData {
   exhibitor: {
@@ -1554,6 +1555,7 @@ function CustomersContent() {
           </>
         )}
       </div>
+      <ScrollToTop />
     </MainLayout>
   );
 }

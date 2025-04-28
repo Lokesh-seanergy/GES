@@ -25,6 +25,7 @@ import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 export default function DashboardPage() {
   // This will automatically redirect to login if not authenticated
@@ -690,6 +691,7 @@ export default function DashboardPage() {
           />
         </div>
       </div>
+      <ScrollToTop />
     </MainLayout>
   );
 }

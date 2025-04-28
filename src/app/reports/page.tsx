@@ -36,6 +36,8 @@ import {
   Line,
 } from "recharts";
 import { CSVLink } from "react-csv";
+import UnderDevelopment from "../under-development";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 interface ChartData {
   name: string;
@@ -134,6 +136,8 @@ export default function ReportsPage() {
 
   return (
     <MainLayout breadcrumbs={[{ label: "Reports" }]}>
+      <UnderDevelopment />
+      <ScrollToTop />
       {/* Search Bar */}
       <div className="mb-6">
         <div className="relative">

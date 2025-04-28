@@ -173,21 +173,26 @@ function CustomersContent() {
         return total + (isNaN(length) || isNaN(width) ? 0 : length * width);
       }, 0);
 
+    const exhibitorOrderCount = exhibitorCustomers.reduce((total, c) => total + c.orders, 0);
+    const eeOrderCount = eeCustomers.reduce((total, c) => total + c.orders, 0);
+    const thirdPartyOrderCount = thirdPartyCustomers.reduce((total, c) => total + c.orders, 0);
+    const totalOrders = exhibitorOrderCount + eeOrderCount + thirdPartyOrderCount;
+
     setSummaryData({
       exhibitor: {
         customerCount: exhibitorCustomers.length,
         metric2: calculateTotalBoothArea(exhibitorCustomers),
-        metric3: exhibitorCustomers.reduce((total, c) => total + c.orders, 0),
+        metric3: totalOrders,
       },
       ee: {
         customerCount: eeCustomers.length,
         metric2: calculateTotalBoothArea(eeCustomers),
-        metric3: eeCustomers.reduce((total, c) => total + c.orders, 0),
+        metric3: 0,
       },
       thirdParty: {
         customerCount: thirdPartyCustomers.length,
         metric2: calculateTotalBoothArea(thirdPartyCustomers),
-        metric3: thirdPartyCustomers.reduce((total, c) => total + c.orders, 0),
+        metric3: 0,
       },
     });
   };
@@ -833,15 +838,6 @@ function CustomersContent() {
                     </p>
                     <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
-                  <div title="Orders">
-                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
-                      <FileText className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <p className="text-lg font-semibold">
-                      {summaryData.ee.metric3}
-                    </p>
-                    <p className="text-xs text-gray-500">Orders</p>
-                  </div>
                 </div>
               </Card>
               <Card className="shadow rounded-md p-4">
@@ -866,15 +862,6 @@ function CustomersContent() {
                       {summaryData.thirdParty.metric2}
                     </p>
                     <p className="text-xs text-gray-500">Booth Sqft</p>
-                  </div>
-                  <div title="Orders">
-                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
-                      <FileText className="w-5 h-5 text-amber-600" />
-                    </div>
-                    <p className="text-lg font-semibold">
-                      {summaryData.thirdParty.metric3}
-                    </p>
-                    <p className="text-xs text-gray-500">Orders</p>
                   </div>
                 </div>
               </Card>

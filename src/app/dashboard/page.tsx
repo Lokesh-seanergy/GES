@@ -13,10 +13,10 @@ import {
 } from "@/components/ui/table";
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart } from "lucide-react";
+import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   BarChart as RechartsBarChart, Bar
@@ -25,7 +25,18 @@ import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { ScrollToTop } from "@/components/ui/scroll-to-top";
+import { useNotifications } from "@/components/NotificationContext";
+
+// Define a type for dashboard tasks
+interface DashboardTask {
+  id: number;
+  task: string;
+  boothZone: string;
+  customerName: string;
+  status: string;
+  due?: string;
+  timestamp?: string;
+}
 
 export default function DashboardPage() {
   // This will automatically redirect to login if not authenticated
@@ -362,21 +373,48 @@ export default function DashboardPage() {
     { label: "Active Locations", value: ongoingLocations, icon: <MapPin className="w-8 h-8 text-pink-500" /> },
     { label: "Closed Shows", value: completedCount, icon: <CheckCircle className="w-8 h-8 text-gray-500" /> },
   ];
-  const showTasks = {
-    todo: [
-      { task: "Review Floor Plan", due: "Jan 5" },
-      { task: "Update Booth Layout", due: "Jan 10" },
-      { task: "Vendor Registration", due: "Jan 15" },
-    ],
+  const { notifications, setNotifications } = useNotifications();
+  // On mount, add sample notifications if none exist
+  useEffect(() => {
+    if (notifications.length === 0) {
+      setNotifications([
+        {
+          id: 1,
+          task: "Review Floor Plan",
+          boothZone: "A1",
+          customerName: "Acme Corp",
+          status: "pending",
+          timestamp: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          task: "Update Booth Layout",
+          boothZone: "B2",
+          customerName: "Globex Corporation",
+          status: "pending",
+          timestamp: new Date().toISOString(),
+        },
+      ]);
+    }
+  }, []);
+  const [showTasks, setShowTasks] = useState<{
+    todo: DashboardTask[];
+    inProgress: DashboardTask[];
+    completed: DashboardTask[];
+  }>({
+    todo: [],
     inProgress: [
-      { task: "Exhibitor Setup", due: "Jan 7" },
-      { task: "Marketing Materials", due: "Jan 12" },
+      { id: 3, task: "Exhibitor Setup", due: "Jan 7", boothZone: "D4", customerName: "Umbrella Corp", status: "inProgress" },
+      { id: 4, task: "Marketing Materials", due: "Jan 12", boothZone: "E5", customerName: "Hooli", status: "inProgress" },
     ],
     completed: [
-      { task: "Budget Approval", due: "Jan 3" },
-      { task: "Venue Booking", due: "Jan 1" },
+      { id: 5, task: "Budget Approval", due: "Jan 3", boothZone: "F6", customerName: "Wayne Enterprises", status: "completed" },
+      { id: 6, task: "Venue Booking", due: "Jan 1", boothZone: "G7", customerName: "Stark Industries", status: "completed" },
     ],
-  };
+  });
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const bellRef = useRef(null);
+
   // Table data from demoOngoingShows (first 5 for example)
   const currentYear = dayjs().year();
   const showsTable = demoOngoingShows.slice(0, 5).map(show => {
@@ -474,6 +512,65 @@ export default function DashboardPage() {
     setItemsPerPage(parseInt(value));
     setCurrentPage(1); // Reset to first page when changing items per page
   };
+
+  useEffect(() => {
+    // Helper to check if a reminder already exists
+    const hasReminder = (id: number, type: 'todo' | 'inProgress') =>
+      notifications.some(
+        n => n.id === id && n.status === `reminder-${type}`
+      );
+
+    // Find tasks outside the top 5 in To Do and In Progress
+    const hiddenTodo = showTasks.todo.slice(5);
+    const hiddenInProgress = showTasks.inProgress.slice(5);
+
+    // Add reminders for hidden To Do tasks
+    hiddenTodo.forEach(task => {
+      if (!hasReminder(task.id, 'todo')) {
+        setNotifications(prev => [
+          ...prev,
+          {
+            ...task,
+            status: 'reminder-todo',
+            task: `Reminder: Accept task - ${task.task}`,
+          },
+        ]);
+      }
+    });
+
+    // Add reminders for hidden In Progress tasks
+    hiddenInProgress.forEach(task => {
+      if (!hasReminder(task.id, 'inProgress')) {
+        setNotifications(prev => [
+          ...prev,
+          {
+            ...task,
+            status: 'reminder-inProgress',
+            task: `Reminder: Mark as Completed - ${task.task}`,
+          },
+        ]);
+      }
+    });
+
+    // Remove reminders for tasks that are now visible or completed
+    setNotifications(prev =>
+      prev.filter(n => {
+        if (n.status === 'reminder-todo') {
+          // If the task is now visible in To Do or is no longer in To Do, remove reminder
+          return (
+            showTasks.todo.slice(5).some(t => t.id === n.id)
+          );
+        }
+        if (n.status === 'reminder-inProgress') {
+          // If the task is now visible in In Progress or is no longer in In Progress, remove reminder
+          return (
+            showTasks.inProgress.slice(5).some(t => t.id === n.id)
+          );
+        }
+        return true; // keep all other notifications
+      })
+    );
+  }, [showTasks, setNotifications]);
 
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
@@ -574,10 +671,37 @@ export default function DashboardPage() {
             <div>
               <h3 className="font-semibold mb-2">To Do</h3>
               <ul className="space-y-2">
-                {showTasks.todo.map((task) => (
-                  <li key={task.task} className="bg-gray-50 rounded p-3 flex justify-between items-center">
-                    <span>{task.task}</span>
-                    <span className="text-xs text-gray-400">Due: {task.due}</span>
+                {notifications.filter((n: DashboardTask) => n.status === "pending").map((task: DashboardTask) => (
+                  <li key={task.id} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
+                    <span>
+                      {task.task}
+                      {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
+                      {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
+                    </span>
+                    <button
+                      className="ml-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                      onClick={() => {
+                        setShowTasks((prev) => ({
+                          ...prev,
+                          inProgress: [
+                            ...prev.inProgress,
+                            { ...task, status: "inProgress" }
+                          ]
+                        }));
+                        setNotifications((prev: DashboardTask[]) => prev.filter((n: DashboardTask) => n.id !== task.id));
+                      }}
+                    >
+                      Accept
+                    </button>
+                  </li>
+                ))}
+                {showTasks.todo.map((task: DashboardTask) => (
+                  <li key={task.task} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
+                    <span>
+                      {task.task}
+                      {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
+                      {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -585,10 +709,26 @@ export default function DashboardPage() {
             <div>
               <h3 className="font-semibold mb-2">In Progress</h3>
               <ul className="space-y-2">
-                {showTasks.inProgress.map((task) => (
-                  <li key={task.task} className="bg-gray-50 rounded p-3 flex justify-between items-center">
-                    <span>{task.task}</span>
-                    <span className="text-xs text-gray-400">Due: {task.due}</span>
+                {showTasks.inProgress.map((task: DashboardTask) => (
+                  <li key={task.id} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
+                    <span>
+                      {task.task} | <b>Zone:</b> {task.boothZone} | <b>Customer:</b> {task.customerName}
+                    </span>
+                    <button
+                      className="ml-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                      onClick={() => {
+                        setShowTasks((prev) => ({
+                          ...prev,
+                          inProgress: prev.inProgress.filter((t) => t.id !== task.id),
+                          completed: [
+                            ...prev.completed,
+                            { ...task, status: "completed", due: dayjs().format('MMM D') },
+                          ],
+                        }));
+                      }}
+                    >
+                      Mark as Completed
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -596,12 +736,18 @@ export default function DashboardPage() {
             <div>
               <h3 className="font-semibold mb-2">Completed</h3>
               <ul className="space-y-2">
-                {showTasks.completed.map((task) => (
-                  <li key={task.task} className="bg-gray-50 rounded p-3 flex justify-between items-center">
-                    <span>{task.task}</span>
-                    <span className="text-xs text-gray-400">Due: {task.due}</span>
-                  </li>
-                ))}
+                {showTasks.completed
+                  .slice(0, 5) // Only show the 5 most recent completed tasks
+                  .map((task: DashboardTask) => (
+                    <li key={task.task} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
+                      <span>
+                        {task.task}
+                        {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
+                        {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
+                      </span>
+                      <span className="text-xs text-gray-400">Due: {task.due}</span>
+                    </li>
+                  ))}
               </ul>
             </div>
           </div>
@@ -656,7 +802,7 @@ export default function DashboardPage() {
             </TableBody>
           </Table>
         </div>
-        <div className="space-y-2">
+        {/* <div className="space-y-2">
           <Label className="text-sm text-gray-500">
             Open
           </Label>
@@ -672,8 +818,8 @@ export default function DashboardPage() {
               }
             }}
           />
-        </div>
-        <div className="space-y-2">
+        </div> */}
+        {/* <div className="space-y-2">
           <Label className="text-sm text-gray-500">
             Close
           </Label>
@@ -689,9 +835,9 @@ export default function DashboardPage() {
               }
             }}
           />
-        </div>
+        </div> */}
       </div>
-      <ScrollToTop />
+      {/* <ScrollToTop /> */}
     </MainLayout>
   );
 }

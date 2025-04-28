@@ -53,7 +53,8 @@ export default function OrderDetail({ order }: OrderDetailProps) {
       </div>
 
       {/* Header Details */}
-      <div className="grid grid-cols-2 gap-4 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+
         {[
           { label: "Order #", field: "orderId" },
           { label: "Status", field: "status" },

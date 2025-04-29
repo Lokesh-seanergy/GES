@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,8 +22,9 @@ import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { useSearchParams } from "next/navigation";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-export default function OrdersPage() {
+function OrdersContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -47,6 +48,7 @@ export default function OrdersPage() {
     tax: 0,
     items: [],
   });
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
 
   const searchParams = useSearchParams();
   const projectNumber = searchParams.get("projectNumber");
@@ -395,7 +397,14 @@ export default function OrdersPage() {
                                   Add Item
                                 </Button>
                                 {diff > 0 && (
-                                  <Button variant="default" onClick={() => alert('Proceed to payment!')}>Make Payment</Button>
+                                  <Button
+                                    variant="default"
+                                    onClick={() => {
+                                      setShowPaymentDialog(true);
+                                    }}
+                                  >
+                                    Make Payment
+                                  </Button>
                                 )}
                                 <Button variant="outline" onClick={() => setIsEditingOrder(false)}>Cancel</Button>
                               </div>
@@ -432,6 +441,37 @@ export default function OrdersPage() {
 
         <ScrollToTop />
       </div>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent>
+          <DialogTitle>Proceed with Payment</DialogTitle>
+          <div className="py-4">Are you sure you want to proceed with the payment?</div>
+          <DialogFooter>
+            <Button
+              variant="default"
+              onClick={() => {
+                setSelectedOrder(editedOrder);
+                setIsEditingOrder(false);
+                setShowPaymentDialog(false);
+              }}
+            >
+              Confirm Payment
+            </Button>
+            <Button variant="outline" onClick={() => setShowPaymentDialog(false)}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MainLayout>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 }

@@ -30,7 +30,7 @@ export default function LoginPage() {
       setIsLoading(true);
       setError("");
       // Normally you would do real sign-in logic here
-      login("mock-email-user", { displayName: "Email User", email });
+      login("mock-email-user", { displayName: "Email User", email, photoURL: null });
       router.push("/ges-workbench/dashboard");
     } catch (error: any) {
       setError(error.message || "Failed to sign in");
@@ -42,7 +42,7 @@ export default function LoginPage() {
   const handleMicrosoftSignIn = async () => {
     try {
       setIsLoading(true);
-      login("mock-microsoft-user", { displayName: "Microsoft User", email: "microsoftuser@example.com" });
+      login("mock-microsoft-user", { displayName: "Microsoft User", email: "microsoftuser@example.com", photoURL: null });
       router.push("/ges-workbench/dashboard");
     } catch (error) {
       console.error(error);
@@ -61,8 +61,8 @@ export default function LoginPage() {
               <Image
                 src="/ges-workbench/ges_logo.png"
                 alt="GES Logo"
-                width={250}
-                height={250}
+                width={320}
+                height={320}
                 priority
               />
             </div>
@@ -93,7 +93,7 @@ export default function LoginPage() {
 
                 <Button
                   type="submit"
-                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                   disabled={isLoading}
                 >
                   {isLoading ? "Signing in..." : "Sign in with Email"}

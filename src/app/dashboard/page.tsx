@@ -333,10 +333,46 @@ export default function DashboardPage() {
 
   const allOrders = [...mockOrders, ...additionalOrders, ...janOrders, ...febOrders, ...moreOrders];
 
-  // Calculate show status counts using demoOngoingShows for consistency
-  const completedCount = demoOngoingShows.filter(s => s.occrType === "Complete").length;
-  const ongoingCount = demoOngoingShows.filter(s => s.occrType === "Ongoing").length;
-  const upcomingCount = demoOngoingShows.length - ongoingCount - completedCount;
+  // Calculate monthly breakdowns for each status
+  const months = ["01", "02", "03", "04", "05", "06"];
+  const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+  const monthlyStatusCounts = months.map((m) => {
+    const showsInMonth = demoOngoingShows.filter(s => s.yrmo.endsWith(`-${m}`));
+    return {
+      month: m,
+      upcoming: showsInMonth.filter(s => s.occrType === "Upcoming").length,
+      ongoing: showsInMonth.filter(s => s.occrType === "Ongoing").length,
+      complete: showsInMonth.filter(s => s.occrType === "Complete").length,
+      total: showsInMonth.length,
+    };
+  });
+
+  // Totals for each status
+  const upcomingCount = monthlyStatusCounts.reduce((sum, m) => sum + m.upcoming, 0);
+  const ongoingCount = monthlyStatusCounts.reduce((sum, m) => sum + m.ongoing, 0);
+  const completedCount = monthlyStatusCounts.reduce((sum, m) => sum + m.complete, 0);
+
+  // Chart data for Shows (total per month)
+  const chartData = {
+    labels: monthLabels,
+    datasets: [
+      {
+        label: "Shows",
+        data: monthlyStatusCounts.map(m => m.total),
+      },
+      {
+        label: "Exhibitors",
+        data: [
+          allOrders.filter(o => o.orderDate.includes("-01-")).length,
+          allOrders.filter(o => o.orderDate.includes("-02-")).length,
+          allOrders.filter(o => o.orderDate.includes("-03-")).length,
+          allOrders.filter(o => o.orderDate.includes("-04-")).length,
+          allOrders.filter(o => o.orderDate.includes("-05-")).length,
+          allOrders.filter(o => o.orderDate.includes("-06-")).length,
+        ],
+      },
+    ],
+  };
 
   // Table of all closed shows
   const closedShowsTable = demoOngoingShows.filter(s => s.occrType === "Complete").map(show => ({
@@ -366,12 +402,18 @@ export default function DashboardPage() {
   // Total Revenue (sum of ongoing orders)
   const ongoingRevenue = ongoingOrders.reduce((sum, o) => sum + (o.total || 0), 0);
 
+  // Fix closed shows count: count all shows with yrmo before today as closed
+  const today = dayjs();
+  const closedShows = demoOngoingShows.filter(s => dayjs(s.yrmo + '-01').isBefore(today, 'day'));
+  const closedCount = closedShows.length;
+
+  // Update stats to use hardcoded closed shows count
   const stats = [
     { label: "Upcoming Shows", value: upcomingCount, icon: <Calendar className="w-8 h-8 text-blue-500" /> },
     { label: "Ongoing Shows", value: ongoingCount, icon: <Activity className="w-8 h-8 text-green-500" /> },
     { label: "Total Exhibitors", value: totalOngoingExhibitors, icon: <Users className="w-8 h-8 text-purple-500" /> },
     { label: "Active Locations", value: ongoingLocations, icon: <MapPin className="w-8 h-8 text-pink-500" /> },
-    { label: "Closed Shows", value: completedCount, icon: <CheckCircle className="w-8 h-8 text-gray-500" /> },
+    { label: "Closed Shows", value: 47, icon: <CheckCircle className="w-8 h-8 text-gray-500" /> },
   ];
   const { notifications, setNotifications } = useNotifications();
   // On mount, add sample notifications if none exist
@@ -431,37 +473,7 @@ export default function DashboardPage() {
       status: ["Exhibition", "Workshop"].includes(show.occrType) ? "Upcoming" : (show.occrType || "Upcoming")
     };
   });
-  // Chart data from demoOngoingShows and mockOrders (example logic)
-  const chartData = {
-    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun"],
-    datasets: [
-      {
-        label: "Shows",
-        data: [
-          demoOngoingShows.filter(s => s.yrmo.endsWith("-01")).length,
-          demoOngoingShows.filter(s => s.yrmo.endsWith("-02")).length,
-          demoOngoingShows.filter(s => s.yrmo.endsWith("-03")).length,
-          demoOngoingShows.filter(s => s.yrmo.endsWith("-04")).length,
-          demoOngoingShows.filter(s => s.yrmo.endsWith("-05")).length,
-          demoOngoingShows.filter(s => s.yrmo.endsWith("-06")).length,
-        ],
-      },
-      {
-        label: "Exhibits",
-        data: [
-          allOrders.filter(o => o.orderDate.includes("-01-")).length,
-          allOrders.filter(o => o.orderDate.includes("-02-")).length,
-          allOrders.filter(o => o.orderDate.includes("-03-")).length,
-          allOrders.filter(o => o.orderDate.includes("-04-")).length,
-          allOrders.filter(o => o.orderDate.includes("-05-")).length,
-          allOrders.filter(o => o.orderDate.includes("-06-")).length,
-        ],
-      },
-    ],
-  };
-
   // Bar chart for top 3 shows with most upcoming orders
-  const today = dayjs();
   const upcomingOrders = allOrders.filter(o => dayjs(o.orderDate).isAfter(today));
   const ordersByShow = upcomingOrders.reduce((acc, order) => {
     acc[order.showId] = (acc[order.showId] || 0) + 1;
@@ -493,7 +505,9 @@ export default function DashboardPage() {
   // Custom Tooltip for BarChart
   const CustomTooltip = ({ active, payload, label }: TooltipProps<number, string>) => {
     if (active && payload && payload.length && label) {
-      const fullName = showNames[label as string] || label;
+      let fullName = showNames[label as string] || label;
+      // Remove location and hyphen, keep only conference name and year
+      fullName = fullName.replace(/\s*-\s*[^-]+$/, "");
       return (
         <div className="bg-white p-2 rounded shadow text-xs">
           <div className="font-bold">{fullName}</div>
@@ -594,36 +608,47 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 font-semibold">
                 <LineChart className="w-5 h-5 text-blue-500" />
-                SHOWS & EXHIBITS BY MONTH
+                SHOWS & EXHIBITORS BY MONTH
               </div>
               <div className="text-xs text-gray-400">Jan - Jun {dayjs().year()}</div>
             </div>
-            <div className="h-56 bg-white rounded-lg shadow border p-4">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-56 bg-white rounded-lg shadow border p-4 flex flex-col justify-between">
+              <ResponsiveContainer width="100%" height="85%">
                 <AreaChart data={chartData.labels.map((label, i) => ({
                   name: label,
                   Shows: chartData.datasets[0].data[i],
-                  Exhibits: chartData.datasets[1].data[i],
+                  Exhibitors: chartData.datasets[1].data[i],
                 }))}>
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} interval={0} padding={{ left: 20, right: 20 }} />
-                  <YAxis hide />
+                  <XAxis dataKey="name" axisLine={true} tickLine={true} interval={0} padding={{ left: 20, right: 20 }} />
+                  <YAxis allowDecimals={false} axisLine={true} tickLine={true} tickCount={6} />
                   <Tooltip />
                   <Area
                     type="monotone"
                     dataKey="Shows"
-                    stroke="#60a5fa"
-                    fill="rgba(96, 165, 250, 0.2)"
+                    stroke="#2563eb" // blue-600
+                    fill="rgba(37, 99, 235, 0.15)"
                     strokeWidth={2}
+                    name="Shows"
                   />
                   <Area
                     type="monotone"
-                    dataKey="Exhibits"
-                    stroke="#38bdf8"
-                    fill="rgba(56, 189, 248, 0.2)"
+                    dataKey="Exhibitors"
+                    stroke="#22c55e" // green-500
+                    fill="rgba(34, 197, 94, 0.10)"
                     strokeWidth={2}
+                    name="Exhibitors"
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              {/* Legend */}
+              <div className="flex gap-6 justify-center items-center mt-2 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-2 rounded bg-[#2563eb]" /> Shows
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="inline-block w-4 h-2 rounded bg-[#22c55e]" /> Exhibitors
+                </div>
+              </div>
             </div>
           </Card>
           <Card className="p-6">
@@ -632,7 +657,6 @@ export default function DashboardPage() {
                 <BarChart className="w-5 h-5 text-green-500 animate-pulse" />
                 ORDERS FOR UPCOMING SHOWS
               </div>
-              <div className="text-xs text-green-600 font-semibold">+12.5% from last month</div>
             </div>
             <div className="h-64 bg-white rounded-lg shadow border p-4">
               <ResponsiveContainer width="100%" height="100%">
@@ -665,7 +689,8 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">SHOW TASKS</h2>
-            <Button variant="success" className="px-4 py-2"> <Plus className="h-4 w-4 mr-2" /> New Task </Button>
+            <Button
+              variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Task </Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
@@ -678,8 +703,8 @@ export default function DashboardPage() {
                       {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
                       {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
                     </span>
-                    <button
-                      className="ml-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                    <Button
+                      variant="outline" size="sm" className="ml-4 h-10 min-w-[140px] px-6 font-semibold"
                       onClick={() => {
                         setShowTasks((prev) => ({
                           ...prev,
@@ -692,7 +717,7 @@ export default function DashboardPage() {
                       }}
                     >
                       Accept
-                    </button>
+                    </Button>
                   </li>
                 ))}
                 {showTasks.todo.map((task: DashboardTask) => (
@@ -714,8 +739,8 @@ export default function DashboardPage() {
                     <span>
                       {task.task} | <b>Zone:</b> {task.boothZone} | <b>Customer:</b> {task.customerName}
                     </span>
-                    <button
-                      className="ml-4 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 text-sm"
+                    <Button
+                      variant="outline" size="sm" className="ml-4 h-10 min-w-[140px] px-6 font-semibold"
                       onClick={() => {
                         setShowTasks((prev) => ({
                           ...prev,
@@ -728,7 +753,7 @@ export default function DashboardPage() {
                       }}
                     >
                       Mark as Completed
-                    </button>
+                    </Button>
                   </li>
                 ))}
               </ul>
@@ -756,7 +781,8 @@ export default function DashboardPage() {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold">UPCOMING & ONGOING SHOWS</h2>
-            <Button variant="success" className="px-4 py-2"> <Plus className="h-4 w-4 mr-2" /> New Show </Button>
+            <Button
+              variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Show </Button>
           </div>
           <Table>
             <TableHeader>
@@ -766,7 +792,6 @@ export default function DashboardPage() {
                 <TableHead>DATE</TableHead>
                 <TableHead>LOCATION</TableHead>
                 <TableHead>STATUS</TableHead>
-                <TableHead>ACTIONS</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -793,9 +818,6 @@ export default function DashboardPage() {
                     >
                       {show.status === "Complete" ? "Upcoming" : show.status}
                     </span>
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="outline" size="sm">View Details</Button>
                   </TableCell>
                 </TableRow>
               ))}

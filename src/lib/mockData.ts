@@ -71,7 +71,7 @@ const CITIES = [
 
 // Function to generate random show data
 const generateShowData = (index: number): ShowData => {
-  const year = 2024;
+  const year = 2025;
   const month = Math.floor(Math.random() * 12) + 1;
   const formattedMonth = month.toString().padStart(2, '0');
   const showId = `SHW${(index + 1).toString().padStart(3, '0')}`;
@@ -95,33 +95,33 @@ const generateShowData = (index: number): ShowData => {
 const predefinedShows: ShowData[] = [
   {
     showId: 'SHW001',
-    showName: 'Developer Conference 2024 - San Francisco',
+    showName: 'Developer Conference 2025 - San Francisco',
     occrId: 'SHW001-CA',
     occrType: 'Developer Conference',
     marketType: 'Software Development',
     projectNumber: 'P2024-001',
     cityOrg: 'San Francisco, CA',
-    yrmo: '2024-04'
+    yrmo: '2025-04'
   },
   {
     showId: 'SHW002',
-    showName: 'Annual Tech Summit 2024 - Las Vegas',
+    showName: 'Annual Tech Summit 2025 - Las Vegas',
     occrId: 'SHW002-NV',
     occrType: 'Annual Conference',
     marketType: 'Technology',
     projectNumber: 'P2024-002',
     cityOrg: 'Las Vegas, NV',
-    yrmo: '2024-05'
+    yrmo: '2025-05'
   },
   {
     showId: 'SHW003',
-    showName: 'Healthcare Expo 2024 - Boston',
+    showName: 'Healthcare Expo 2025 - Boston',
     occrId: 'SHW003-MA',
     occrType: 'Exhibition',
     marketType: 'Healthcare',
     projectNumber: 'P2024-003',
     cityOrg: 'Boston, MA',
-    yrmo: '2024-06'
+    yrmo: '2025-06'
   }
 ];
 
@@ -134,7 +134,7 @@ export const mockShows: ShowData[] = [
 // Predefined project data
 const predefinedProjects: ProjectData[] = [
   {
-    projectName: 'Developer Conference 2024',
+    projectName: 'Developer Conference 2025',
     projectNumber: 'P2024-001',
     projectType: 'Developer Conference',
     status: 'Planning',
@@ -142,7 +142,7 @@ const predefinedProjects: ProjectData[] = [
     facilityId: 'FAC001'
   },
   {
-    projectName: 'Annual Tech Summit 2024',
+    projectName: 'Annual Tech Summit 2025',
     projectNumber: 'P2024-002',
     projectType: 'Annual Conference',
     status: 'Planning',
@@ -150,7 +150,7 @@ const predefinedProjects: ProjectData[] = [
     facilityId: 'FAC002'
   },
   {
-    projectName: 'Healthcare Expo 2024',
+    projectName: 'Healthcare Expo 2025',
     projectNumber: 'P2024-003',
     projectType: 'Exhibition',
     status: 'Planning',
@@ -812,7 +812,7 @@ export interface ShowComments {
 // Generate mock key dates for a show
 const generateKeyDates = (showId: string, projectNumber: string, facilityId: string): ShowKeyDate[] => {
   const dateTypes = ['Move-in', 'Show Start', 'Show End', 'Move-out'];
-  const currentDate = new Date('2024-04-01');
+  const currentDate = new Date('2025-04-01');
   
   return dateTypes.map((dateType, index) => {
     const date = new Date(currentDate);
@@ -926,7 +926,7 @@ export const mockOrders: Order[] = [
     cancelCharge: 0,
     source: "Web",
     project: "P2024-001",
-    orderDate: "2024-03-20",
+    orderDate: "2025-03-20",
     boothInfo: "Booth #A12",
     billingAddress: "123 Main St, New York, NY 10001",
     total: 16500,
@@ -945,7 +945,7 @@ export const mockOrders: Order[] = [
         extendedPrice: 3000,
         userItemDescription: "Standard booth with basic setup",
         dff: "N/A",
-        orderReceivedDate: "2024-03-20",
+        orderReceivedDate: "-03-20",
         status: "Confirmed",
         itemType: "Booth",
         ato: false,
@@ -967,7 +967,7 @@ export const mockOrders: Order[] = [
         extendedPrice: 4000,
         userItemDescription: "High-resolution display for presentations",
         dff: "N/A",
-        orderReceivedDate: "2024-03-20",
+        orderReceivedDate: "2025-03-20",
         status: "Confirmed",
         itemType: "Equipment",
         ato: false,
@@ -989,7 +989,7 @@ export const mockOrders: Order[] = [
         extendedPrice: 8000,
         userItemDescription: "Includes table, chairs, and storage",
         dff: "N/A",
-        orderReceivedDate: "2024-03-20",
+        orderReceivedDate: "2025-03-20",
         status: "Confirmed",
         itemType: "Furniture",
         ato: false,
@@ -1012,7 +1012,7 @@ export const mockOrders: Order[] = [
     cancelCharge: 0,
     source: "Email",
     project: "P2024-002",
-    orderDate: "2024-03-21",
+    orderDate: "2025-03-21",
     boothInfo: "Booth #B15",
     billingAddress: "456 Tech Ave, Seattle, WA 98101",
     total: 27500,
@@ -1031,7 +1031,7 @@ export const mockOrders: Order[] = [
         extendedPrice: 12000,
         userItemDescription: "Premium booth with custom branding",
         dff: "N/A",
-        orderReceivedDate: "2024-03-21",
+        orderReceivedDate: "2025-03-21",
         status: "Confirmed",
         itemType: "Booth",
         ato: false,
@@ -1053,7 +1053,7 @@ export const mockOrders: Order[] = [
         extendedPrice: 8000,
         userItemDescription: "Includes sound system and projectors",
         dff: "N/A",
-        orderReceivedDate: "2024-03-21",
+        orderReceivedDate: "2025-03-21",
         status: "Confirmed",
         itemType: "Equipment",
         ato: false,
@@ -1075,7 +1075,7 @@ export const mockOrders: Order[] = [
         extendedPrice: 16000,
         userItemDescription: "Enterprise-grade server racks",
         dff: "N/A",
-        orderReceivedDate: "2024-03-21",
+        orderReceivedDate: "2025-03-21",
         status: "Confirmed",
         itemType: "Equipment",
         ato: false,

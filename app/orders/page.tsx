@@ -13,13 +13,29 @@ export default function OrdersPage() {
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
 
-  const totalPages = Math.ceil(orders.length / ITEMS_PER_PAGE);
-  const paginatedOrders = orders.slice(
+  // Filtered based on search input
+  const filteredOrders = orders.filter((order) =>
+    order.orderId.includes(search) ||
+    order.showId?.includes(search) ||
+    order.customerPo?.includes(search)
+  );
+
+  // Reorder: move selected order to top
+  const reorderedOrders = selectedOrderId
+    ? [
+        ...filteredOrders.filter((order) => order.orderId === selectedOrderId),
+        ...filteredOrders.filter((order) => order.orderId !== selectedOrderId),
+      ]
+    : filteredOrders;
+
+  const totalPages = Math.ceil(reorderedOrders.length / ITEMS_PER_PAGE);
+  const paginatedOrders = reorderedOrders.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
-  const selectedOrder = orders.find((order) => order.orderId === selectedOrderId);
+
+  const selectedOrder = filteredOrders.find((order) => order.orderId === selectedOrderId);
 
   return (
     <MainLayout>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 
 interface Order {
   orderId: string;
@@ -9,12 +9,23 @@ interface Order {
 
 interface OrderListProps {
   orders: Order[];
-  selectedOrderId: string;
+  selectedOrderId: string | null;
   onSelect: (orderId: string) => void;
   search: string;
 }
 
 export default function OrderList({ orders, selectedOrderId, onSelect, search }: OrderListProps) {
+  const itemRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+
+  useEffect(() => {
+    if (selectedOrderId && itemRefs.current[selectedOrderId]) {
+      itemRefs.current[selectedOrderId]?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }
+  }, [selectedOrderId]);
+
   const filtered = orders.filter(order =>
     order.orderId.toLowerCase().includes(search.toLowerCase()) ||
     order.showId.toLowerCase().includes(search.toLowerCase()) ||
@@ -26,7 +37,12 @@ export default function OrderList({ orders, selectedOrderId, onSelect, search }:
       {filtered.map(order => (
         <div
           key={order.orderId}
-          className={`mb-1 p-2 rounded cursor-pointer border transition-all ${order.orderId === selectedOrderId ? "bg-blue-50 border-blue-500" : "bg-gray-50 border-transparent hover:border-blue-300"}`}
+          ref={(el) => itemRefs.current[order.orderId] = el}
+          className={`mb-1 p-2 rounded cursor-pointer border transition-all ${
+            order.orderId === selectedOrderId
+              ? "bg-blue-50 border-blue-500"
+              : "bg-gray-50 border-transparent hover:border-blue-300"
+          }`}
           onClick={() => onSelect(order.orderId)}
         >
           <div className="font-bold text-blue-900">{order.orderId}</div>
@@ -40,4 +56,4 @@ export default function OrderList({ orders, selectedOrderId, onSelect, search }:
       )}
     </div>
   );
-} 
+}

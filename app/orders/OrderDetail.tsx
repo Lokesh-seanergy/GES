@@ -1,16 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 interface OrderDetailProps {
   order: any;
 }
 
 export default function OrderDetail({ order }: OrderDetailProps) {
+  if (!order) return <div>No order selected.</div>;
+
   const [isEditing, setIsEditing] = useState(false);
   const [editableOrder, setEditableOrder] = useState(order);
-
-  if (!order) return <div>No order selected.</div>;
+  useEffect(() => {
+    setEditableOrder(order);
+  }, [order]);
+ 
 
   const handleChange = (field: string, value: any) => {
     setEditableOrder((prev: any) => ({
@@ -41,17 +45,7 @@ export default function OrderDetail({ order }: OrderDetailProps) {
   return (
     <div className="space-y-4">
       {/* Buttons */}
-      <div className="flex gap-4 mb-4">
-        {isEditing ? (
-          <>
-            <button onClick={handleSave} className="px-4 py-2 bg-green-500 text-white rounded">Save</button>
-            <button onClick={handleCancel} className="px-4 py-2 bg-gray-400 text-white rounded">Cancel</button>
-          </>
-        ) : (
-          <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-blue-600 text-white rounded">Edit</button>
-        )}
-      </div>
-
+      
       {/* Header Details */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
 
@@ -102,8 +96,8 @@ export default function OrderDetail({ order }: OrderDetailProps) {
           </tr>
         </thead>
         <tbody>
-          {editableOrder.lineItems.map((item: any, index: number) => (
-            <tr key={index}>
+          {editableOrder.lineItems?.map((item: any, index: number) => (
+            <tr key={item.line || index}>
               {[
                 "line", "orderedItem", "itemDescription", "qty", "cancellationFee", "qtyCancelled",
                 "uom", "kitPrice", "newPrice", "discount", "extendedPrice", "userItemDescription", "dff"
@@ -111,9 +105,9 @@ export default function OrderDetail({ order }: OrderDetailProps) {
                 <td key={field} className="border px-2 py-1">
                   {isEditing ? (
                     <input
-                      type="text"
-                      value={item[field]}
-                      onChange={(e) => handleLineItemChange(index, field, e.target.value)}
+                      type="number"
+                      value={editableOrder.subtotal}
+                      onChange={(e) => handleChange("subtotal", parseFloat(e.target.value))}
                       className="border p-1 rounded w-full"
                     />
                   ) : (

@@ -239,6 +239,25 @@ export default function ShowsPage() {
 
   const [selectedShowDetails, setSelectedShowDetails] = useState<(typeof mockShowDetails)[0] | null>(null);
 
+  const [showAutoOut, setShowAutoOut] = useState(false);
+  const [autoOutData, setAutoOutData] = useState({
+    facilityId: "",
+    facilityName: "",
+    projectNumber: "",
+  });
+
+  const [showFacilityDetails, setShowFacilityDetails] = useState(false);
+
+  // Add state for Facility Schedules Form
+  const [showSchedules, setShowSchedules] = useState(false);
+
+  // Add state for Material Handling
+  const [showMaterialHandling, setShowMaterialHandling] = useState(false);
+  const [activeWarehouseTab, setActiveWarehouseTab] = useState("warehouse");
+
+  // Add state for Facility Vendors Form
+  const [showVendorInfo, setShowVendorInfo] = useState(false);
+
   const filteredAndSortedShows = useMemo(() => {
     return [...shows]
       .filter((show) => {
@@ -640,6 +659,29 @@ export default function ShowsPage() {
     setIsNewShowOpen(false);
   };
 
+  const handleAutoOutClick = () => {
+    setShowAutoOut(true);
+  };
+
+  const handleDetailsClick = () => {
+    setShowFacilityDetails(true);
+  };
+
+  // Add handler for Schedule button
+  const handleScheduleClick = () => {
+    setShowSchedules(true);
+  };
+
+  // Add handler for Material Handling button
+  const handleMaterialHandlingClick = () => {
+    setShowMaterialHandling(true);
+  };
+
+  // Add click handler for Vendor Info button
+  const handleVendorInfoClick = () => {
+    setShowVendorInfo(true);
+  };
+
   return (
     <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
@@ -752,7 +794,7 @@ export default function ShowsPage() {
                   >
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Show ID</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Show ID</Label>
                         <Input
                           value={filters.showId}
                           onChange={(e) =>
@@ -763,7 +805,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Show Name</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Show Name</Label>
                         <Input
                           value={filters.showName}
                           onChange={(e) =>
@@ -774,7 +816,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Occr ID</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occr ID</Label>
                         <Input
                           value={filters.occrId}
                           onChange={(e) =>
@@ -785,7 +827,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Occr Type</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occr Type</Label>
                         <Select
                           value={filters.occrType}
                           onValueChange={(value) =>
@@ -805,7 +847,7 @@ export default function ShowsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Market Type</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Market Type</Label>
                         <Select
                           value={filters.marketType}
                           onValueChange={(value) =>
@@ -825,7 +867,7 @@ export default function ShowsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Project #</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Project #</Label>
                         <Input
                           value={filters.projectNumber}
                           onChange={(e) =>
@@ -836,7 +878,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">City Org</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">City Org</Label>
                         <Input
                           value={filters.cityOrg}
                           onChange={(e) =>
@@ -847,7 +889,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Year/Month Range</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Year/Month Range</Label>
                         <Input
                           type="text"
                           value={formatYrmoRange(
@@ -1130,10 +1172,13 @@ export default function ShowsPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Close Date</Label>
+                              <Label className="text-sm text-gray-500">
+                                Close
+                              </Label>
                               <Input
                                 type="text"
                                 placeholder="MM/DD/YYYY"
+                                className="h-9 px-3 w-full md:w-3/4"
                                 value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
                                 onChange={(e) => {
                                   const date = dayjs(e.target.value, 'MM/DD/YYYY');
@@ -1724,7 +1769,6 @@ export default function ShowsPage() {
                                           </CardContent>
                                         </Card>
                                       </div>
-
                                       {/* Show Options */}
                                       <div className="space-y-4">
                                         <Card className="shadow-sm">
@@ -1933,124 +1977,221 @@ export default function ShowsPage() {
                       </CardHeader>
                       <CardContent className="p-4">
                         {/* Project Info */}
-                        <div className="grid grid-cols-2 gap-4 mb-4">
-                          <div className="space-y-2">
-                            <Label className="text-xs text-gray-500">Project Number</Label>
-                            <Input
-                              value={selectedShow?.projectNumber || ''}
-                              readOnly
-                              className="h-8"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs text-gray-500">Project Name</Label>
-                            <Input
-                              value={mockProjectData.find(p => p.projectNumber === selectedShow?.projectNumber)?.projectName || ''}
-                              readOnly
-                              className="h-8"
-                            />
-                          </div>
-                        </div>
-
-                        {/* Split tables into two sections side by side */}
-                        <div className="grid grid-cols-[2fr,1fr] gap-6">
-                          {/* Main Facility Info */}
-                          <div>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility ID</TableHead>
-                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility Name</TableHead>
-                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Hall</TableHead>
-                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Registration Location</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {mockFacilityData
-                                  .filter(facility => 
-                                    mockProjectData.find(p => 
-                                      p.projectNumber === selectedShow?.projectNumber && 
-                                      p.facilityId === facility.facilityId
-                                    )
-                                  )
-                                  .map((facility) => (
-                                    <TableRow key={facility.facilityId}>
-                                      <TableCell className="py-2 text-sm text-center">{facility.facilityId}</TableCell>
-                                      <TableCell className="py-2 text-sm text-center">{facility.facilityName}</TableCell>
-                                      <TableCell className="py-2 text-sm text-center">{facility.hall}</TableCell>
-                                      <TableCell className="py-2 text-sm text-center">{facility.location1}</TableCell>
-                                    </TableRow>
-                                  ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-
-                          {/* Servicecenter Info */}
-                          <div>
-                            <div className="flex justify-end mb-2">
-                              <span className="text-sm font-medium">Servicecenter(TM)</span>
+                        <div className="space-y-6">
+                          {/* Project section */}
+                          <div className="space-y-3">
+                            <div className="text-sm font-medium">Project</div>
+                            <div className="grid grid-cols-2 gap-x-8">
+                              <div>
+                                <Label className="text-sm mb-1 block">Project Number</Label>
+                                <Input 
+                                  value={selectedShow?.projectNumber || ''} 
+                                  readOnly 
+                                  className="h-8 bg-white border-gray-300" 
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm mb-1 block">Project Name</Label>
+                                <Input 
+                                  value={selectedShow?.project || ''} 
+                                  readOnly 
+                                  className="h-8 bg-white border-gray-300" 
+                                />
+                              </div>
                             </div>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Location</TableHead>
-                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Area Code</TableHead>
-                                  <TableHead className="text-xs font-semibold text-gray-700 text-center">Phone</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {mockFacilityData
-                                  .filter(facility => 
-                                    mockProjectData.find(p => 
-                                      p.projectNumber === selectedShow?.projectNumber && 
-                                      p.facilityId === facility.facilityId
-                                    )
-                                  )
-                                  .map((facility) => (
-                                    <TableRow key={facility.facilityId}>
-                                      <TableCell className="py-2 text-sm text-center">{facility.location2}</TableCell>
-                                      <TableCell className="py-2 text-sm text-center">{facility.areaCode}</TableCell>
-                                      <TableCell className="py-2 text-sm text-center">{facility.phone}</TableCell>
-                                    </TableRow>
-                                  ))}
-                              </TableBody>
-                            </Table>
                           </div>
-                        </div>
 
-                        {/* Notes and Comments */}
-                        <div className="grid grid-cols-3 gap-4 mt-4">
-                          <div className="space-y-1">
-                            <Label className="text-xs text-gray-500">Notes</Label>
-                            <Input placeholder="Enter notes" className="h-8" />
+                          {/* Facility Information Table with integrated Servicecenter(TM) */}
+                          <div className="mt-4">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '15%' }}>
+                                    Facility ID
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '25%' }}>
+                                    Facility Name
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '10%' }}>
+                                    Hall
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '15%' }}>
+                                    Registration Location
+                                  </th>
+                                  <th colSpan={3} className="border border-gray-300 bg-gray-100 text-left p-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="border-t border-gray-300 flex-grow"></span>
+                                      <span className="text-sm font-normal">Servicecenter(TM)</span>
+                                      <span className="border-t border-gray-300 flex-grow"></span>
+                                    </div>
+                                  </th>
+                                </tr>
+                                <tr>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '15%' }}>
+                                    Location
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '10%' }}>
+                                    Area Code
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '10%' }}>
+                                    Phone
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="MCCORM" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="MCCORMICK PLAC" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                </tr>
+                                {/* Add more empty rows to match the screenshot */}
+                                {[...Array(5)].map((_, index) => (
+                                  <tr key={index}>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-gray-500">Comments</Label>
-                            <Input placeholder="Enter comments" className="h-8" />
-                          </div>
-                          <div className="space-y-1">
-                            <Label className="text-xs text-gray-500">Special Instructions</Label>
-                            <Input placeholder="Enter special instructions" className="h-8" />
-                          </div>
-                        </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex justify-between items-center mt-4">
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
-                            Auto-Out
-                          </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
-                            Details
-                          </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
-                            Schedule
-                          </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
-                            Material Handling
-                          </Button>
-                          <Button className="bg-green-400 text-white hover:bg-green-300 px-3 h-8 text-sm">
-                            Vendor Info
-                          </Button>
+                          {/* Keep the Notes, Comments, and Special Instructions section */}
+                          <div className="space-y-6 mt-8">
+                            <div>
+                              <Label className="text-sm text-gray-600 mb-2 block">Notes</Label>
+                              <Textarea 
+                                placeholder="Enter notes"
+                                className="min-h-[80px] w-full resize-none border-gray-300 rounded-sm"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm text-gray-600 mb-2 block">Comments</Label>
+                              <Textarea 
+                                placeholder="Enter comments"
+                                className="min-h-[80px] w-full resize-none border-gray-300 rounded-sm"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm text-gray-600 mb-2 block">Special Instructions</Label>
+                              <Textarea 
+                                placeholder="Enter special instructions"
+                                className="min-h-[80px] w-full resize-none border-gray-300 rounded-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Action Buttons - Centered with equal spacing */}
+                          <div className="flex justify-center items-center gap-4 mt-8">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleAutoOutClick}
+                            >
+                              Auto-Out
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleDetailsClick}
+                            >
+                              Details
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleScheduleClick}
+                            >
+                              Schedule
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleMaterialHandlingClick}
+                            >
+                              Material Handling
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleVendorInfoClick}
+                            >
+                              Vendor Info
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2198,6 +2339,1372 @@ export default function ShowsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Auto-Out Slide-out Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[500px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showAutoOut
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Labor Orders</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAutoOut(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Facility Info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Facility ID</Label>
+                  <Input
+                    value="MCCORM"
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Project Number</Label>
+                  <Input
+                    value="0716022"
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-500">Facility Name</Label>
+                <Input
+                  value="MCCORMICK PLACE CONVENTION CENTER"
+                  readOnly
+                  className="bg-gray-50"
+                />
+              </div>
+            </div>
+
+            {/* Auto-Out Table */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold">Labor Auto-Out Settings</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-24">Item</TableHead>
+                    <TableHead>Item Description</TableHead>
+                    <TableHead className="w-24">LOB</TableHead>
+                    <TableHead className="w-24">Auto-Out %</TableHead>
+                    <TableHead className="w-24">ST %</TableHead>
+                    <TableHead className="w-24">OT %</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>705011</TableCell>
+                    <TableCell>LABOR, PLUMBING</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>50</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705060</TableCell>
+                    <TableCell>LABOR, ELECTRICAL</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705061</TableCell>
+                    <TableCell>LABOR, ELECTRICAL BOOTH WORK</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705066</TableCell>
+                    <TableCell>LABOR, ELECTRICAL HIGH LIFT</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705112</TableCell>
+                    <TableCell>LABOR, HANGING SIGN CREW</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowAutoOut(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Facility Details Slide-out Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showFacilityDetails
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Facility</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFacilityDetails(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Basic Facility Info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Facility ID</Label>
+                  <Input className="h-9" />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-sm text-gray-500">Facility Name</Label>
+                  <Input className="h-9" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Organization</Label>
+                  <Input className="h-9" />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-sm text-gray-500">Type</Label>
+                  <Select defaultValue="convention-center">
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="convention-center">Convention Center</SelectItem>
+                      <SelectItem value="hotel">Hotel</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Address Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Address</h3>
+              <div className="grid gap-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Address 1</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Address 2</Label>
+                    <Input className="h-8" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">City</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">State</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Zip</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Country</Label>
+                    <Input className="h-8" defaultValue="United States" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Primary Contact Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Primary Contact</h3>
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Last Name</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">First Name</Label>
+                    <Input className="h-8" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Phone</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Email</Label>
+                    <Input className="h-8" type="email" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main container for both sections */}
+            <div className="grid grid-cols-2 gap-6">
+              {/* Facility Specific Services */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Facility Specific Services</h3>
+                <div className="grid grid-cols-[1fr,auto] gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Service Type</Label>
+                    <div className="border rounded-md h-[200px] overflow-y-auto bg-white">
+                      <div className="grid grid-cols-1 divide-y">
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Supplied</Label>
+                    <div className="border rounded-md h-[200px] overflow-y-auto bg-white w-[100px]">
+                      <div className="grid grid-cols-1 divide-y">
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floor Plan Attachment */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Floor Plan Attachment</h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                      <Label className="text-sm text-gray-500">Attached</Label>
+                      <Checkbox />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Last Updated By</Label>
+                    <Input className="h-9" readOnly />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Last Updated Date</Label>
+                    <Input className="h-9" type="date" readOnly />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Zones, Halls, and Rooms */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Zones</h3>
+                <div className="border rounded-md h-[200px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Zones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-sm">A1</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">A2</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">A3</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">A4</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Halls</h3>
+                <div className="border rounded-md h-[200px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Hall</TableHead>
+                        <TableHead className="text-xs">Sq Ft</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall A</TableCell>
+                        <TableCell className="text-sm">25,000</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall B</TableCell>
+                        <TableCell className="text-sm">30,000</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall C</TableCell>
+                        <TableCell className="text-sm">28,000</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall D</TableCell>
+                        <TableCell className="text-sm">22,000</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm text-gray-500">Sub Total:</Label>
+                  <Input className="h-9 w-32 bg-gray-50" value="105,000" readOnly />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Rooms</h3>
+                <div className="border rounded-md h-[200px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Rooms</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 101</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 102</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 201</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 202</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 301</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowFacilityDetails(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Material Handling Slide-out Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showMaterialHandling
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Material Handling</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowMaterialHandling(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Show Occurrence and Facility sections side by side */}
+            <div className="grid grid-cols-2 gap-8">
+              {/* Show Occurrence Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Show Occurrence</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Occr ID</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.occrId || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Number</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.projectNumber || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Name</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.project || ''} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Facility Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Facility</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility ID</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Name</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Address</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs Section */}
+            <div className="space-y-4">
+              <Tabs
+                value={activeWarehouseTab}
+                onValueChange={setActiveWarehouseTab}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-5 gap-1 bg-gray-100 p-1 h-9">
+                  <TabsTrigger
+                    value="warehouse"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Warehouse
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="showSite"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Show Site
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="marshalling"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Marshalling
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="freightDates"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Freight Dates
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="generalInfo"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    General Info
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="warehouse" className="mt-4">
+                  <div className="space-y-6">
+                    {/* Warehouse Timings */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold">Warehouse Timings</h3>
+                      <div className="border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-gray-50">
+                            <TableRow>
+                              <TableHead className="text-xs font-medium w-32">Day</TableHead>
+                              <TableHead className="text-xs font-medium text-center" colSpan={2}>----- Driver Check In -----</TableHead>
+                              <TableHead className="text-xs font-medium text-center" colSpan={2}>Open/Close</TableHead>
+                              <TableHead className="text-xs font-medium text-center" colSpan={2}>----- Lunch Time -----</TableHead>
+                            </TableRow>
+                            <TableRow className="bg-gray-50">
+                              <TableHead></TableHead>
+                              <TableHead className="text-xs font-medium text-center">From</TableHead>
+                              <TableHead className="text-xs font-medium text-center">To</TableHead>
+                              <TableHead className="text-xs font-medium text-center">Open</TableHead>
+                              <TableHead className="text-xs font-medium text-center">Close</TableHead>
+                              <TableHead className="text-xs font-medium text-center">From</TableHead>
+                              <TableHead className="text-xs font-medium text-center">To</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell className="font-medium">Monday - Friday</TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="08:00:00" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="14:30:00" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="11:30:00" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="12:30:00" 
+                                />
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">Saturday</TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">Sunday</TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="showSite" className="mt-4">
+                  <div className="space-y-6">
+                    {/* Show Site Address Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-8">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Label className="text-sm text-gray-600 w-32">Show Site Address</Label>
+                            <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox id="onsite-docks" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          <Label htmlFor="onsite-docks" className="text-sm">Onsite Docks</Label>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Label className="text-sm text-gray-600 w-32">Show Site Add Desc</Label>
+                        <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                      </div>
+                    </div>
+
+                    {/* Timings Table */}
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-gray-50">
+                          <TableRow>
+                            <TableHead className="text-xs font-medium w-32">Week Day</TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Driver Check In----------
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Unloading----------
+                            </TableHead>
+                          </TableRow>
+                          <TableRow className="bg-gray-50">
+                            <TableHead></TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {[...Array(7)].map((_, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="marshalling" className="mt-4">
+                  <div className="space-y-6">
+                    {/* Yard Information Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-8">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Label className="text-sm text-gray-600 w-32">Yard</Label>
+                            <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Label className="text-sm text-gray-600 w-32">Yard Address</Label>
+                            <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Label className="text-sm text-gray-600 w-32">Yard Add Desc</Label>
+                        <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                      </div>
+                    </div>
+
+                    {/* Timings Table */}
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-gray-50">
+                          <TableRow>
+                            <TableHead className="text-xs font-medium w-32">Week Day</TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Driver Check In----------
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Unloading----------
+                            </TableHead>
+                          </TableRow>
+                          <TableRow className="bg-gray-50">
+                            <TableHead></TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {[...Array(7)].map((_, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="freightDates" className="mt-4">
+                  <div className="space-y-6">
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-gray-50">
+                          <TableRow>
+                            <TableHead className="text-xs font-medium w-[250px]">Business Type</TableHead>
+                            <TableHead className="text-xs font-medium w-[150px]">Week Day</TableHead>
+                            <TableHead className="text-xs font-medium">Delivery Date & Time</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Thursday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="20-MAR-2025 18:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Sunday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="23-MAR-2025 12:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Friday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="21-MAR-2025 14:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Saturday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="22-MAR-2025 12:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="generalInfo" className="mt-4">
+                  <div className="space-y-6">
+                    {/* OT Surcharge Rules Section */}
+                    <div className="border rounded-md p-4 space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">OT Surcharge Rules</Label>
+                        <Input 
+                          className="mt-1 w-full h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                        />
+                      </div>
+
+                      {/* Left Column Checkboxes */}
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="pov-rules" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="pov-rules" className="text-sm">Pov Rules</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="cart-load" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="cart-load" className="text-sm">Cart Load</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="hand-carry" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="hand-carry" className="text-sm">Hand Carry</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="freight-pkg" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="freight-pkg" className="text-sm">Freight Pkg</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="vehicle-spotting" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="vehicle-spotting" className="text-sm">Vehicle Spotting</Label>
+                          </div>
+                        </div>
+
+                        {/* Right Column Checkboxes */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="machinery" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="machinery" className="text-sm">Machinery</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="access-storage" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="access-storage" className="text-sm">Access Storage</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="refrigeration" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="refrigeration" className="text-sm">Refrigeration</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="freezer" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="freezer" className="text-sm">Freezer</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="special-handling" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="special-handling" className="text-sm">Special Handling</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="targeted-show" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="targeted-show" className="text-sm">Targeted Show</Label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Transportation Plus Section */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Transportation Plus</Label>
+                        <div className="grid grid-cols-2 gap-8">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm">Available?</Label>
+                              <Checkbox defaultChecked className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <Label className="text-sm w-20">Discount %</Label>
+                              <Input 
+                                className="w-24 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                                defaultValue="10"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm">Maximum?</Label>
+                              <Checkbox defaultChecked className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <Label className="text-sm w-32">Maximum Weight (cwt)</Label>
+                              <Input 
+                                className="w-24 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                                defaultValue="50"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowMaterialHandling(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Facility Schedules Form Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showSchedules
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Facility Schedules Form</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSchedules(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Show Occurrence and Facility sections side by side */}
+            <div className="grid grid-cols-2 gap-8">
+              {/* Show Occurrence Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Show Occurrence</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Occr ID</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.occrId || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Number</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.projectNumber || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Name</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.project || ''} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Facility Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Facility</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility ID</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Name</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Address</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Schedule For</Label>
+                <Select defaultValue="hours-by-date">
+                  <SelectTrigger className="w-[200px] h-8">
+                    <SelectValue placeholder="Select schedule type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hours-by-date">Hours By Date</SelectItem>
+                    <SelectItem value="other">Other Options</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-gray-50">
+                    <TableRow>
+                      <TableHead className="text-xs font-medium">Schedule Type</TableHead>
+                      <TableHead className="text-xs font-medium">Schedule Date / Time From</TableHead>
+                      <TableHead className="text-xs font-medium">From Day</TableHead>
+                      <TableHead className="text-xs font-medium">Schedule Date/Time To</TableHead>
+                      <TableHead className="text-xs font-medium">To Day</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>17-MAR-2025 10:00:00</TableCell>
+                      <TableCell>Monday</TableCell>
+                      <TableCell>17-MAR-2025 17:00:00</TableCell>
+                      <TableCell>Monday</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>18-MAR-2025 10:00:00</TableCell>
+                      <TableCell>Tuesday</TableCell>
+                      <TableCell>18-MAR-2025 17:00:00</TableCell>
+                      <TableCell>Tuesday</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>19-MAR-2025 10:00:00</TableCell>
+                      <TableCell>Wednesday</TableCell>
+                      <TableCell>19-MAR-2025 17:00:00</TableCell>
+                      <TableCell>Wednesday</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>20-MAR-2025 09:00:00</TableCell>
+                      <TableCell>Thursday</TableCell>
+                      <TableCell>20-MAR-2025 13:00:00</TableCell>
+                      <TableCell>Thursday</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSchedules(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Facility Vendors Form container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showVendorInfo
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Facility Vendors Form</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowVendorInfo(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Facility Details Section */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-lg font-medium">Facility Details</h3>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Show Occurrence ID</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Project Name</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Project Number</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Facility Name</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Facility ID</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Vendor Information Table */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-lg font-medium">Vendor Information</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border px-4 py-2 text-left text-sm">Vendor Type</th>
+                      <th className="border px-4 py-2 text-left text-sm">Vendor Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">PO Number</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">Area Code</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Number</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...Array(4)].map((_, index) => (
+                      <tr key={index}>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* GES Subcontractor Information Table */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-lg font-medium">GES Subcontractor Information</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border px-4 py-2 text-left text-sm">Subcont. Type</th>
+                      <th className="border px-4 py-2 text-left text-sm">Vendor Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">PO Number</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">Area Code</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Number</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...Array(4)].map((_, index) => (
+                      <tr key={index}>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </MainLayout>
   );
 }
+

@@ -5,6 +5,7 @@ import Sidemenu from "./Sidemenu";
 import Header from "./Header";
 import type { BreadcrumbItem } from "./Breadcrumb";
 import Breadcrumb from "./Breadcrumb";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -26,6 +27,7 @@ export default function MainLayout({
         <main className="flex-1 overflow-y-auto p-6 bg-[#f0f1f5] relative">
           {breadcrumbs.length > 0 && <Breadcrumb items={breadcrumbs} />}
           {children}
+          <ScrollToTop />
         </main>
       </div>
     </div>

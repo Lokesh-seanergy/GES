@@ -45,8 +45,7 @@ export default function OrderList({ orders, selectedOrderId, onSelect, search }:
           }`}
           onClick={() => onSelect(order.orderId)}
         >
-          <div className="font-bold text-blue-900">{order.orderId}</div>
-          <div className="text-xs text-gray-600">Show ID: {order.showId}</div>
+          <div className="font-bold text-blue-900">ORDER ID:{order.orderId}</div>
           <div className="text-xs text-gray-600">Customer PO: {order.customerPo}</div>
           <div className="text-xs text-gray-500">Order Date: {order.orderDate}</div>
         </div>

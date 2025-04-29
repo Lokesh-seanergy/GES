@@ -59,13 +59,12 @@ export default function LoginPage() {
             {/* Logo Section */}
             <div className="flex flex-col items-center space-y-4 md:w-1/2">
               <Image
-                src="/ges-workbench/ges_logo.png"
+                src="/ges-workbench/GES ShowFlowlogo.png"
                 alt="GES Logo"
-                width={120}
-                height={120}
+                width={350}
+                height={350}
                 priority
               />
-              <h1 className="text-4xl font-bold text-gray-900">SHOWFLOW</h1>
             </div>
 
             {/* Divider */}

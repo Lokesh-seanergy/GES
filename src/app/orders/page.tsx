@@ -5,18 +5,10 @@ import MainLayout from "@/components/mainlayout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Search, X } from "lucide-react";
+import { Search } from "lucide-react";
 import { mockOrders } from "@/lib/mockData";
 import type { Order, OrderItem } from "@/types/orders";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -29,18 +21,15 @@ import { format } from "date-fns";
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
+import { useSearchParams } from "next/navigation";
 
 export default function OrdersPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [selectedItem, setSelectedItem] = useState<OrderItem | null>(null);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
-  const [isEditingItem, setIsEditingItem] = useState(false);
-  const [isNewOrderModalOpen, setIsNewOrderModalOpen] = useState(false);
   const [editedOrder, setEditedOrder] = useState<Order | null>(null);
-  const [editedItem, setEditedItem] = useState<OrderItem | null>(null);
   const [newOrder, setNewOrder] = useState<Partial<Order>>({
     showId: "",
     occurrenceId: "",
@@ -59,18 +48,25 @@ export default function OrdersPage() {
     items: [],
   });
 
-  // Filter orders based on search query
-  const filteredOrders = mockOrders.filter((order) => {
-    if (!searchQuery) return true;
+  const searchParams = useSearchParams();
+  const projectNumber = searchParams.get("projectNumber");
+  const firstName = searchParams.get("firstName");
+  const lastName = searchParams.get("lastName");
+  const boothNumber = searchParams.get("boothNumber");
 
-    const query = searchQuery.toLowerCase();
-    return (
-      (order.orderId?.toLowerCase() || "").includes(query) ||
-      (order.showId?.toLowerCase() || "").includes(query) ||
-      (order.customerPO?.toLowerCase() || "").includes(query) ||
-      (order.orderDate || "").includes(query)
-    );
-  });
+  // Filter orders based on search query and remove ORD-002
+  const filteredOrders = mockOrders
+    .filter((order) => order.orderId !== 'ORD-002')
+    .filter((order) => {
+      if (!searchQuery) return true;
+      const query = searchQuery.toLowerCase();
+      return (
+        (order.orderId?.toLowerCase() || "").includes(query) ||
+        (order.showId?.toLowerCase() || "").includes(query) ||
+        (order.customerPO?.toLowerCase() || "").includes(query) ||
+        (order.orderDate || "").includes(query)
+      );
+    });
 
   // Paginate orders
   const paginatedOrders = filteredOrders.slice(
@@ -78,68 +74,14 @@ export default function OrdersPage() {
     currentPage * itemsPerPage
   );
 
+  useEffect(() => {
+    if (!selectedOrder && paginatedOrders.length > 0) {
+      setSelectedOrder(paginatedOrders[0]);
+    }
+  }, [paginatedOrders, selectedOrder]);
+
   const handleOrderClick = (order: Order) => {
     setSelectedOrder(order);
-    setSelectedItem(null);
-  };
-
-  const handleItemClick = (item: OrderItem) => {
-    setSelectedItem(item);
-  };
-
-  const handleOrderSave = () => {
-    if (editedOrder) {
-      // In a real app, you would update the backend here
-      const updatedOrders = mockOrders.map((order) =>
-        order.orderId === editedOrder.orderId ? editedOrder : order
-      );
-      setSelectedOrder(editedOrder);
-      setIsEditingOrder(false);
-    }
-  };
-
-  const handleItemSave = () => {
-    if (editedItem && selectedOrder) {
-      // In a real app, you would update the backend here
-      const updatedItems = selectedOrder.items.map((item) =>
-        item.serialNo === editedItem.serialNo ? editedItem : item
-      );
-      const updatedOrder = {
-        ...selectedOrder,
-        items: updatedItems,
-      };
-      setSelectedOrder(updatedOrder);
-      setIsEditingItem(false);
-    }
-  };
-
-  const handleNewOrder = () => {
-    const order = {
-      ...newOrder,
-      orderId: `ORD-${Math.floor(Math.random() * 10000)}`,
-      items: [],
-    } as Order;
-
-    // In a real app, you would save to the backend here
-    setSelectedOrder(order);
-    setIsNewOrderModalOpen(false);
-    setNewOrder({
-      showId: "",
-      occurrenceId: "",
-      salesChannel: "",
-      terms: "",
-      orderType: "",
-      customerPO: "",
-      cancelCharge: 0,
-      source: "",
-      project: "",
-      orderDate: "",
-      boothInfo: "",
-      billingAddress: "",
-      subTotal: 0,
-      tax: 0,
-      items: [],
-    });
   };
 
   const formatDate = (dateString: string) => {
@@ -154,11 +96,6 @@ export default function OrdersPage() {
     setCurrentPage(newPage);
   };
 
-  const handleItemsPerPageChange = (value: string) => {
-    setItemsPerPage(parseInt(value));
-    setCurrentPage(1); // Reset to first page when changing items per page
-  };
-
   return (
     <MainLayout
       breadcrumbs={[
@@ -167,7 +104,6 @@ export default function OrdersPage() {
           href: "#",
           onClick: () => {
             setSelectedOrder(null);
-            setSelectedItem(null);
           },
         },
       ]}
@@ -187,9 +123,6 @@ export default function OrdersPage() {
                   />
                   <Search className="absolute left-2.5 top-2.5 text-gray-400 h-4 w-4" />
                 </div>
-                <Button onClick={() => setIsNewOrderModalOpen(true)}>
-                  New Order
-                </Button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
@@ -208,23 +141,19 @@ export default function OrdersPage() {
                         <div className="font-semibold text-base mb-1">
                           {order.orderId}
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1">
-                            <span className="text-gray-700 font-semibold">
-                              Show ID:
-                            </span>
-                            <span>{order.showId}</span>
+                        {(projectNumber || firstName || lastName || boothNumber) && (
+                          <div className="mb-1 flex flex-wrap gap-2 text-sm text-black font-normal">
+                            {projectNumber && (
+                              <span>Project #: {projectNumber}</span>
+                            )}
+                            {boothNumber && (
+                              <span>Booth #: {boothNumber}</span>
+                            )}
+                            {(firstName || lastName) && (
+                              <span>Exhibitor: {firstName} {lastName}</span>
+                            )}
                           </div>
-                          <div
-                            className={`flex items-center gap-1 ${
-                              order.orderType === "Active"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            <span>{order.orderType}</span>
-                          </div>
-                        </div>
+                        )}
                         <div className="flex items-center gap-1">
                           <span className="text-gray-700 font-semibold">
                             Customer PO:
@@ -249,20 +178,15 @@ export default function OrdersPage() {
                         <h2 className="text-lg font-semibold">
                           Order Details
                         </h2>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            onClick={() => setIsEditingOrder(true)}
-                          >
-                            Edit Order
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => setIsNewOrderModalOpen(true)}
-                          >
-                            New Order
-                          </Button>
-                        </div>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsEditingOrder(true);
+                            setEditedOrder(selectedOrder ? { ...selectedOrder } : null);
+                          }}
+                        >
+                          Edit Order
+                        </Button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -311,7 +235,7 @@ export default function OrdersPage() {
                             Total
                           </Label>
                           <div className="text-sm font-medium">
-                            ${selectedOrder.total.toFixed(2)}
+                            ${selectedOrder.items.reduce((sum, item) => sum + (item.newPrice || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
                           </div>
                         </div>
                       </div>
@@ -327,53 +251,157 @@ export default function OrdersPage() {
                                 <Table className="min-w-full table-fixed divide-y divide-gray-300">
                                   <TableHeader className="bg-gray-50">
                                     <TableRow>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Serial No
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Ordered Item
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Quantity
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        UOM
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Status
-                                      </TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Serial No</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ordered Item</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Price</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {selectedOrder.items.map((item) => (
-                                      <TableRow
-                                        key={item.serialNo}
-                                        onClick={() => handleItemClick(item)}
-                                        className="cursor-pointer"
-                                      >
-                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                          {item.serialNo}
-                                        </TableCell>
-                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                          {item.orderedItem}
-                                        </TableCell>
-                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                          {item.quantity}
-                                        </TableCell>
-                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                          {item.uom}
-                                        </TableCell>
-                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                          {item.status}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
+                                    {isEditingOrder && editedOrder
+                                      ? editedOrder.items.map((item, idx) => (
+                                          <TableRow key={item.serialNo}>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.serialNo}</TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                              {item.isNew ? (
+                                                <input
+                                                  className="border rounded px-2 py-1 w-full"
+                                                  value={item.orderedItem}
+                                                  onChange={e => {
+                                                    const newItems = [...editedOrder.items];
+                                                    newItems[idx] = { ...item, orderedItem: e.target.value };
+                                                    setEditedOrder({ ...editedOrder, items: newItems });
+                                                  }}
+                                                />
+                                              ) : (
+                                                item.orderedItem
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                              {item.isNew ? (
+                                                <input
+                                                  type="number"
+                                                  className="border rounded px-2 py-1 w-16"
+                                                  value={item.quantity}
+                                                  onChange={e => {
+                                                    const newItems = [...editedOrder.items];
+                                                    newItems[idx] = { ...item, quantity: Number(e.target.value) };
+                                                    setEditedOrder({ ...editedOrder, items: newItems });
+                                                  }}
+                                                />
+                                              ) : (
+                                                item.quantity
+                                              )}
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                              {item.isNew ? (
+                                                <input
+                                                  type="number"
+                                                  className="border rounded px-2 py-1 w-24"
+                                                  value={item.newPrice}
+                                                  onChange={e => {
+                                                    const newItems = [...editedOrder.items];
+                                                    newItems[idx] = { ...item, newPrice: Number(e.target.value) };
+                                                    setEditedOrder({ ...editedOrder, items: newItems });
+                                                  }}
+                                                />
+                                              ) : (
+                                                item.newPrice
+                                              )}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))
+                                      : selectedOrder.items.map((item) => (
+                                          <TableRow key={item.serialNo}>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.serialNo}</TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                              {item.orderedItem}
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                              {item.quantity}
+                                            </TableCell>
+                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                              {item.newPrice}
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
                                   </TableBody>
                                 </Table>
                               </div>
                             </div>
                           </div>
                         </div>
+                        {isEditingOrder && editedOrder && (() => {
+                          const originalTotal = selectedOrder.items.reduce((sum, item) => sum + (item.newPrice || 0), 0);
+                          const newTotal = editedOrder.items.reduce((sum, item) => sum + (item.newPrice || 0), 0);
+                          const diff = newTotal - originalTotal;
+                          return (
+                            <>
+                              {diff > 0 && (
+                                <div className="mt-2 text-green-700 font-semibold">
+                                  Additional amount to be paid: ${diff.toLocaleString()}
+                                </div>
+                              )}
+                              <div className="flex gap-2 mt-4 items-center">
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => {
+                                    if (!editedOrder) return;
+                                    const maxSerial = editedOrder.items.reduce((max, item) => Math.max(max, item.serialNo), 0);
+                                    const newItem = {
+                                      serialNo: maxSerial + 1,
+                                      orderedItem: '',
+                                      itemDescription: '',
+                                      quantity: 1,
+                                      cancellationFee: 0,
+                                      quantityCancelled: 0,
+                                      uom: '',
+                                      kitPrice: 0,
+                                      newPrice: 0,
+                                      discount: 0,
+                                      extendedPrice: 0,
+                                      userItemDescription: '',
+                                      dff: '',
+                                      orderReceivedDate: '',
+                                      status: '',
+                                      itemType: '',
+                                      ato: false,
+                                      lineType: '',
+                                      documentNumber: '',
+                                      industryInformation: '',
+                                      isNew: true,
+                                    };
+                                    setEditedOrder({
+                                      orderId: editedOrder.orderId || '',
+                                      showId: editedOrder.showId || '',
+                                      occurrenceId: editedOrder.occurrenceId || '',
+                                      subTotal: editedOrder.subTotal || 0,
+                                      salesChannel: editedOrder.salesChannel || '',
+                                      terms: editedOrder.terms || '',
+                                      tax: editedOrder.tax || 0,
+                                      orderType: editedOrder.orderType || '',
+                                      customerPO: editedOrder.customerPO || '',
+                                      cancelCharge: editedOrder.cancelCharge || 0,
+                                      source: editedOrder.source || '',
+                                      project: editedOrder.project || '',
+                                      orderDate: editedOrder.orderDate || '',
+                                      boothInfo: editedOrder.boothInfo || '',
+                                      billingAddress: editedOrder.billingAddress || '',
+                                      total: editedOrder.total || 0,
+                                      items: [...editedOrder.items, newItem],
+                                    });
+                                  }}
+                                >
+                                  Add Item
+                                </Button>
+                                {diff > 0 && (
+                                  <Button variant="default" onClick={() => alert('Proceed to payment!')}>Make Payment</Button>
+                                )}
+                                <Button variant="outline" onClick={() => setIsEditingOrder(false)}>Cancel</Button>
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     </Card>
                   ) : (

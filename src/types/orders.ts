@@ -19,6 +19,7 @@ export interface OrderItem {
   lineType: string;
   documentNumber: string;
   industryInformation: string;
+  isNew?: boolean;
 }
 
 export interface Order {

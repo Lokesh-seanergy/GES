@@ -1140,8 +1140,15 @@ function CustomersContent() {
                           <Button
                             variant="default"
                             onClick={() => {
-                              // TODO: Implement order functionality
-                              alert('Order functionality coming soon!');
+                              if (customerForDetailView) {
+                                const params = new URLSearchParams({
+                                  projectNumber: customerForDetailView.projectNumber || '',
+                                  firstName: customerForDetailView.firstName || '',
+                                  lastName: customerForDetailView.lastName || '',
+                                  boothNumber: customerForDetailView.boothNumber || '',
+                                });
+                                router.push(`/orders?${params.toString()}`);
+                              }
                             }}
                           >
                             Order

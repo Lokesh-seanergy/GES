@@ -1,7 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // basePath: '/ges-workbench',
-  basePath: '/GES',
+  basePath: '/ges-workbench',
   output: 'standalone',
   images: {
     remotePatterns: [

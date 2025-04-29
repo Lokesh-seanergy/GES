@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUp } from "lucide-react";
 import { Button } from "./button";
@@ -12,41 +12,24 @@ export function ScrollToTop() {
   useEffect(() => {
     setMounted(true);
     
-    // Wait for next tick to ensure hydration is complete
-    const timeout = setTimeout(() => {
-      const handleScroll = (e: Event) => {
-        const target = e.target as HTMLElement;
-        if (target.scrollTop > 100) {
-          setShowButton(true);
-        } else {
-          setShowButton(false);
-        }
-      };
-
-      // Find the scrollable container
-      const scrollContainer = document.querySelector('.h-\\[calc\\(100vh-4rem\\)\\]');
-      if (scrollContainer) {
-        scrollContainer.addEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      if (scrollY > 100) {
+        setShowButton(true);
+      } else {
+        setShowButton(false);
       }
+    };
 
-      return () => {
-        if (scrollContainer) {
-          scrollContainer.removeEventListener('scroll', handleScroll);
-        }
-      };
-    }, 0);
-
-    return () => clearTimeout(timeout);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const handleScrollToTop = () => {
-    const scrollContainer = document.querySelector('.h-\\[calc\\(100vh-4rem\\)\\]');
-    if (scrollContainer) {
-      scrollContainer.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-      });
-    }
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   };
 
   // Don't render anything during SSR
@@ -65,10 +48,10 @@ export function ScrollToTop() {
             onClick={handleScrollToTop}
             variant="success"
             size="sm"
-            className="rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
+            className="rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 bg-green-500 hover:bg-green-600"
           >
             <ArrowUp className="h-5 w-5" />
-            <span className="text-sm font-medium">Back to Top</span>
+            <span className="text-sm font-medium text-white">Back to Top</span>
           </Button>
         </motion.div>
       )}

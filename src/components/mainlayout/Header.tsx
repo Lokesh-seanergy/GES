@@ -73,7 +73,7 @@ export default function Header() {
           >
             <Bell size={20} />
             {notifications.filter(n => n.status === "pending").length > 0 && (
-              <span className="absolute top-1 right-1 h-4 w-4 bg-green-500 rounded-full text-white text-xs flex items-center justify-center">
+              <span className="absolute top-1 right-1 h-4 w-4 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center">
                 {notifications.filter(n => n.status === "pending").length}
               </span>
             )}

@@ -759,7 +759,8 @@ export default function ShowsPage() {
                       </span>
                     </Button>
                     <Button
-                      variant="success"
+                      variant="outline"
+                      className="gap-2"
                       onClick={toggleNewShow}
                     >
                       <Plus
@@ -770,7 +771,8 @@ export default function ShowsPage() {
                       <span>New Show</span>
                     </Button>
                     <Button
-                      variant="success"
+                      variant="outline"
+                      className="gap-2"
                       onClick={toggleNewOccr}
                     >
                       <Plus
@@ -1067,7 +1069,7 @@ export default function ShowsPage() {
                         <Button variant="outline" onClick={handleCloseShowDialog}>
                           Cancel
                         </Button>
-                        <Button variant="success" onClick={handleAddShow}>
+                        <Button variant="outline" onClick={handleAddShow}>
                           Create Show
                         </Button>
                       </div>
@@ -1218,7 +1220,7 @@ export default function ShowsPage() {
                         <Button variant="outline" onClick={() => setIsNewOccrOpen(false)}>
                           Cancel
                         </Button>
-                        <Button variant="success" onClick={handleAddShow}>
+                        <Button variant="outline" onClick={handleAddShow}>
                           Create Occurrence
                         </Button>
                       </div>
@@ -1594,19 +1596,19 @@ export default function ShowsPage() {
                                 <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent h-9">
                                   <TabsTrigger
                                     value="projectInfo"
-                                    className="data-[state=active]:bg-green-400 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-[#E6F3FF] data-[state=active]:text-[#1A4B7A] bg-gray-50 hover:bg-[#D5E8F9] h-9 border border-[#D1E3F8]"
                                   >
                                     Project Info
                                   </TabsTrigger>
                                   <TabsTrigger
                                     value="keyDates"
-                                    className="data-[state=active]:bg-green-400 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-[#E6F3FF] data-[state=active]:text-[#1A4B7A] bg-gray-50 hover:bg-[#D5E8F9] h-9 border border-[#D1E3F8]"
                                   >
                                     Key Dates
                                   </TabsTrigger>
                                   <TabsTrigger
                                     value="generalInfo"
-                                    className="data-[state=active]:bg-green-400 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-[#E6F3FF] data-[state=active]:text-[#1A4B7A] bg-gray-50 hover:bg-[#D5E8F9] h-9 border border-[#D1E3F8]"
                                   >
                                     General Info
                                   </TabsTrigger>
@@ -1649,11 +1651,11 @@ export default function ShowsPage() {
                                     <div className="flex justify-end gap-2">
                                       <Button
                                         onClick={() => setShowProjectFacilities(true)}
-                                        className="bg-green-400 text-white hover:bg-green-300 h-9 px-4"
+                                        className="bg-[#E6F3FF] text-[#1A4B7A] hover:bg-[#D5E8F9] border border-[#D1E3F8] h-9 px-4"
                                       >
                                         Project Facilities
                                       </Button>
-                                      <Button className="bg-green-400 text-white hover:bg-green-300 h-9 px-4">
+                                      <Button className="bg-[#E6F3FF] text-[#1A4B7A] hover:bg-[#D5E8F9] border border-[#D1E3F8] h-9 px-4">
                                         Key Contacts
                                       </Button>
                                     </div>

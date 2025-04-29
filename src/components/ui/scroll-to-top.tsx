@@ -46,9 +46,9 @@ export function ScrollToTop() {
         >
           <Button
             onClick={handleScrollToTop}
-            variant="success"
+            variant="outline"
             size="sm"
-            className="rounded-full px-4 py-2 shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2 bg-green-500 hover:bg-green-600"
+            className="h-10 min-w-[140px] px-6 font-semibold rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
           >
             <ArrowUp className="h-5 w-5" />
             <span className="text-sm font-medium text-white">Back to Top</span>

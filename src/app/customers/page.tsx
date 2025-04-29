@@ -12,6 +12,7 @@ import {
   mockShows,
   mockCustomers,
   mockFacilityData,
+  mockProjectData,
   type ShowData,
   type CustomerData,
   type CustomerType,
@@ -107,6 +108,13 @@ function CustomersContent() {
   const [prioritizedCustomers, setPrioritizedCustomers] = useState<CustomerData[]>(
     []
   );
+
+  // Find the current show and its project
+  const currentShow = mockShows.find(show => show.occrId === occrId && show.showName === showName);
+  const currentProject = currentShow
+    ? mockProjectData.find(project => project.projectNumber === currentShow.projectNumber)
+    : undefined;
+  const currentFacilityId = currentProject?.facilityId || 'N/A';
 
   const resetPage = useCallback(() => {
     setSearchQuery("");
@@ -955,7 +963,7 @@ function CustomersContent() {
                           </div>
                           <div className="space-y-2">
                             <div className="text-sm text-gray-800">
-                              <span className="font-medium">Facility ID:</span> {customer.facilityId}
+                              <span className="font-medium">Facility ID:</span> {currentFacilityId}
                             </div>
                             <div className="text-sm text-gray-800">
                               <span className="font-medium">Project #:</span> {mockShows.find(show => show.showId === customer.showId)?.projectNumber || 'N/A'}
@@ -1073,7 +1081,7 @@ function CustomersContent() {
                                           {customerForDetailView.projectNumber || 'N/A'}
                                         </TableCell>
                                         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
-                                          {customerForDetailView.facilityId || 'N/A'}
+                                          {currentFacilityId}
                                         </TableCell>
                                         <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                                           {customerForDetailView.boothNumber || 'N/A'}
@@ -1129,14 +1137,6 @@ function CustomersContent() {
                           </div>
                         )}
                         <div className="mt-6 pt-4 border-t flex gap-2">
-                          <Button
-                            variant="default"
-                            onClick={() =>
-                              openEditDialog(customerForDetailView)
-                            }
-                          >
-                            Edit Customer
-                          </Button>
                           <Button
                             variant="default"
                             onClick={() => {

@@ -608,7 +608,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 font-semibold">
                 <LineChart className="w-5 h-5 text-blue-500" />
-                SHOWS & EXHIBITORS BY MONTH
+                Shows & Exhibitors By Month
               </div>
               <div className="text-xs text-gray-400">Jan - Jun {dayjs().year()}</div>
             </div>
@@ -655,7 +655,7 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2 font-semibold">
                 <BarChart className="w-5 h-5 text-green-500 animate-pulse" />
-                ORDERS FOR UPCOMING SHOWS
+                Orders for Ongoing Shows
               </div>
             </div>
             <div className="h-64 bg-white rounded-lg shadow border p-4">
@@ -688,7 +688,7 @@ export default function DashboardPage() {
         {/* Show Tasks */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">SHOW TASKS</h2>
+            <h2 className="text-lg font-semibold">Show Tasks</h2>
             <Button
               variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Task </Button>
           </div>
@@ -780,7 +780,7 @@ export default function DashboardPage() {
         {/* Upcoming & Ongoing Shows Table */}
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">UPCOMING & ONGOING SHOWS</h2>
+            <h2 className="text-lg font-semibold">Upcoming & Ongoing Shows</h2>
             <Button
               variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Show </Button>
           </div>

@@ -12,7 +12,7 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "Next.js App",
+  title: "GES ShowFlow",
   description: "A Next.js app with Tailwind CSS and shadcn/ui",
 };
 

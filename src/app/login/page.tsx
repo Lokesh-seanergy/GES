@@ -61,11 +61,10 @@ export default function LoginPage() {
               <Image
                 src="/ges-workbench/ges_logo.png"
                 alt="GES Logo"
-                width={120}
-                height={120}
+                width={320}
+                height={320}
                 priority
               />
-              <h1 className="text-4xl font-bold text-gray-900">SHOWFLOW</h1>
             </div>
 
             {/* Divider */}

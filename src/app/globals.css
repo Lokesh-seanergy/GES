@@ -1,4 +1,3 @@
-/* Tailwind CSS */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -34,6 +33,9 @@
     --ring: 222.2 84% 4.9%;
  
     --radius: 0.5rem;
+
+    --primary-font: "Roboto", sans-serif;
+    --secondary-font: "Roboto", sans-serif;
   }
  
   .dark {
@@ -66,3 +68,14 @@
     --ring: 212.7 26.8% 83.9%;
   }
 }
+ 
+@layer base {
+  * {
+    @apply border-border;
+    font-family: "Roboto", sans-serif;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Roboto", sans-serif;
+  }
+} 

@@ -96,7 +96,7 @@ export default function Sidemenu() {
       {/* Logo section */}
       <div className={`relative bg-[#88c5cf] w-full h-16 p-0 m-0 flex items-center justify-center overflow-hidden transition-all duration-300`}> 
         <img
-          src={expanded ? "/ges-workbench/ges_logo.png" : "/ges-workbench/geslogo.png"}
+          src={expanded ? "/ges-workbench/swb.png" : "/ges-workbench/geslogo.png"}
           alt="GES Logo"
           className={expanded ? "w-full h-full object-cover" : "h-10 w-10 rounded-full object-cover border-2 border-white shadow"}
           style={{ display: 'block', transition: 'all 0.3s' }}

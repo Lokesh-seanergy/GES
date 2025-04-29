@@ -54,7 +54,7 @@ export default function Header() {
         <h1
           className={`${roboto.className} text-[26px] leading-[100%] tracking-[0%] ml-8`}
         >
-          <span className="font-[400] ">ShowFlow</span>
+          <span className="font-[400] ">Show Workbench</span>
         </h1>
       </div>
 

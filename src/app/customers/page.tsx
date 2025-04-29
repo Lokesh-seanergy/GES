@@ -890,7 +890,7 @@ function CustomersContent() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
                             <span className="text-gray-700 font-semibold">
-                              Customer ID:
+                              Exhibitor ID:
                             </span>
                             <span>{customer.customerId}</span>
                           </div>
@@ -1002,7 +1002,7 @@ function CustomersContent() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <span className="text-gray-700 font-semibold">
-                                Customer ID:
+                                Exhibitor ID:
                               </span>
                               <span>{customer.customerId}</span>
                             </div>
@@ -1140,8 +1140,15 @@ function CustomersContent() {
                           <Button
                             variant="default"
                             onClick={() => {
-                              // TODO: Implement order functionality
-                              alert('Order functionality coming soon!');
+                              if (customerForDetailView) {
+                                const params = new URLSearchParams({
+                                  projectNumber: customerForDetailView.projectNumber || '',
+                                  firstName: customerForDetailView.firstName || '',
+                                  lastName: customerForDetailView.lastName || '',
+                                  boothNumber: customerForDetailView.boothNumber || '',
+                                });
+                                router.push(`/orders?${params.toString()}`);
+                              }
                             }}
                           >
                             Order
@@ -1209,7 +1216,7 @@ function CustomersContent() {
                             htmlFor="customerId"
                             className={errors.customerId ? "text-red-500" : ""}
                           >
-                            Customer ID<span className="text-red-500">*</span>
+                            Exhibitor ID<span className="text-red-500">*</span>
                           </Label>
                           <Input
                             id="customerId"

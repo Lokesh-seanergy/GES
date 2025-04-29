@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -24,7 +24,7 @@ import { ScrollToTop } from "@/components/ui/scroll-to-top";
 import { useSearchParams } from "next/navigation";
 import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
-export default function OrdersPage() {
+function OrdersContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -465,5 +465,13 @@ export default function OrdersPage() {
         </DialogContent>
       </Dialog>
     </MainLayout>
+  );
+}
+
+export default function OrdersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <OrdersContent />
+    </Suspense>
   );
 }

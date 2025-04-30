@@ -5,7 +5,6 @@ import MainLayout from "@/components/mainlayout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { Search, X, ChevronRight } from "lucide-react";
 import { User, Ruler, FileText } from "lucide-react";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
@@ -18,7 +17,6 @@ import {
   type CustomerData,
   type CustomerType,
   type FacilityData,
-
 } from "@/lib/mockData";
 import {
   Dialog,
@@ -27,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import React from "react";
@@ -39,11 +37,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
-
 
 interface SummaryData {
   exhibitor: {
@@ -64,24 +60,20 @@ interface SummaryData {
 }
 
 const customerTypes: CustomerType[] = ["Exhibitors", "ShowOrg", "3rd party"];
-
 interface EditedCustomer extends Omit<CustomerData, 'type'> {
   type: CustomerType[];
   cityStateZip?: string;
 }
-
 
 function CustomersContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
 
-
   // Get show parameters from URL
   const showNameFromUrl = searchParams.get('showName');
   const occrIdFromUrl = searchParams.get('occrId');
   const showIdFromUrl = searchParams.get('showId');
-
 
   const [searchQuery, setSearchQuery] = useState("");
   const [showName, setShowName] = useState(showNameFromUrl || "");
@@ -93,20 +85,16 @@ function CustomersContent() {
     thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
   });
 
-
   // Initialize with filtered customers if show ID is provided
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>(
     showIdFromUrl ? mockCustomers.filter(customer => customer.showId === showIdFromUrl) : []
   );
 
-
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(
     null
   );
   const [selectedCustomerForEdit, setSelectedCustomerForEdit] =
-
     useState<CustomerData | null>(null);
-
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editedCustomer, setEditedCustomer] = useState<EditedCustomer | null>(null);
   const [key, setKey] = useState(Date.now());
@@ -115,7 +103,6 @@ function CustomersContent() {
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-
   const occrIdInputRef = useRef<HTMLInputElement>(null);
   const showNameInputRef = useRef<HTMLInputElement>(null);
   const [prioritizedCustomers, setPrioritizedCustomers] = useState<CustomerData[]>(
@@ -128,7 +115,6 @@ function CustomersContent() {
     ? mockProjectData.find(project => project.projectNumber === currentShow.projectNumber)
     : undefined;
   const currentFacilityId = currentProject?.facilityId || 'N/A';
-
 
   const resetPage = useCallback(() => {
     setSearchQuery("");
@@ -153,7 +139,6 @@ function CustomersContent() {
     }
   }, []);
 
-
   const handleCustomerBreadcrumbClick = () => {
     // Reset all form inputs and data
     resetPage();
@@ -161,7 +146,6 @@ function CustomersContent() {
     // Reset URL without triggering navigation events
     router.replace("/customers");
   };
-
 
   const calculateSummaryData = (show: ShowData | null) => {
     if (!show) {
@@ -197,47 +181,38 @@ function CustomersContent() {
         return total + (isNaN(length) || isNaN(width) ? 0 : length * width);
       }, 0);
 
-
     const exhibitorOrderCount = exhibitorCustomers.reduce((total, c) => total + c.orders, 0);
     const eeOrderCount = eeCustomers.reduce((total, c) => total + c.orders, 0);
     const thirdPartyOrderCount = thirdPartyCustomers.reduce((total, c) => total + c.orders, 0);
     const totalOrders = exhibitorOrderCount + eeOrderCount + thirdPartyOrderCount;
 
-
     setSummaryData({
       exhibitor: {
         customerCount: exhibitorCustomers.length,
-
         metric2: calculateTotalBoothArea(exhibitorCustomers),
         metric3: totalOrders,
       },
       ee: {
         customerCount: eeCustomers.length,
         metric2: calculateTotalBoothArea(eeCustomers),
-
         metric3: 0,
       },
       thirdParty: {
         customerCount: thirdPartyCustomers.length,
-
         metric2: calculateTotalBoothArea(thirdPartyCustomers),
-
         metric3: 0,
       },
     });
   };
-
 
   // Completely revamped input handlers
   const handleOccrIdChange = (value: string) => {
     setOccrId(value);
 
     // Cancel any pending searches
-
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-
 
     // If input is cleared manually, reset everything
     if (!value.trim()) {
@@ -275,7 +250,6 @@ function CustomersContent() {
         calculateSummaryData(null);
         // Optionally clear the other field if desired, or leave it
         // setShowName("");
-
       }
     }, 300);
   };
@@ -287,7 +261,6 @@ function CustomersContent() {
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-
 
     // If input is cleared manually, reset everything
     if (!value.trim()) {
@@ -304,16 +277,13 @@ function CustomersContent() {
     }
 
     // Set up new search with delay only if input is not empty
-
     searchTimeoutRef.current = setTimeout(() => {
       const foundShow = mockShows.find((show) =>
         show.showName.toLowerCase().includes(value.toLowerCase())
       );
 
       if (foundShow) {
-
         setOccrId(foundShow.occrId); // Update the other field
-
         setShowSummary(true);
         calculateSummaryData(foundShow);
         router.push(
@@ -337,11 +307,9 @@ function CustomersContent() {
     setExpandedCustomerId(null);
 
     // Cancel any pending searches
-
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
-
 
     // Update without search if empty
     if (!value.trim()) {
@@ -360,7 +328,6 @@ function CustomersContent() {
       if (foundShow) {
         setShowName(foundShow.showName);
         setOccrId(foundShow.occrId);
-
         setShowSummary(true);
         calculateSummaryData(foundShow);
         router.push(
@@ -387,9 +354,7 @@ function CustomersContent() {
       setOccrId(urlOccrId);
       setShowSummary(true);
       setExpandedCustomerId(null);
-
       setPrioritizedCustomers([]);
-
 
       const foundShow = mockShows.find(
         (show) => show.showName === urlShowName && show.occrId === urlOccrId
@@ -436,7 +401,6 @@ function CustomersContent() {
     setIsDialogOpen(true);
   };
 
-
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
@@ -477,9 +441,7 @@ function CustomersContent() {
       if (!editedCustomer?.subContractor?.email?.trim()) {
         newErrors["subContractor.email"] = "Subcontractor email is required";
       } else if (
-
         editedCustomer.subContractor?.email &&
-
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedCustomer.subContractor.email)
       ) {
         newErrors["subContractor.email"] = "Please enter a valid email address";
@@ -498,7 +460,6 @@ function CustomersContent() {
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
 
   const handleSave = async () => {
     if (!editedCustomer) return;
@@ -524,7 +485,6 @@ function CustomersContent() {
       });
       
       setEditedCustomer(null);
-
       setIsDialogOpen(false);
     } catch (error) {
       console.error('Error updating customer:', error);
@@ -555,7 +515,6 @@ function CustomersContent() {
       setKey(Date.now());
     }
   };
-
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -589,7 +548,6 @@ function CustomersContent() {
         [name]: value
       };
     });
-
   };
 
   const handleTypeChange = (typeValue: CustomerType) => {
@@ -599,18 +557,14 @@ function CustomersContent() {
       let updatedSubContractor = editedCustomer.subContractor;
 
       if (currentTypes.includes(typeValue)) {
-
         newTypes = currentTypes.filter((type) => type !== typeValue);
-
         if (typeValue === "3rd party") {
           updatedSubContractor = undefined;
         }
       } else {
         newTypes.push(typeValue);
         if (typeValue === "3rd party" && !updatedSubContractor) {
-
           updatedSubContractor = { name: "", email: "", phone: "" };
-
         }
       }
 
@@ -622,9 +576,7 @@ function CustomersContent() {
     }
   };
 
-
   const recalculateSummaryData = (customers: CustomerData[]) => {
-
     const exhibitorCustomers = customers.filter((c) =>
       c.type.includes("Exhibitors")
     );
@@ -703,25 +655,20 @@ function CustomersContent() {
 
     // Reset all related states immediately
     setOccrId("");
-
     setShowName("");
     setShowSummary(false);
     setFilteredCustomers([]);
-
     setSummaryData({
       exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
       ee: { customerCount: 0, metric2: 0, metric3: 0 },
       thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
     });
 
-
     // Clear any pending searches
-
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
     }
-
 
     // Update URL without triggering navigation
     router.push("/customers", { scroll: false });
@@ -730,7 +677,6 @@ function CustomersContent() {
     if (occrIdInputRef.current) {
       occrIdInputRef.current.blur();
     }
-
   };
 
   const clearShowName = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -781,7 +727,6 @@ function CustomersContent() {
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <Label htmlFor="occrId">Occurrence ID</Label>
-
               <div className="relative">
                 <Input
                   id="occrId"
@@ -825,7 +770,6 @@ function CustomersContent() {
                   </button>
                 )}
               </div>
-
             </div>
             <div className="space-y-1 relative">
               <Label htmlFor="searchQuery">Search</Label>
@@ -834,9 +778,7 @@ function CustomersContent() {
                 type="text"
                 placeholder="Search by Show ID, Name, or..."
                 value={searchQuery}
-
                 onChange={(e) => handleSearchQueryChange(e.target.value)}
-
                 className="pl-8 bg-white text-sm"
               />
               <Search className="absolute left-2.5 bottom-2.5 text-gray-400 h-4 w-4" />
@@ -852,7 +794,6 @@ function CustomersContent() {
                   EXHIBITOR SUMMARY
                 </h3>
                 <div className="flex justify-around text-center">
-
                   <div title="Customer Count">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
                       <User className="w-5 h-5 text-blue-600" />
@@ -879,7 +820,6 @@ function CustomersContent() {
                       {summaryData.exhibitor.metric3}
                     </p>
                     <p className="text-xs text-gray-500">Orders</p>
-
                   </div>
                 </div>
               </Card>
@@ -888,7 +828,6 @@ function CustomersContent() {
                   E&E SUMMARY
                 </h3>
                 <div className="flex justify-around text-center">
-
                   <div title="Customer Count">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
                       <User className="w-5 h-5 text-blue-600" />
@@ -906,7 +845,6 @@ function CustomersContent() {
                       {summaryData.ee.metric2}
                     </p>
                     <p className="text-xs text-gray-500">Booth Sqft</p>
-
                   </div>
                 </div>
               </Card>
@@ -915,7 +853,6 @@ function CustomersContent() {
                   3RD PARTY
                 </h3>
                 <div className="flex justify-around text-center">
-
                   <div title="Customer Count">
                     <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
                       <User className="w-5 h-5 text-blue-600" />
@@ -933,7 +870,6 @@ function CustomersContent() {
                       {summaryData.thirdParty.metric2}
                     </p>
                     <p className="text-xs text-gray-500">Booth Sqft</p>
-
                   </div>
                 </div>
               </Card>
@@ -954,9 +890,7 @@ function CustomersContent() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
                             <span className="text-gray-700 font-semibold">
-
                               Exhibitor ID:
-
                             </span>
                             <span>{customer.customerId}</span>
                           </div>
@@ -999,11 +933,9 @@ function CustomersContent() {
                       <div className="flex flex-col gap-1 border-r md:pr-4 text-sm">
                         <div className="font-semibold text-base mb-1">
                           Address
-
                         </div>
                         <div className="text-gray-600">
                           {formatAddress(customer.address)}
-
                         </div>
                         <div className="flex items-start gap-1 mt-1">
                           <span className="text-gray-700 font-semibold pr-2">
@@ -1029,7 +961,6 @@ function CustomersContent() {
                           <div className="font-semibold text-base mb-1">
                             Booth Info
                           </div>
-
                           <div className="space-y-2">
                             <div className="text-sm text-gray-800">
                               <span className="font-medium">Facility ID:</span> {currentFacilityId}
@@ -1040,7 +971,6 @@ function CustomersContent() {
                             <div className="text-sm text-gray-800">
                               <span className="font-medium">Booth #:</span> {customer.boothNumber}
                             </div>
-
                           </div>
                         </div>
                         <div className="flex items-center justify-end text-sm text-gray-600 hover:text-blue-600 mt-2">
@@ -1053,7 +983,6 @@ function CustomersContent() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
-
                   <div className="space-y-4 md:max-w-xs lg:max-w-sm h-[calc(100vh-14rem)] overflow-y-auto pr-2">
                     {prioritizedCustomers.map((customer) => (
                       <Card
@@ -1063,7 +992,6 @@ function CustomersContent() {
                           expandedCustomerId === customer.id
                             ? "bg-blue-50 border-blue-300 shadow-md"
                             : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-gray-300"
-
                         )}
                         onClick={() => handleCustomerCardClick(customer.id)}
                       >
@@ -1074,9 +1002,7 @@ function CustomersContent() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <span className="text-gray-700 font-semibold">
-
                                 Exhibitor ID:
-
                               </span>
                               <span>{customer.customerId}</span>
                             </div>
@@ -1139,7 +1065,6 @@ function CustomersContent() {
                                 <Table className="min-w-full table-fixed divide-y divide-gray-300">
                                   <TableHeader className="bg-gray-50">
                                     <TableRow>
-
                                       <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project #</TableHead>
                                       <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Facility</TableHead>
                                       <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth #</TableHead>
@@ -1183,14 +1108,12 @@ function CustomersContent() {
                                         <TableCell colSpan={7} className="text-center text-gray-400 py-8">Select a customer to view booth/zone details.</TableCell>
                                       </TableRow>
                                     )}
-
                                   </TableBody>
                                 </Table>
                               </div>
                             </div>
                           </div>
                         </div>
-
 
                         {/* Project Details Section */}
                         {customerForDetailView && (
@@ -1215,21 +1138,12 @@ function CustomersContent() {
                         )}
                         <div className="mt-6 pt-4 border-t flex gap-2">
                           <Button
-                            variant="default"
                             onClick={() => {
-                              if (customerForDetailView) {
-                                const params = new URLSearchParams({
-                                  projectNumber: customerForDetailView.projectNumber || '',
-                                  firstName: customerForDetailView.firstName || '',
-                                  lastName: customerForDetailView.lastName || '',
-                                  boothNumber: customerForDetailView.boothNumber || '',
-                                });
-                                router.push(`/orders?${params.toString()}`);
-                              }
+                              // TODO: Implement order functionality
+                              alert('Order functionality coming soon!');
                             }}
                           >
                             Order
-
                           </Button>
                         </div>
                       </Card>
@@ -1247,7 +1161,7 @@ function CustomersContent() {
             {selectedCustomerForEdit && (
               <Dialog
                 open={isDialogOpen}
-                onOpenChange={(open) => {
+                onOpenChange={(open: boolean) => {
                   setIsDialogOpen(open);
                   if (!open) setSelectedCustomerForEdit(null);
                 }}
@@ -1277,9 +1191,7 @@ function CustomersContent() {
                             id="customerName"
                             value={editedCustomer?.customerName || ""}
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                             className={
                               errors.customerName ? "border-red-500" : ""
@@ -1296,17 +1208,13 @@ function CustomersContent() {
                             htmlFor="customerId"
                             className={errors.customerId ? "text-red-500" : ""}
                           >
-
                             Exhibitor ID<span className="text-red-500">*</span>
-
                           </Label>
                           <Input
                             id="customerId"
                             value={editedCustomer?.customerId || ""}
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                             className={
                               errors.customerId ? "border-red-500" : ""
@@ -1327,9 +1235,7 @@ function CustomersContent() {
                               editedCustomer?.isActive ? "active" : "inactive"
                             }
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                           >
                             <option value="active">Active</option>
@@ -1348,9 +1254,7 @@ function CustomersContent() {
                             type="email"
                             value={editedCustomer?.email || ""}
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                             className={errors.email ? "border-red-500" : ""}
                           />
@@ -1371,9 +1275,7 @@ function CustomersContent() {
                             id="phone"
                             value={editedCustomer?.phone || ""}
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                             className={errors.phone ? "border-red-500" : ""}
                           />
@@ -1387,11 +1289,9 @@ function CustomersContent() {
                           <Label htmlFor="address">Address</Label>
                           <Input
                             id="address"
-
                             value={editedCustomer?.address?.street || ""}
                             onChange={(e) =>
                               handleInputChange(e)
-
                             }
                           />
                         </div>
@@ -1406,9 +1306,7 @@ function CustomersContent() {
                             id="facilityId"
                             value={editedCustomer?.facilityId || ""}
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                             className={
                               errors.facilityId ? "border-red-500" : ""
@@ -1431,9 +1329,7 @@ function CustomersContent() {
                             id="boothNumber"
                             value={editedCustomer?.boothNumber || ""}
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                             className={
                               errors.boothNumber ? "border-red-500" : ""
@@ -1451,9 +1347,7 @@ function CustomersContent() {
                             id="zone"
                             value={editedCustomer?.zone || ""}
                             onChange={(e) =>
-
                               handleInputChange(e)
-
                             }
                           />
                         </div>
@@ -1502,9 +1396,7 @@ function CustomersContent() {
                                 id="subContractorName"
                                 value={editedCustomer.subContractor?.name || ""}
                                 onChange={(e) =>
-
                                   handleInputChange(e)
-
                                 }
                                 placeholder="Subcontractor company name"
                                 className={
@@ -1530,9 +1422,7 @@ function CustomersContent() {
                                   ""
                                 }
                                 onChange={(e) =>
-
                                   handleInputChange(e)
-
                                 }
                                 placeholder="Contact person name"
                               />
@@ -1554,9 +1444,7 @@ function CustomersContent() {
                                   editedCustomer.subContractor?.phone || ""
                                 }
                                 onChange={(e) =>
-
                                   handleInputChange(e)
-
                                 }
                                 placeholder="Subcontractor phone"
                                 className={
@@ -1589,9 +1477,7 @@ function CustomersContent() {
                                   editedCustomer.subContractor?.email || ""
                                 }
                                 onChange={(e) =>
-
                                   handleInputChange(e)
-
                                 }
                                 placeholder="Subcontractor email"
                                 className={
@@ -1615,7 +1501,6 @@ function CustomersContent() {
                   <DialogFooter className="flex justify-between border-t pt-4 mt-4">
                     <Button
                       type="button"
-                      variant="destructive"
                       onClick={handleDelete}
                     >
                       Delete Customer
@@ -1623,7 +1508,7 @@ function CustomersContent() {
                     <div className="space-x-2">
                       <Button
                         type="button"
-                        variant="outline"
+                     
                         onClick={() => setIsDialogOpen(false)}
                       >
                         Cancel
@@ -1638,7 +1523,6 @@ function CustomersContent() {
             )}
 
             <div className="flex justify-end items-center mt-4">
-
               <PageSizeSelector
                 pageSize={rowsPerPage}
                 setPageSize={(value) => {
@@ -1652,7 +1536,6 @@ function CustomersContent() {
                 onPageChange={handlePageChange}
                 className="ml-4"
               />
-
             </div>
           </>
         )}
@@ -1662,7 +1545,6 @@ function CustomersContent() {
   );
 }
 
-
 export default function CustomersPage() {
   return (
     <Suspense fallback={<div>Loading...</div>}>
@@ -1670,4 +1552,3 @@ export default function CustomersPage() {
     </Suspense>
   );
 }
-

@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Bell, ChevronDown, LogOut, User } from "lucide-react";
 import { Roboto } from "next/font/google";
 import { SearchBar } from "../ui/SearchBar";
 import Image from "next/image";
 import { useAuthStore } from "@/store/authStore";
+import { useNotifications } from "../NotificationContext";
 
 // Configure the Roboto font with specific weights
 const roboto = Roboto({
@@ -16,8 +17,11 @@ const roboto = Roboto({
 
 export default function Header() {
   const { logout, userProfile } = useAuthStore();
+  const { notifications, setNotifications } = useNotifications();
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [imageError, setImageError] = useState(false);
+  const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
+  const bellRef = useRef(null);
 
   const handleLogout = () => {
     try {
@@ -50,7 +54,7 @@ export default function Header() {
         <h1
           className={`${roboto.className} text-[26px] leading-[100%] tracking-[0%] ml-8`}
         >
-          <span className="font-[400] ">ShowFlow</span>
+          <span className="font-[400] ">Show Workbench</span>
         </h1>
       </div>
 
@@ -61,12 +65,36 @@ export default function Header() {
         </div>
 
         {/* Notifications */}
-        <button className="relative p-2 text-gray-500 hover:text-blue-600 mr-2">
-          <Bell size={20} />
-          <span className="absolute top-1 right-1 h-4 w-4 bg-green-500 rounded-full text-white text-xs flex items-center justify-center">
-            2
-          </span>
-        </button>
+        <div className="relative" ref={bellRef}>
+          <button
+            className="relative p-2 text-gray-500 hover:text-blue-600 mr-2 focus:outline-none"
+            onClick={() => setShowNotificationDropdown((prev) => !prev)}
+            aria-label="Show notifications"
+          >
+            <Bell size={20} />
+            {notifications.filter(n => n.status === "pending").length > 0 && (
+              <span className="absolute top-1 right-1 h-4 w-4 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center">
+                {notifications.filter(n => n.status === "pending").length}
+              </span>
+            )}
+          </button>
+          {showNotificationDropdown && (
+            <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded shadow-lg z-50">
+              <div className="p-4 font-semibold border-b">Notifications</div>
+              {notifications.filter(n => n.status === "pending").length === 0 ? (
+                <div className="p-4 text-gray-500">No new notifications</div>
+              ) : (
+                notifications.filter(n => n.status === "pending").map((note) => (
+                  <div key={note.id} className="p-4 border-b flex items-center gap-2">
+                    <span>
+                      {note.task} | <b>Zone:</b> {note.boothZone} | <b>Customer:</b> {note.customerName}
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
 
         {/* User Profile Dropdown */}
         <div className="relative">

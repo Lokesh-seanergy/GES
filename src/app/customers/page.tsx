@@ -5,22 +5,20 @@ import MainLayout from "@/components/mainlayout/MainLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Search,
-  Users,
-  Box,
-  ClipboardList,
-  Check,
-  X,
-  ChevronRight,
-} from "lucide-react";
-import { useState, useEffect, useCallback, useRef } from "react";
+
+import { Search, X, ChevronRight } from "lucide-react";
+import { User, Ruler, FileText } from "lucide-react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import {
   mockShows,
   mockCustomers,
-  ShowData,
-  Customer,
-  CustomerType,
+  mockFacilityData,
+  mockProjectData,
+  type ShowData,
+  type CustomerData,
+  type CustomerType,
+  type FacilityData,
+
 } from "@/lib/mockData";
 import {
   Dialog,
@@ -33,7 +31,6 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import React from "react";
-import Router from "next/router";
 import {
   Table,
   TableBody,
@@ -42,6 +39,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+
+import { CustomPagination } from "@/components/ui/pagination";
+import { PageSizeSelector } from "@/components/ui/page-size-selector";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
+
 
 interface SummaryData {
   exhibitor: {
@@ -63,47 +65,76 @@ interface SummaryData {
 
 const customerTypes: CustomerType[] = ["Exhibitors", "ShowOrg", "3rd party"];
 
-export default function CustomersPage() {
+interface EditedCustomer extends Omit<CustomerData, 'type'> {
+  type: CustomerType[];
+  cityStateZip?: string;
+}
+
+
+function CustomersContent() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
 
+
+  // Get show parameters from URL
+  const showNameFromUrl = searchParams.get('showName');
+  const occrIdFromUrl = searchParams.get('occrId');
+  const showIdFromUrl = searchParams.get('showId');
+
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [showName, setShowName] = useState("");
-  const [occrId, setOccrId] = useState("");
+  const [showName, setShowName] = useState(showNameFromUrl || "");
+  const [occrId, setOccrId] = useState(occrIdFromUrl || "");
   const [showSummary, setShowSummary] = useState(false);
-  const [originalShow, setOriginalShow] = useState<ShowData | null>(null);
-  const [previousShow, setPreviousShow] = useState<ShowData | null>(null);
   const [summaryData, setSummaryData] = useState<SummaryData>({
     exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
     ee: { customerCount: 0, metric2: 0, metric3: 0 },
     thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
   });
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
+
+
+  // Initialize with filtered customers if show ID is provided
+  const [filteredCustomers, setFilteredCustomers] = useState<CustomerData[]>(
+    showIdFromUrl ? mockCustomers.filter(customer => customer.showId === showIdFromUrl) : []
+  );
+
+
   const [expandedCustomerId, setExpandedCustomerId] = useState<string | null>(
     null
   );
   const [selectedCustomerForEdit, setSelectedCustomerForEdit] =
-    useState<Customer | null>(null);
+
+    useState<CustomerData | null>(null);
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editedCustomer, setEditedCustomer] = useState<Customer | null>(null);
+  const [editedCustomer, setEditedCustomer] = useState<EditedCustomer | null>(null);
   const [key, setKey] = useState(Date.now());
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hasSearchedRef = useRef(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [reloadKey, setReloadKey] = useState(0);
+
+  const occrIdInputRef = useRef<HTMLInputElement>(null);
+  const showNameInputRef = useRef<HTMLInputElement>(null);
+  const [prioritizedCustomers, setPrioritizedCustomers] = useState<CustomerData[]>(
+    []
+  );
+
+  // Find the current show and its project
+  const currentShow = mockShows.find(show => show.occrId === occrId && show.showName === showName);
+  const currentProject = currentShow
+    ? mockProjectData.find(project => project.projectNumber === currentShow.projectNumber)
+    : undefined;
+  const currentFacilityId = currentProject?.facilityId || 'N/A';
+
 
   const resetPage = useCallback(() => {
     setSearchQuery("");
     setShowName("");
     setOccrId("");
     setShowSummary(false);
-    setOriginalShow(null);
-    setPreviousShow(null);
-    hasSearchedRef.current = false;
     setFilteredCustomers([]);
     setSummaryData({
       exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
@@ -111,37 +142,26 @@ export default function CustomersPage() {
       thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
     });
     setExpandedCustomerId(null);
+    setPrioritizedCustomers([]);
     setSelectedCustomerForEdit(null);
     setIsDialogOpen(false);
     setKey(Date.now());
+
+    // Clear any pending searches
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
   }, []);
 
-  const handleBreadcrumbClick = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
 
-      setSearchQuery("");
-      setShowName("");
-      setOccrId("");
-      setShowSummary(false);
-      setFilteredCustomers([]);
-      setSummaryData({
-        exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
-        ee: { customerCount: 0, metric2: 0, metric3: 0 },
-        thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
-      });
-      hasSearchedRef.current = false;
-      setExpandedCustomerId(null);
-      setSelectedCustomerForEdit(null);
+  const handleCustomerBreadcrumbClick = () => {
+    // Reset all form inputs and data
+    resetPage();
 
-      setKey(Date.now());
+    // Reset URL without triggering navigation events
+    router.replace("/customers");
+  };
 
-      window.history.pushState({}, "", "/customers");
-
-      resetPage();
-    },
-    [resetPage]
-  );
 
   const calculateSummaryData = (show: ShowData | null) => {
     if (!show) {
@@ -151,6 +171,7 @@ export default function CustomersPage() {
         thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
       });
       setFilteredCustomers([]);
+      setPrioritizedCustomers([]);
       return;
     }
 
@@ -158,6 +179,7 @@ export default function CustomersPage() {
       (customer) => customer.showId === show.showId
     );
     setFilteredCustomers(showCustomers);
+    setPrioritizedCustomers(showCustomers);
 
     const exhibitorCustomers = showCustomers.filter((c) =>
       c.type.includes("Exhibitors")
@@ -167,152 +189,189 @@ export default function CustomersPage() {
       c.type.includes("3rd party")
     );
 
+    // Calculate total booth sizes for each type
+    const calculateTotalBoothArea = (customers: CustomerData[]) =>
+      customers.reduce((total, c) => {
+        const length = parseFloat(c.boothLength || '0');
+        const width = parseFloat(c.boothWidth || '0');
+        return total + (isNaN(length) || isNaN(width) ? 0 : length * width);
+      }, 0);
+
+
+    const exhibitorOrderCount = exhibitorCustomers.reduce((total, c) => total + c.orders, 0);
+    const eeOrderCount = eeCustomers.reduce((total, c) => total + c.orders, 0);
+    const thirdPartyOrderCount = thirdPartyCustomers.reduce((total, c) => total + c.orders, 0);
+    const totalOrders = exhibitorOrderCount + eeOrderCount + thirdPartyOrderCount;
+
+
     setSummaryData({
       exhibitor: {
         customerCount: exhibitorCustomers.length,
-        metric2: 1,
-        metric3: 800,
+
+        metric2: calculateTotalBoothArea(exhibitorCustomers),
+        metric3: totalOrders,
       },
       ee: {
         customerCount: eeCustomers.length,
-        metric2: 0,
+        metric2: calculateTotalBoothArea(eeCustomers),
+
         metric3: 0,
       },
       thirdParty: {
         customerCount: thirdPartyCustomers.length,
-        metric2: 0,
+
+        metric2: calculateTotalBoothArea(thirdPartyCustomers),
+
         metric3: 0,
       },
     });
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setExpandedCustomerId(null);
+
+  // Completely revamped input handlers
+  const handleOccrIdChange = (value: string) => {
+    setOccrId(value);
+
+    // Cancel any pending searches
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
-    if (!query.trim()) {
-      hasSearchedRef.current = false;
 
-      if (originalShow) {
-        setShowName(originalShow.showName);
-        setOccrId(originalShow.occrId);
-        setShowSummary(true);
-        calculateSummaryData(originalShow);
-
-        router.push(
-          `/customers?showName=${encodeURIComponent(
-            originalShow.showName
-          )}&occrId=${encodeURIComponent(originalShow.occrId)}`
-        );
-      } else {
-        resetPage();
-        router.push("/customers");
-      }
-      return;
+    // If input is cleared manually, reset everything
+    if (!value.trim()) {
+      setShowName("");
+      setShowSummary(false);
+      setFilteredCustomers([]);
+      setSummaryData({
+        exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+        ee: { customerCount: 0, metric2: 0, metric3: 0 },
+        thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
+      });
+      router.push("/customers", { scroll: false });
+      return; // Don't proceed to search timeout
     }
 
-    hasSearchedRef.current = true;
-
+    // Set up new search with delay only if input is not empty
     searchTimeoutRef.current = setTimeout(() => {
-      const foundShow = mockShows.find(
-        (show) =>
-          show.showId.toLowerCase().includes(query.toLowerCase()) ||
-          show.showName.toLowerCase().includes(query.toLowerCase()) ||
-          show.occrId.toLowerCase().includes(query.toLowerCase())
+      const foundShow = mockShows.find((show) =>
+        show.occrId.toLowerCase().includes(value.toLowerCase())
       );
 
       if (foundShow) {
-        setPreviousShow(foundShow);
-
-        if (query.length > 2) {
-          router.push(
-            `/customers?showName=${encodeURIComponent(
-              foundShow.showName
-            )}&occrId=${encodeURIComponent(foundShow.occrId)}`
-          );
-        }
-
-        setShowName(foundShow.showName);
-        setOccrId(foundShow.occrId);
+        setShowName(foundShow.showName); // Update the other field
         setShowSummary(true);
         calculateSummaryData(foundShow);
+        router.push(
+          `/customers?showName=${encodeURIComponent(
+            foundShow.showName
+          )}&occrId=${encodeURIComponent(foundShow.occrId)}`,
+          { scroll: false }
+        );
+      } else {
+        // Keep the typed text, but clear results if no show found
+        setShowSummary(false);
+        calculateSummaryData(null);
+        // Optionally clear the other field if desired, or leave it
+        // setShowName("");
+
       }
     }, 300);
   };
 
-  const handleDirectInput = (field: "showName" | "occrId", value: string) => {
-    if (field === "showName") {
-      setShowName(value);
-    } else {
-      setOccrId(value);
+  const handleShowNameChange = (value: string) => {
+    setShowName(value);
+
+    // Cancel any pending searches
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
+
+
+    // If input is cleared manually, reset everything
+    if (!value.trim()) {
+      setOccrId("");
+      setShowSummary(false);
+      setFilteredCustomers([]);
+      setSummaryData({
+        exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+        ee: { customerCount: 0, metric2: 0, metric3: 0 },
+        thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
+      });
+      router.push("/customers", { scroll: false });
+      return; // Don't proceed to search timeout
+    }
+
+    // Set up new search with delay only if input is not empty
+
+    searchTimeoutRef.current = setTimeout(() => {
+      const foundShow = mockShows.find((show) =>
+        show.showName.toLowerCase().includes(value.toLowerCase())
+      );
+
+      if (foundShow) {
+
+        setOccrId(foundShow.occrId); // Update the other field
+
+        setShowSummary(true);
+        calculateSummaryData(foundShow);
+        router.push(
+          `/customers?showName=${encodeURIComponent(
+            foundShow.showName
+          )}&occrId=${encodeURIComponent(foundShow.occrId)}`,
+          { scroll: false }
+        );
+      } else {
+        // Keep the typed text, but clear results if no show found
+        setShowSummary(false);
+        calculateSummaryData(null);
+        // Optionally clear the other field if desired, or leave it
+        // setOccrId("");
+      }
+    }, 300);
+  };
+
+  const handleSearchQueryChange = (value: string) => {
+    setSearchQuery(value);
     setExpandedCustomerId(null);
+
+    // Cancel any pending searches
 
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
     }
 
+
+    // Update without search if empty
     if (!value.trim()) {
-      hasSearchedRef.current = false;
-
-      if (originalShow) {
-        setShowName(originalShow.showName);
-        setOccrId(originalShow.occrId);
-        setShowSummary(true);
-        calculateSummaryData(originalShow);
-
-        router.push(
-          `/customers?showName=${encodeURIComponent(
-            originalShow.showName
-          )}&occrId=${encodeURIComponent(originalShow.occrId)}`
-        );
-      } else {
-        resetPage();
-        router.push("/customers");
-      }
       return;
     }
 
-    hasSearchedRef.current = true;
-
+    // Set up new search with delay
     searchTimeoutRef.current = setTimeout(() => {
-      let foundShow = null;
-
-      if (field === "showName") {
-        foundShow = mockShows.find((show) =>
-          show.showName.toLowerCase().includes(value.toLowerCase())
-        );
-        if (foundShow) {
-          setOccrId(foundShow.occrId);
-        }
-      } else if (field === "occrId") {
-        foundShow = mockShows.find((show) =>
+      const foundShow = mockShows.find(
+        (show) =>
+          show.showId.toLowerCase().includes(value.toLowerCase()) ||
+          show.showName.toLowerCase().includes(value.toLowerCase()) ||
           show.occrId.toLowerCase().includes(value.toLowerCase())
-        );
-        if (foundShow) {
-          setShowName(foundShow.showName);
-        }
-      }
+      );
 
       if (foundShow) {
-        setPreviousShow(foundShow);
-
-        if (value.length > 2) {
-          router.push(
-            `/customers?showName=${encodeURIComponent(
-              foundShow.showName
-            )}&occrId=${encodeURIComponent(foundShow.occrId)}`
-          );
-        }
+        setShowName(foundShow.showName);
+        setOccrId(foundShow.occrId);
 
         setShowSummary(true);
         calculateSummaryData(foundShow);
-      } else {
+        router.push(
+          `/customers?showName=${encodeURIComponent(
+            foundShow.showName
+          )}&occrId=${encodeURIComponent(foundShow.occrId)}`
+        );
+      } else if (value.length > 2) {
+        // Keep the text but clear results
         setShowSummary(false);
+        calculateSummaryData(null);
       }
     }, 300);
   };
@@ -329,15 +388,14 @@ export default function CustomersPage() {
       setShowSummary(true);
       setExpandedCustomerId(null);
 
+      setPrioritizedCustomers([]);
+
+
       const foundShow = mockShows.find(
         (show) => show.showName === urlShowName && show.occrId === urlOccrId
       );
 
       if (foundShow) {
-        if (!hasSearchedRef.current) {
-          setOriginalShow(foundShow);
-        }
-        setPreviousShow(foundShow);
         calculateSummaryData(foundShow);
       }
     } else if (isInitialLoad && pathname === "/customers") {
@@ -345,16 +403,39 @@ export default function CustomersPage() {
     }
   }, [searchParams, pathname, resetPage, showName, occrId]);
 
+  useEffect(() => {
+    if (showIdFromUrl) {
+      const show = mockShows.find(s => s.showId === showIdFromUrl);
+      if (show) {
+        setShowName(show.showName);
+        setOccrId(show.occrId);
+        setShowSummary(true);
+        const customers = mockCustomers.filter(c => c.showId === showIdFromUrl);
+        setFilteredCustomers(customers);
+        calculateSummaryData(show);
+      }
+    }
+  }, [showIdFromUrl]);
+
   const handleCustomerCardClick = (customerId: string) => {
-    setExpandedCustomerId(customerId);
-    setExpandedRow(customerId);
+    const selectedCustomer = filteredCustomers.find((c) => c.id === customerId);
+    if (selectedCustomer) {
+      const remainingCustomers = filteredCustomers.filter(
+        (c) => c.id !== customerId
+      );
+      setPrioritizedCustomers([selectedCustomer, ...remainingCustomers]);
+      setExpandedCustomerId(customerId);
+      setExpandedRow(customerId);
+    }
   };
 
-  const openEditDialog = (customer: Customer) => {
+  const openEditDialog = (customer: CustomerData) => {
+    if (!customer) return;
     setSelectedCustomerForEdit(customer);
-    setEditedCustomer({ ...customer });
+    setEditedCustomer({ ...customer } as EditedCustomer);
     setIsDialogOpen(true);
   };
+
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -369,13 +450,13 @@ export default function CustomersPage() {
 
     if (!editedCustomer?.email?.trim()) {
       newErrors.email = "Email is required";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedCustomer.email)) {
+    } else if (editedCustomer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedCustomer.email)) {
       newErrors.email = "Please enter a valid email address";
     }
 
     if (!editedCustomer?.phone?.trim()) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^[\d\s\-()]+$/.test(editedCustomer.phone)) {
+    } else if (editedCustomer.phone && !/^[\d\s\-()]+$/.test(editedCustomer.phone)) {
       newErrors.phone = "Please enter a valid phone number";
     }
 
@@ -396,6 +477,9 @@ export default function CustomersPage() {
       if (!editedCustomer?.subContractor?.email?.trim()) {
         newErrors["subContractor.email"] = "Subcontractor email is required";
       } else if (
+
+        editedCustomer.subContractor?.email &&
+
         !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editedCustomer.subContractor.email)
       ) {
         newErrors["subContractor.email"] = "Please enter a valid email address";
@@ -403,7 +487,10 @@ export default function CustomersPage() {
 
       if (!editedCustomer?.subContractor?.phone?.trim()) {
         newErrors["subContractor.phone"] = "Subcontractor phone is required";
-      } else if (!/^[\d\s\-()]+$/.test(editedCustomer.subContractor.phone)) {
+      } else if (
+        editedCustomer.subContractor?.phone &&
+        !/^[\d\s\-()]+$/.test(editedCustomer.subContractor.phone)
+      ) {
         newErrors["subContractor.phone"] = "Please enter a valid phone number";
       }
     }
@@ -412,31 +499,35 @@ export default function CustomersPage() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
 
-    if (!validateForm()) {
-      return;
-    }
+  const handleSave = async () => {
+    if (!editedCustomer) return;
+    
+    try {
+      const response = await fetch('/api/customers', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editedCustomer),
+      });
 
-    if (editedCustomer) {
-      const updatedCustomers = filteredCustomers.map((customer) =>
-        customer.id === editedCustomer.id ? editedCustomer : customer
-      );
-      setFilteredCustomers(updatedCustomers);
-
-      const customerIndex = mockCustomers.findIndex(
-        (c) => c.id === editedCustomer.id
-      );
-      if (customerIndex !== -1) {
-        mockCustomers[customerIndex] = { ...editedCustomer };
+      if (!response.ok) {
+        throw new Error('Failed to update customer');
       }
 
-      recalculateSummaryData(updatedCustomers);
+      setFilteredCustomers((prevCustomers) => {
+        if (!prevCustomers) return prevCustomers;
+        return prevCustomers.map((customer) =>
+          customer.id === editedCustomer.id ? editedCustomer : customer
+        );
+      });
+      
+      setEditedCustomer(null);
 
       setIsDialogOpen(false);
-      setSelectedCustomerForEdit(null);
-      setKey(Date.now());
+    } catch (error) {
+      console.error('Error updating customer:', error);
     }
   };
 
@@ -465,37 +556,40 @@ export default function CustomersPage() {
     }
   };
 
-  const handleInputChange = (
-    field:
-      | keyof Customer
-      | `subContractor.${keyof NonNullable<Customer["subContractor"]>}`,
-    value: string | boolean | CustomerType[]
-  ) => {
-    if (!editedCustomer) return;
 
-    if (errors[field]) {
-      const updatedErrors = { ...errors };
-      delete updatedErrors[field];
-      setErrors(updatedErrors);
-    }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    
+    setEditedCustomer((prev) => {
+      if (!prev) return prev;
+      
+      if (name === 'type') {
+        // Handle type as CustomerType[]
+        return {
+          ...prev,
+          type: [value as CustomerType]
+        };
+      }
+      
+      if (name.includes('.')) {
+        const [parent, child] = name.split('.');
+        if (parent === 'address') {
+          return {
+            ...prev,
+            address: {
+              ...prev.address,
+              [child]: value
+            }
+          };
+        }
+      }
+      
+      return {
+        ...prev,
+        [name]: value
+      };
+    });
 
-    if (field.startsWith("subContractor.")) {
-      const subField = field.split(".")[1] as keyof NonNullable<
-        Customer["subContractor"]
-      >;
-      setEditedCustomer({
-        ...editedCustomer,
-        subContractor: {
-          ...(editedCustomer.subContractor || { name: "" }),
-          [subField]: value,
-        },
-      });
-    } else {
-      setEditedCustomer({
-        ...editedCustomer,
-        [field as keyof Customer]: value,
-      });
-    }
   };
 
   const handleTypeChange = (typeValue: CustomerType) => {
@@ -505,14 +599,18 @@ export default function CustomersPage() {
       let updatedSubContractor = editedCustomer.subContractor;
 
       if (currentTypes.includes(typeValue)) {
-        newTypes = currentTypes.filter((t) => t !== typeValue);
+
+        newTypes = currentTypes.filter((type) => type !== typeValue);
+
         if (typeValue === "3rd party") {
           updatedSubContractor = undefined;
         }
       } else {
         newTypes.push(typeValue);
         if (typeValue === "3rd party" && !updatedSubContractor) {
-          updatedSubContractor = { name: "" };
+
+          updatedSubContractor = { name: "", email: "", phone: "" };
+
         }
       }
 
@@ -524,7 +622,9 @@ export default function CustomersPage() {
     }
   };
 
-  const recalculateSummaryData = (customers: Customer[]) => {
+
+  const recalculateSummaryData = (customers: CustomerData[]) => {
+
     const exhibitorCustomers = customers.filter((c) =>
       c.type.includes("Exhibitors")
     );
@@ -576,7 +676,8 @@ export default function CustomersPage() {
 
   const closeDetailsPanel = () => {
     setExpandedCustomerId(null);
-    setExpandedRow(null); // Reset expanded row
+    setPrioritizedCustomers(filteredCustomers);
+    setExpandedRow(null);
   };
 
   const handlePageChange = (newPage: number) => {
@@ -595,61 +696,74 @@ export default function CustomersPage() {
     currentPage * rowsPerPage
   );
 
-  const handleCustomerBreadcrumbClick = () => {
-    // Reset all form inputs
-    setSearchQuery("");
-    setShowName("");
+  // Clear functions
+  const clearOccrId = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Reset all related states immediately
     setOccrId("");
 
-    // Reset all data display flags
+    setShowName("");
     setShowSummary(false);
-
-    // Clear all data
-    setOriginalShow(null);
-    setPreviousShow(null);
     setFilteredCustomers([]);
 
-    // Reset summary data
     setSummaryData({
       exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
       ee: { customerCount: 0, metric2: 0, metric3: 0 },
       thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
     });
 
-    // Close any open details or edit panels
-    setExpandedCustomerId(null);
-    setExpandedRow(null);
-    setSelectedCustomerForEdit(null);
-    setIsDialogOpen(false);
 
-    // Reset pagination
-    setCurrentPage(1);
-    setRowsPerPage(5);
+    // Clear any pending searches
 
-    // Clear any error states
-    setErrors({});
-
-    // Clear timeouts to prevent delayed searches
     if (searchTimeoutRef.current) {
       clearTimeout(searchTimeoutRef.current);
       searchTimeoutRef.current = null;
     }
 
-    // Reset search flag to prevent auto-searches
-    hasSearchedRef.current = false;
 
-    // Force component re-renders
-    setKey(Date.now());
-    setReloadKey((prev) => prev + 1);
+    // Update URL without triggering navigation
+    router.push("/customers", { scroll: false });
 
-    // Reset URL without triggering navigation events
-    router.replace("/customers");
+    // Ensure input is blurred
+    if (occrIdInputRef.current) {
+      occrIdInputRef.current.blur();
+    }
+
   };
 
-  useEffect(() => {
-    // Place your data fetching logic here
-    // This will run when the component mounts or when reloadKey changes
-  }, [reloadKey]);
+  const clearShowName = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setShowName("");
+    setOccrId("");
+    setShowSummary(false);
+    setFilteredCustomers([]);
+    setSummaryData({
+      exhibitor: { customerCount: 0, metric2: 0, metric3: 0 },
+      ee: { customerCount: 0, metric2: 0, metric3: 0 },
+      thirdParty: { customerCount: 0, metric2: 0, metric3: 0 },
+    });
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    router.push("/customers", { scroll: false });
+    showNameInputRef.current?.blur();
+  };
+
+  const handleEditCustomer = (editedCustomer: EditedCustomer) => {
+    const customerIndex = mockCustomers.findIndex(customer => customer.id === editedCustomer.id);
+    if (customerIndex !== -1) {
+      mockCustomers[customerIndex] = { ...editedCustomer };
+    }
+    recalculateSummaryData(mockCustomers);
+  };
+
+  // Update the address rendering to use string type
+  const formatAddress = (address: CustomerData['address']): string => {
+    return `${address.street}, ${address.city}, ${address.state} ${address.zip}, ${address.country}`;
+  };
 
   return (
     <MainLayout
@@ -667,23 +781,51 @@ export default function CustomersPage() {
           <CardContent className="p-6 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
               <Label htmlFor="occrId">Occurrence ID</Label>
-              <Input
-                id="occrId"
-                placeholder="Enter occurrence ID"
-                value={occrId}
-                onChange={(e) => handleDirectInput("occrId", e.target.value)}
-                className="bg-white text-sm"
-              />
+
+              <div className="relative">
+                <Input
+                  id="occrId"
+                  placeholder="Enter occurrence ID"
+                  value={occrId}
+                  onChange={(e) => handleOccrIdChange(e.target.value)}
+                  className="bg-white text-sm pr-8"
+                  ref={occrIdInputRef}
+                />
+                {occrId && (
+                  <button
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={clearOccrId}
+                    type="button"
+                    aria-label="Clear occurrence ID"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
             <div className="space-y-1">
               <Label htmlFor="showName">Show Name</Label>
-              <Input
-                id="showName"
-                placeholder="Enter show name"
-                value={showName}
-                onChange={(e) => handleDirectInput("showName", e.target.value)}
-                className="bg-white text-sm"
-              />
+              <div className="relative">
+                <Input
+                  id="showName"
+                  placeholder="Enter show name"
+                  value={showName}
+                  onChange={(e) => handleShowNameChange(e.target.value)}
+                  className="bg-white text-sm pr-8"
+                  ref={showNameInputRef}
+                />
+                {showName && (
+                  <button
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    onClick={clearShowName}
+                    type="button"
+                    aria-label="Clear show name"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
             </div>
             <div className="space-y-1 relative">
               <Label htmlFor="searchQuery">Search</Label>
@@ -692,7 +834,9 @@ export default function CustomersPage() {
                 type="text"
                 placeholder="Search by Show ID, Name, or..."
                 value={searchQuery}
-                onChange={(e) => handleSearch(e.target.value)}
+
+                onChange={(e) => handleSearchQueryChange(e.target.value)}
+
                 className="pl-8 bg-white text-sm"
               />
               <Search className="absolute left-2.5 bottom-2.5 text-gray-400 h-4 w-4" />
@@ -708,23 +852,34 @@ export default function CustomersPage() {
                   EXHIBITOR SUMMARY
                 </h3>
                 <div className="flex justify-around text-center">
-                  <div>
-                    <Users className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+
+                  <div title="Customer Count">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
                     <p className="text-lg font-semibold">
                       {summaryData.exhibitor.customerCount}
                     </p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
-                  <div>
-                    <Box className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Booth Measurements">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
+                      <Ruler className="w-5 h-5 text-green-600" />
+                    </div>
                     <p className="text-lg font-semibold">
                       {summaryData.exhibitor.metric2}
                     </p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
                   </div>
-                  <div>
-                    <ClipboardList className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Orders">
+                    <div className="w-10 h-10 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-2">
+                      <FileText className="w-5 h-5 text-amber-600" />
+                    </div>
                     <p className="text-lg font-semibold">
                       {summaryData.exhibitor.metric3}
                     </p>
+                    <p className="text-xs text-gray-500">Orders</p>
+
                   </div>
                 </div>
               </Card>
@@ -733,23 +888,25 @@ export default function CustomersPage() {
                   E&E SUMMARY
                 </h3>
                 <div className="flex justify-around text-center">
-                  <div>
-                    <Users className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+
+                  <div title="Customer Count">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
                     <p className="text-lg font-semibold">
                       {summaryData.ee.customerCount}
                     </p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
-                  <div>
-                    <Box className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Booth Measurements">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
+                      <Ruler className="w-5 h-5 text-green-600" />
+                    </div>
                     <p className="text-lg font-semibold">
                       {summaryData.ee.metric2}
                     </p>
-                  </div>
-                  <div>
-                    <ClipboardList className="w-6 h-6 mx-auto text-gray-500 mb-1" />
-                    <p className="text-lg font-semibold">
-                      {summaryData.ee.metric3}
-                    </p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
+
                   </div>
                 </div>
               </Card>
@@ -758,23 +915,25 @@ export default function CustomersPage() {
                   3RD PARTY
                 </h3>
                 <div className="flex justify-around text-center">
-                  <div>
-                    <Users className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+
+                  <div title="Customer Count">
+                    <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-2">
+                      <User className="w-5 h-5 text-blue-600" />
+                    </div>
                     <p className="text-lg font-semibold">
                       {summaryData.thirdParty.customerCount}
                     </p>
+                    <p className="text-xs text-gray-500">Exhibitor</p>
                   </div>
-                  <div>
-                    <Box className="w-6 h-6 mx-auto text-gray-500 mb-1" />
+                  <div title="Booth Measurements">
+                    <div className="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-2">
+                      <Ruler className="w-5 h-5 text-green-600" />
+                    </div>
                     <p className="text-lg font-semibold">
                       {summaryData.thirdParty.metric2}
                     </p>
-                  </div>
-                  <div>
-                    <ClipboardList className="w-6 h-6 mx-auto text-gray-500 mb-1" />
-                    <p className="text-lg font-semibold">
-                      {summaryData.thirdParty.metric3}
-                    </p>
+                    <p className="text-xs text-gray-500">Booth Sqft</p>
+
                   </div>
                 </div>
               </Card>
@@ -795,7 +954,9 @@ export default function CustomersPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1">
                             <span className="text-gray-700 font-semibold">
-                              Customer ID:
+
+                              Exhibitor ID:
+
                             </span>
                             <span>{customer.customerId}</span>
                           </div>
@@ -838,18 +999,11 @@ export default function CustomersPage() {
                       <div className="flex flex-col gap-1 border-r md:pr-4 text-sm">
                         <div className="font-semibold text-base mb-1">
                           Address
+
                         </div>
-                        <div className="flex items-start gap-1">
-                          <span className="text-gray-700 font-semibold pr-2">
-                            Street:
-                          </span>
-                          <span>{customer.address}</span>
-                        </div>
-                        <div className="flex items-start gap-1">
-                          <span className="text-gray-700 font-semibold pr-2">
-                            City/St/Zip:
-                          </span>
-                          <span>{customer.cityStateZip}</span>
+                        <div className="text-gray-600">
+                          {formatAddress(customer.address)}
+
                         </div>
                         <div className="flex items-start gap-1 mt-1">
                           <span className="text-gray-700 font-semibold pr-2">
@@ -875,8 +1029,18 @@ export default function CustomersPage() {
                           <div className="font-semibold text-base mb-1">
                             Booth Info
                           </div>
-                          <div className="text-sm text-gray-800">
-                            {customer.facilityId}
+
+                          <div className="space-y-2">
+                            <div className="text-sm text-gray-800">
+                              <span className="font-medium">Facility ID:</span> {currentFacilityId}
+                            </div>
+                            <div className="text-sm text-gray-800">
+                              <span className="font-medium">Project #:</span> {mockShows.find(show => show.showId === customer.showId)?.projectNumber || 'N/A'}
+                            </div>
+                            <div className="text-sm text-gray-800">
+                              <span className="font-medium">Booth #:</span> {customer.boothNumber}
+                            </div>
+
                           </div>
                         </div>
                         <div className="flex items-center justify-end text-sm text-gray-600 hover:text-blue-600 mt-2">
@@ -889,15 +1053,17 @@ export default function CustomersPage() {
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-[auto_1fr] gap-6">
-                  <div className="space-y-4 md:max-w-xs lg:max-w-sm">
-                    {filteredCustomers.map((customer) => (
+
+                  <div className="space-y-4 md:max-w-xs lg:max-w-sm h-[calc(100vh-14rem)] overflow-y-auto pr-2">
+                    {prioritizedCustomers.map((customer) => (
                       <Card
                         key={customer.id}
                         className={cn(
-                          "p-4 transition-colors duration-150 ease-in-out",
+                          "p-4 transition-all duration-150 ease-in-out border cursor-pointer",
                           expandedCustomerId === customer.id
-                            ? "bg-blue-50 border border-blue-300 shadow-md"
-                            : "bg-white border"
+                            ? "bg-blue-50 border-blue-300 shadow-md"
+                            : "bg-white border-gray-200 opacity-60 hover:opacity-100 hover:border-gray-300"
+
                         )}
                         onClick={() => handleCustomerCardClick(customer.id)}
                       >
@@ -908,7 +1074,9 @@ export default function CustomersPage() {
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-1">
                               <span className="text-gray-700 font-semibold">
-                                Customer ID:
+
+                                Exhibitor ID:
+
                               </span>
                               <span>{customer.customerId}</span>
                             </div>
@@ -971,159 +1139,51 @@ export default function CustomersPage() {
                                 <Table className="min-w-full table-fixed divide-y divide-gray-300">
                                   <TableHeader className="bg-gray-50">
                                     <TableRow>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Project #
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Facility
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Booth #
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Booth Type
-                                      </TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                                        Service Issue
-                                      </TableHead>
+
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Project #</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Facility</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth #</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Type</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Length</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Booth Width</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Service Issue</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody className="divide-y divide-gray-200 bg-white">
-                                    {filteredCustomers.map((customer) => (
-                                      <React.Fragment key={customer.id}>
-                                        <TableRow
-                                          onClick={() =>
-                                            handleRowClick(customer.id)
-                                          }
-                                          className="cursor-pointer"
-                                        >
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.showId}
-                                          >
-                                            <span
-                                              className={
-                                                customer.showId === "AWS23"
-                                                  ? "font-semibold"
-                                                  : ""
-                                              }
-                                            >
-                                              {customer.showId}
-                                            </span>
-                                          </TableCell>
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.facilityName}
-                                          >
-                                            {customer.facilityName}
-                                          </TableCell>
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.boothNumber}
-                                          >
-                                            {customer.boothNumber}
-                                          </TableCell>
-                                          <TableCell
-                                            className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 truncate"
-                                            title={customer.boothType || "N/A"}
-                                          >
-                                            {customer.boothType || "N/A"}
-                                          </TableCell>
-                                          <TableCell className="whitespace-nowrap px-3 py-4 text-sm truncate">
-                                            {customer.serviceIssue &&
-                                            customer.serviceIssue.toLowerCase() !==
-                                              "none" ? (
-                                              <span className="font-medium text-green-600">
-                                                ACTIVE
-                                              </span>
-                                            ) : (
-                                              <span className="font-medium text-gray-500">
-                                                INACTIVE
-                                              </span>
-                                            )}
-                                          </TableCell>
-                                        </TableRow>
-                                        {expandedRow === customer.id && (
-                                          <TableRow>
-                                            <TableCell
-                                              colSpan={5}
-                                              className="px-3 py-4"
-                                            >
-                                              <div className="bg-gray-50 p-4 rounded-md shadow-sm">
-                                                <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
-                                                  <div>
-                                                    <strong>First Name:</strong>{" "}
-                                                    {customer.firstName}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Last Name:</strong>{" "}
-                                                    {customer.lastName}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Email Id:</strong>{" "}
-                                                    {customer.email}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Country:</strong>{" "}
-                                                    {customer.country === "USA"
-                                                      ? "+1"
-                                                      : customer.country}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Contact Type:
-                                                    </strong>{" "}
-                                                    {customer.contactType}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Contact Role:
-                                                    </strong>{" "}
-                                                    {customer.contactRole}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Shared Booth:
-                                                    </strong>{" "}
-                                                    {customer.sharedBooth
-                                                      ? "Yes"
-                                                      : "No"}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Operation Zone:
-                                                    </strong>{" "}
-                                                    {customer.operationZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Service Zone:
-                                                    </strong>{" "}
-                                                    {customer.serviceZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Target Zone:
-                                                    </strong>{" "}
-                                                    {customer.targetZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>Empty Zone:</strong>{" "}
-                                                    {customer.emptyZone}
-                                                  </div>
-                                                  <div>
-                                                    <strong>
-                                                      Service Issue:
-                                                    </strong>{" "}
-                                                    {customer.serviceIssue}
-                                                  </div>
-                                                </div>
-                                              </div>
-                                            </TableCell>
-                                          </TableRow>
-                                        )}
-                                      </React.Fragment>
-                                    ))}
+                                    {customerForDetailView ? (
+                                      <TableRow>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.projectNumber || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {currentFacilityId}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                          {customerForDetailView.boothNumber || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.boothType || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.boothLength || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-900">
+                                          {customerForDetailView.boothWidth || 'N/A'}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                          {customerForDetailView.serviceIssue && customerForDetailView.serviceIssue.toLowerCase() !== 'none' ? (
+                                            <span className="font-medium text-green-600">ACTIVE</span>
+                                          ) : (
+                                            <span className="font-medium text-gray-500">INACTIVE</span>
+                                          )}
+                                        </TableCell>
+                                      </TableRow>
+                                    ) : (
+                                      <TableRow>
+                                        <TableCell colSpan={7} className="text-center text-gray-400 py-8">Select a customer to view booth/zone details.</TableCell>
+                                      </TableRow>
+                                    )}
+
                                   </TableBody>
                                 </Table>
                               </div>
@@ -1131,14 +1191,45 @@ export default function CustomersPage() {
                           </div>
                         </div>
 
-                        <div className="mt-6 pt-4 border-t">
+
+                        {/* Project Details Section */}
+                        {customerForDetailView && (
+                          <div className="mt-8 bg-gray-50 p-6 rounded-md shadow-sm">
+                            <h4 className="font-semibold text-base mb-4 text-gray-800">Project Details</h4>
+                            <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+                              <div><strong>First Name:</strong> {customerForDetailView.firstName || 'N/A'}</div>
+                              <div><strong>Last Name:</strong> {customerForDetailView.lastName || 'N/A'}</div>
+                              <div><strong>Email Id:</strong> {customerForDetailView.email || 'N/A'}</div>
+                              <div><strong>Contact Type:</strong> {customerForDetailView.contactType || 'N/A'}</div>
+                              <div><strong>Contact Role:</strong> {customerForDetailView.contactRole || 'N/A'}</div>
+                              <div><strong>Shared Booth:</strong> {customerForDetailView.sharedBooth ? 'Yes' : 'No'}</div>
+                              <div><strong>Service Zone:</strong> {customerForDetailView.serviceZone || 'N/A'}</div>
+                              <div><strong>Target Zone:</strong> {customerForDetailView.targetZone || 'N/A'}</div>
+                              <div><strong>Empty Zone:</strong> {customerForDetailView.emptyZone || 'N/A'}</div>
+                              <div className="col-span-2">
+                                <strong>Service Issue:</strong> {customerForDetailView.serviceIssue || 'N/A'}<br />
+                                <strong>Description:</strong> {(!customerForDetailView.serviceIssue || customerForDetailView.serviceIssue.toLowerCase() === 'inactive' || customerForDetailView.serviceIssue.toLowerCase() === 'none') ? '----' : customerForDetailView.serviceIssue}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div className="mt-6 pt-4 border-t flex gap-2">
                           <Button
-                            variant="outline"
-                            onClick={() =>
-                              openEditDialog(customerForDetailView)
-                            }
+                            variant="default"
+                            onClick={() => {
+                              if (customerForDetailView) {
+                                const params = new URLSearchParams({
+                                  projectNumber: customerForDetailView.projectNumber || '',
+                                  firstName: customerForDetailView.firstName || '',
+                                  lastName: customerForDetailView.lastName || '',
+                                  boothNumber: customerForDetailView.boothNumber || '',
+                                });
+                                router.push(`/orders?${params.toString()}`);
+                              }
+                            }}
                           >
-                            Edit Customer
+                            Order
+
                           </Button>
                         </div>
                       </Card>
@@ -1186,7 +1277,9 @@ export default function CustomersPage() {
                             id="customerName"
                             value={editedCustomer?.customerName || ""}
                             onChange={(e) =>
-                              handleInputChange("customerName", e.target.value)
+
+                              handleInputChange(e)
+
                             }
                             className={
                               errors.customerName ? "border-red-500" : ""
@@ -1203,13 +1296,17 @@ export default function CustomersPage() {
                             htmlFor="customerId"
                             className={errors.customerId ? "text-red-500" : ""}
                           >
-                            Customer ID<span className="text-red-500">*</span>
+
+                            Exhibitor ID<span className="text-red-500">*</span>
+
                           </Label>
                           <Input
                             id="customerId"
                             value={editedCustomer?.customerId || ""}
                             onChange={(e) =>
-                              handleInputChange("customerId", e.target.value)
+
+                              handleInputChange(e)
+
                             }
                             className={
                               errors.customerId ? "border-red-500" : ""
@@ -1230,10 +1327,9 @@ export default function CustomersPage() {
                               editedCustomer?.isActive ? "active" : "inactive"
                             }
                             onChange={(e) =>
-                              handleInputChange(
-                                "isActive",
-                                e.target.value === "active"
-                              )
+
+                              handleInputChange(e)
+
                             }
                           >
                             <option value="active">Active</option>
@@ -1252,7 +1348,9 @@ export default function CustomersPage() {
                             type="email"
                             value={editedCustomer?.email || ""}
                             onChange={(e) =>
-                              handleInputChange("email", e.target.value)
+
+                              handleInputChange(e)
+
                             }
                             className={errors.email ? "border-red-500" : ""}
                           />
@@ -1273,7 +1371,9 @@ export default function CustomersPage() {
                             id="phone"
                             value={editedCustomer?.phone || ""}
                             onChange={(e) =>
-                              handleInputChange("phone", e.target.value)
+
+                              handleInputChange(e)
+
                             }
                             className={errors.phone ? "border-red-500" : ""}
                           />
@@ -1287,9 +1387,11 @@ export default function CustomersPage() {
                           <Label htmlFor="address">Address</Label>
                           <Input
                             id="address"
-                            value={editedCustomer?.address || ""}
+
+                            value={editedCustomer?.address?.street || ""}
                             onChange={(e) =>
-                              handleInputChange("address", e.target.value)
+                              handleInputChange(e)
+
                             }
                           />
                         </div>
@@ -1304,7 +1406,9 @@ export default function CustomersPage() {
                             id="facilityId"
                             value={editedCustomer?.facilityId || ""}
                             onChange={(e) =>
-                              handleInputChange("facilityId", e.target.value)
+
+                              handleInputChange(e)
+
                             }
                             className={
                               errors.facilityId ? "border-red-500" : ""
@@ -1327,7 +1431,9 @@ export default function CustomersPage() {
                             id="boothNumber"
                             value={editedCustomer?.boothNumber || ""}
                             onChange={(e) =>
-                              handleInputChange("boothNumber", e.target.value)
+
+                              handleInputChange(e)
+
                             }
                             className={
                               errors.boothNumber ? "border-red-500" : ""
@@ -1345,7 +1451,9 @@ export default function CustomersPage() {
                             id="zone"
                             value={editedCustomer?.zone || ""}
                             onChange={(e) =>
-                              handleInputChange("zone", e.target.value)
+
+                              handleInputChange(e)
+
                             }
                           />
                         </div>
@@ -1394,10 +1502,9 @@ export default function CustomersPage() {
                                 id="subContractorName"
                                 value={editedCustomer.subContractor?.name || ""}
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.name",
-                                    e.target.value
-                                  )
+
+                                  handleInputChange(e)
+
                                 }
                                 placeholder="Subcontractor company name"
                                 className={
@@ -1423,10 +1530,9 @@ export default function CustomersPage() {
                                   ""
                                 }
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.contactName",
-                                    e.target.value
-                                  )
+
+                                  handleInputChange(e)
+
                                 }
                                 placeholder="Contact person name"
                               />
@@ -1448,10 +1554,9 @@ export default function CustomersPage() {
                                   editedCustomer.subContractor?.phone || ""
                                 }
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.phone",
-                                    e.target.value
-                                  )
+
+                                  handleInputChange(e)
+
                                 }
                                 placeholder="Subcontractor phone"
                                 className={
@@ -1484,10 +1589,9 @@ export default function CustomersPage() {
                                   editedCustomer.subContractor?.email || ""
                                 }
                                 onChange={(e) =>
-                                  handleInputChange(
-                                    "subContractor.email",
-                                    e.target.value
-                                  )
+
+                                  handleInputChange(e)
+
                                 }
                                 placeholder="Subcontractor email"
                                 className={
@@ -1534,41 +1638,36 @@ export default function CustomersPage() {
             )}
 
             <div className="flex justify-end items-center mt-4">
-              <span className="mr-2">Rows per page:</span>
-              <select
-                value={rowsPerPage}
-                onChange={handleRowsPerPageChange}
-                className="border rounded-md"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={15}>15</option>
-              </select>
-              <span className="ml-4">
-                {currentPage} of{" "}
-                {Math.ceil(filteredCustomers.length / rowsPerPage)}
-              </span>
-              <button
-                onClick={() => handlePageChange(currentPage - 1)}
-                disabled={currentPage === 1}
-                className="ml-2"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => handlePageChange(currentPage + 1)}
-                disabled={
-                  currentPage ===
-                  Math.ceil(filteredCustomers.length / rowsPerPage)
-                }
-                className="ml-2"
-              >
-                Next
-              </button>
+
+              <PageSizeSelector
+                pageSize={rowsPerPage}
+                setPageSize={(value) => {
+                  setRowsPerPage(value);
+                  setCurrentPage(1); // Reset to first page when changing items per page
+                }}
+              />
+              <CustomPagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(filteredCustomers.length / rowsPerPage)}
+                onPageChange={handlePageChange}
+                className="ml-4"
+              />
+
             </div>
           </>
         )}
       </div>
+      <ScrollToTop />
     </MainLayout>
   );
 }
+
+
+export default function CustomersPage() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <CustomersContent />
+    </Suspense>
+  );
+}
+

@@ -1,8 +1,7 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
-import MainLayout from "@/components/mainlayout/MainLayout";
-
+import { useState, useMemo, useEffect, useCallback, useRef, Suspense } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import type { BreadcrumbItem } from "@/components/mainlayout/Breadcrumb";
 
 import {
@@ -17,8 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, ChevronLeft, ArrowUp } from "lucide-react";
-import { ArrowUpDown, ArrowDown } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, ArrowUp, ArrowUpDown, ArrowDown, ChevronRight, X } from "lucide-react";
 import { create } from "zustand";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -45,18 +43,32 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import MainLayout from "@/components/mainlayout/MainLayout";
+import { mockShows, mockProjectData, mockFacilityData, mockShowDetails, ShowKeyDate, ShowMeasurements, ShowOptions, ShowComments } from "@/lib/mockData";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { CustomPagination } from "@/components/ui/pagination";
+import { PageSizeSelector } from "@/components/ui/page-size-selector";
+import dayjs from "dayjs";
+import { ScrollToTop } from "@/components/ui/scroll-to-top";
 
 interface ShowData {
-  id: string;
-  name: string;
+  showId: string;
+  showName: string;
   occrId: string;
   occrType: string;
   marketType: string;
-  project: string;
+  projectNumber: string;
   cityOrg: string;
   yrmo: string;
+  project?: string; // Making project optional for backward compatibility
+  name?: string; // Making name optional for backward compatibility
 }
 
 interface ProjectData {
@@ -84,7 +96,7 @@ interface FilterState {
   occrId: string;
   occrType: string;
   marketType: string;
-  project: string;
+  projectNumber: string;
   cityOrg: string;
   yrmoStart: string;
   yrmoEnd: string;
@@ -110,15 +122,7 @@ const MARKET_TYPES = [
   "Education",
 ];
 
-type SortField =
-  | "id"
-  | "name"
-  | "occrId"
-  | "occrType"
-  | "marketType"
-  | "project"
-  | "cityOrg"
-  | "yrmo";
+type SortField = 'showId' | 'showName' | 'occrId' | 'occrType' | 'marketType' | 'projectNumber' | 'cityOrg' | 'yrmo';
 type SortDirection = "asc" | "desc";
 
 // Basic store for search
@@ -144,92 +148,16 @@ function useDebounce<T>(value: T, delay: number = 500): T {
   return debouncedValue;
 }
 
-// Mock data
-const mockShows: ShowData[] = [
-  {
-    id: "AWS23",
-    name: "AWS re:Invent 2024",
-    occrId: "AWS23-LV",
-    occrType: "Annual Conference",
-    marketType: "Cloud & Enterprise",
-    project: "P2024-001",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-11",
-  },
-  {
-    id: "CES24",
-    name: "CES 2024",
-    occrId: "CES24-LV",
-    occrType: "Trade Show",
-    marketType: "Consumer Electronics",
-    project: "P2024-005",
-    cityOrg: "Las Vegas, NV",
-    yrmo: "2024-01",
-  },
-  {
-    id: "GGL24",
-    name: "Google I/O 2024",
-    occrId: "IO24-SF",
-    occrType: "Developer Conference",
-    marketType: "Technology",
-    project: "P2024-003",
-    cityOrg: "San Francisco, CA",
-    yrmo: "2024-05",
-  },
-  {
-    id: "MSFT24",
-    name: "Microsoft Build 2024",
-    occrId: "BUILD24-SEA",
-    occrType: "Developer Conference",
-    marketType: "Software Development",
-    project: "P2024-002",
-    cityOrg: "Seattle, WA",
-    yrmo: "2024-05",
-  },
-  {
-    id: "WWDC24",
-    name: "Apple WWDC 2024",
-    occrId: "WWDC24-CUP",
-    occrType: "Developer Conference",
-    marketType: "Software & Hardware",
-    project: "P2024-004",
-    cityOrg: "Cupertino, CA",
-    yrmo: "2024-06",
-  },
-];
-
-const mockProjectData: ProjectData = {
-  projectName: "Trade Show Setup 2024",
-  projectNumber: "P2024-001",
-  projectType: "Exhibition",
-  status: "Active",
-  productionCity: "Las Vegas",
-  facilityId: "LV001",
-};
-
-const mockFacilityData: FacilityData[] = [
-  {
-    facilityId: "F001",
-    facilityName: "Main Exhibition Hall",
-    hall: "Hall A",
-    location1: "North Wing",
-    location2: "Level 1",
-    areaCode: "702",
-    phone: "555-0101",
-  },
-  {
-    facilityId: "F002",
-    facilityName: "Conference Center",
-    hall: "Hall B",
-    location1: "South Wing",
-    location2: "Level 2",
-    areaCode: "702",
-    phone: "555-0102",
-  },
-];
+// Add pagination interface
+interface PaginationState {
+  currentPage: number;
+  itemsPerPage: number;
+  totalItems: number;
+}
 
 // Main component
 export default function ShowsPage() {
+  const router = useRouter();
 
   // Search state
   const [searchText, setSearchText] = useState("");
@@ -244,7 +172,7 @@ export default function ShowsPage() {
     occrId: "",
     occrType: "",
     marketType: "",
-    project: "",
+    projectNumber: "",
     cityOrg: "",
     yrmoStart: "",
     yrmoEnd: "",
@@ -252,10 +180,8 @@ export default function ShowsPage() {
   const [activeFilters, setActiveFilters] = useState<Partial<FilterState>>({});
 
   // Sort state
-  const [sortField, setSortField] = useState<SortField>("id");
-
+  const [sortField, setSortField] = useState<SortField>("showId");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
-
 
   // Update search store with debounced value
   useEffect(() => {
@@ -272,20 +198,29 @@ export default function ShowsPage() {
   };
 
   // Filtered and sorted shows
-  const [shows, setShows] = useState<ShowData[]>(mockShows);
+  const [shows, setShows] = useState<ShowData[]>(mockShows.map(show => ({
+    showId: show.showId,
+    showName: show.showName,
+    occrId: show.occrId,
+    occrType: show.occrType,
+    marketType: show.marketType,
+    projectNumber: show.projectNumber,
+    cityOrg: show.cityOrg,
+    yrmo: show.yrmo
+  })));
   const [selectedShow, setSelectedShow] = useState<ShowData | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isNewShowOpen, setIsNewShowOpen] = useState(false);
   const [isNewOccrOpen, setIsNewOccrOpen] = useState(false);
-  const [newShow, setNewShow] = useState({
-    id: "",
-    name: "",
-    occrId: "",
-    occrType: "",
-    marketType: "",
-    project: "",
-    cityOrg: "",
-    yrmo: "",
+  const [newShow, setNewShow] = useState<ShowData>({
+    showId: '',
+    showName: '',
+    occrId: '',
+    occrType: '',
+    marketType: '',
+    projectNumber: '',
+    cityOrg: '',
+    yrmo: ''
   });
 
   const [newOccr, setNewOccr] = useState({
@@ -300,18 +235,41 @@ export default function ShowsPage() {
     facilityId: "",
   });
 
+  const [showDialog, setShowDialog] = useState(false);
+
+  const [selectedShowDetails, setSelectedShowDetails] = useState<(typeof mockShowDetails)[0] | null>(null);
+
+  const [showAutoOut, setShowAutoOut] = useState(false);
+  const [autoOutData, setAutoOutData] = useState({
+    facilityId: "",
+    facilityName: "",
+    projectNumber: "",
+  });
+
+  const [showFacilityDetails, setShowFacilityDetails] = useState(false);
+
+  // Add state for Facility Schedules Form
+  const [showSchedules, setShowSchedules] = useState(false);
+
+  // Add state for Material Handling
+  const [showMaterialHandling, setShowMaterialHandling] = useState(false);
+  const [activeWarehouseTab, setActiveWarehouseTab] = useState("warehouse");
+
+  // Add state for Facility Vendors Form
+  const [showVendorInfo, setShowVendorInfo] = useState(false);
+
   const filteredAndSortedShows = useMemo(() => {
     return [...shows]
       .filter((show) => {
         // Search filter
         if (debouncedSearch) {
           const searchFields = [
-            show.id,
-            show.name,
+            show.showId,
+            show.showName,
             show.occrId,
             show.occrType,
             show.marketType,
-            show.project,
+            show.projectNumber,
             show.cityOrg,
             show.yrmo,
           ].map((field) => field.toLowerCase());
@@ -329,13 +287,13 @@ export default function ShowsPage() {
         // Active filters
         if (
           activeFilters.showId &&
-          !show.id.toLowerCase().includes(activeFilters.showId.toLowerCase())
+          !show.showId.toLowerCase().includes(activeFilters.showId.toLowerCase())
         ) {
           return false;
         }
         if (
           activeFilters.showName &&
-          !show.name
+          !show.showName
             .toLowerCase()
             .includes(activeFilters.showName.toLowerCase())
         ) {
@@ -362,10 +320,10 @@ export default function ShowsPage() {
           return false;
         }
         if (
-          activeFilters.project &&
-          !show.project
+          activeFilters.projectNumber &&
+          !show.projectNumber
             .toLowerCase()
-            .includes(activeFilters.project.toLowerCase())
+            .includes(activeFilters.projectNumber.toLowerCase())
         ) {
           return false;
         }
@@ -397,7 +355,6 @@ export default function ShowsPage() {
   }, [debouncedSearch, sortField, sortDirection, shows, activeFilters]);
 
   // Sort handlers
-
   const handleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
@@ -440,75 +397,46 @@ export default function ShowsPage() {
       setNewOccr((prev) => ({ ...prev, [field]: e.target.value }));
     };
 
-  const createShow = () => {
-    setShows((prev) => [
-      ...prev,
-      {
-        id: newShow.id,
-        name: newShow.name,
-        occrId: newShow.occrId,
-        occrType: newShow.occrType,
-        marketType: newShow.marketType,
-        project: newShow.project,
-        cityOrg: newShow.cityOrg,
-        yrmo: newShow.yrmo,
-      },
-    ]);
+  const handleAddShow = () => {
+    // Add the new show to the shows array
+    setShows((prevShows) => [...prevShows, newShow]);
+    // Reset the newShow state
     setNewShow({
-      id: "",
-      name: "",
+      showId: "",
+      showName: "",
       occrId: "",
       occrType: "",
       marketType: "",
-      project: "",
+      projectNumber: "",
       cityOrg: "",
       yrmo: "",
     });
+    // Close the dialog
+    setShowDialog(false);
     setIsNewShowOpen(false);
-  };
-
-
-  const createOccr = () => {
-    // Here you would typically update both the shows and occurrences
-    // For now, we'll just close the form
-    setNewOccr({
-      showId: "",
-      occrId: "",
-      occrType: "",
-      description: "",
-      open: "",
-      close: "",
-      timezone: "",
-      projectNumber: "",
-      facilityId: "",
-
-    });
-    setIsNewOccrOpen(false);
   };
 
   // Handle show selection for editing
   const handleShowSelect = (show: ShowData) => {
     setSelectedShow(show);
+    const details = mockShowDetails.find(details => details.showId === show.showId);
+    setSelectedShowDetails(details || null);
   };
 
   // Delete show
-  const handleDeleteShow = (show: ShowData) => {
-    setSelectedShow(show);
-
-    setShowDeleteDialog(true);
-
+  const handleDeleteShow = (showId: string) => {
+    setShows(prev => prev.filter(show => show.showId !== showId));
   };
 
   const confirmDelete = () => {
     if (!selectedShow) return;
 
     setShows((prevShows) =>
-      prevShows.filter((show) => show.id !== selectedShow.id)
+      prevShows.filter((show) => show.showId !== selectedShow.showId)
     );
     setShowDeleteDialog(false);
     setSelectedShow(null);
   };
-
 
   const [activeTab, setActiveTab] = useState("projectInfo");
 
@@ -531,7 +459,6 @@ export default function ShowsPage() {
       const month = cleaned.slice(4, 6);
       const validMonth = validateMonth(month);
       formattedValue = month ? `${year}-${validMonth}` : year;
-
     }
 
     // Format as a range if there's enough digits
@@ -590,7 +517,7 @@ export default function ShowsPage() {
       occrId: "",
       occrType: "",
       marketType: "",
-      project: "",
+      projectNumber: "",
       cityOrg: "",
       yrmoStart: "",
       yrmoEnd: "",
@@ -646,124 +573,70 @@ export default function ShowsPage() {
     }
   };
 
-  // Add pagination constants
-  const ITEMS_PER_PAGE = 10;
-
   // Add pagination state
-  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState<PaginationState>({
+    currentPage: 1,
+    itemsPerPage: 10,
+    totalItems: 150
+  });
 
-  // Calculate paginated shows
+  // Update filtered and sorted shows with pagination
   const paginatedShows = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
+    const startIndex = (pagination.currentPage - 1) * pagination.itemsPerPage;
+    const endIndex = startIndex + pagination.itemsPerPage;
     return filteredAndSortedShows.slice(startIndex, endIndex);
-  }, [filteredAndSortedShows, currentPage]);
+  }, [filteredAndSortedShows, pagination.currentPage, pagination.itemsPerPage]);
 
-  const totalPages = Math.ceil(filteredAndSortedShows.length / ITEMS_PER_PAGE);
+  // Add pagination handlers
+  const handlePageChange = (newPage: number) => {
+    setPagination(prev => ({ ...prev, currentPage: newPage }));
+  };
 
-  // Back to Top button visibility state and functionality
-  const [showBackToTop, setShowBackToTop] = useState(false);
-
-  // Scroll handler with proper cleanup
-  useEffect(() => {
-    let scrollContainer: HTMLDivElement | null = null;
-
-    // Wait for component to mount and DOM to be ready
-    setTimeout(() => {
-      scrollContainer = document.querySelector(
-        ".h-\\[calc\\(100vh-4rem\\)\\]"
-      ) as HTMLDivElement;
-
-      if (scrollContainer) {
-        const handleScroll = () => {
-          if (scrollContainer) {
-            setShowBackToTop(scrollContainer.scrollTop > 400);
-          }
-        };
-
-        scrollContainer.addEventListener("scroll", handleScroll);
-
-        // Return cleanup function
-        return () => {
-          if (scrollContainer) {
-            scrollContainer.removeEventListener("scroll", handleScroll);
-          }
-        };
-
-      }
-    }, 0);
-
-    // Cleanup in case component unmounts before setTimeout
-    return () => {
-      if (scrollContainer) {
-        scrollContainer.removeEventListener("scroll", () => {});
-      }
-    };
-  }, []);
-
-  const scrollToTop = () => {
-    const scrollContainer = document.querySelector(
-      ".h-\\[calc\\(100vh-4rem\\)\\]"
-    ) as HTMLDivElement;
-    if (scrollContainer) {
-      scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
-    }
+  const handleItemsPerPageChange = (value: string) => {
+    setPagination(prev => ({
+      ...prev,
+      itemsPerPage: parseInt(value),
+      currentPage: 1 // Reset to first page when changing items per page
+    }));
   };
 
   // Breadcrumb state
-  const [breadcrumbs, setBreadcrumbs] = useState([
-    { label: "Home", href: "/" },
-    { label: "Shows", href: "/shows" },
+  const [breadcrumbs, setBreadcrumbs] = useState<BreadcrumbItem[]>([
+    { label: "Shows", href: "#" },
   ]);
 
-  // Enhanced breadcrumb handling
-  const handleBreadcrumbClick = (
-    crumb: { label: string; href: string },
-    e: React.MouseEvent
-  ) => {
-    e.preventDefault();
-
-    switch (crumb.href) {
-      case "/":
-        router.push("/");
-        break;
-      case "/shows":
-        setSelectedShow(null);
-        setShowProjectFacilities(false);
-        break;
-      case "#show":
-        if (showProjectFacilities) {
-          setShowProjectFacilities(false);
-        }
-        break;
-      default:
-        break;
-    }
-  };
-
-
-  // Update breadcrumbs with proper hrefs
+  // Update breadcrumbs when show selection changes
   useEffect(() => {
     if (selectedShow) {
-      const newBreadcrumbs = [
-        { label: "Home", href: "/" },
-        { label: "Shows", href: "/shows" },
-        { label: selectedShow.name, href: "#show" },
+      const newBreadcrumbs: BreadcrumbItem[] = [
+        {
+          label: "Shows",
+          href: "#",
+          onClick: () => {
+            setSelectedShow(null);
+            setShowProjectFacilities(false);
+          },
+        },
       ];
 
+      // Add the selected show
+      newBreadcrumbs.push({
+        label: selectedShow.showName,
+        href: "#",
+      });
+
+      // Add project facilities if needed
       if (showProjectFacilities) {
         newBreadcrumbs.push({
           label: "Project Facilities",
-          href: "#facilities",
+          href: "#",
+          onClick: () => setShowProjectFacilities(false),
         });
       }
 
       setBreadcrumbs(newBreadcrumbs);
     } else {
-      setBreadcrumbs([
-        { label: "Home", href: "/" },
-        { label: "Shows", href: "/shows" },
-      ]);
+      setBreadcrumbs([{ label: "Shows", href: "#" }]);
     }
   }, [selectedShow, showProjectFacilities]);
 
@@ -776,88 +649,86 @@ export default function ShowsPage() {
     restDelta: 0.001, // More precise stopping point
   };
 
-  const router = useRouter();
+  const handleCustomerButtonClick = () => {
+    if (selectedShowDetails && selectedShow) {
+      router.push(`/customers?showId=${selectedShowDetails.showId}&showName=${encodeURIComponent(selectedShow.showName)}&occrId=${encodeURIComponent(selectedShow.occrId)}`);
+    }
+  };
+
+  const handleCloseShowDialog = () => {
+    setIsNewShowOpen(false);
+  };
+
+  const handleAutoOutClick = () => {
+    setShowAutoOut(true);
+  };
+
+  const handleDetailsClick = () => {
+    setShowFacilityDetails(true);
+  };
+
+  // Add handler for Schedule button
+  const handleScheduleClick = () => {
+    setShowSchedules(true);
+  };
+
+  // Add handler for Material Handling button
+  const handleMaterialHandlingClick = () => {
+    setShowMaterialHandling(true);
+  };
+
+  // Add click handler for Vendor Info button
+  const handleVendorInfoClick = () => {
+    setShowVendorInfo(true);
+  };
 
   return (
-    <MainLayout
-      breadcrumbs={breadcrumbs}
-      breadcrumbClassName="text-lg py-4 bg-gray-50 border-b border-gray-200"
-    >
+    <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
-        {/* Custom Breadcrumb Navigation */}
-        <nav
-          aria-label="Breadcrumb"
-          className="flex items-center space-x-2 text-sm px-6 py-3 bg-white border-b sticky top-0 z-10"
-        >
-          {breadcrumbs.map((crumb, index) => (
-            <div key={index} className="flex items-center">
-              {index > 0 && <span className="mx-2 text-gray-400">/</span>}
-              <Link
-                href={crumb.href}
-                className={cn(
-                  "transition-colors",
-                  crumb.href === "#"
-                    ? "text-gray-600 cursor-default"
-                    : "text-blue-600 hover:text-blue-800"
-                )}
-                onClick={(e) => handleBreadcrumbClick(crumb, e)}
-              >
-                {crumb.label}
-              </Link>
-            </div>
-          ))}
-        </nav>
-
         {/* Main content container with improved transitions */}
-        <div className="flex h-full relative transition-all duration-500 ease-out">
-          {/* Master View (Show Information) */}
+        <div className="flex h-full w-full relative transition-all duration-500 ease-out">
+          {/* Show Details sidebar */}
           <motion.div
             className={cn(
-              "bg-white border-r border-gray-200",
-              getContainerWidths().showInfo
+              "bg-white border-r border-gray-200 overflow-hidden shrink-0",
+              showProjectFacilities ? "w-[180px]" : selectedShow ? "w-[180px]" : "w-full"
             )}
             initial={false}
             animate={{
               width: showProjectFacilities
-                ? "15%"
+                ? "180px"
                 : selectedShow
-                ? "25%"
+                ? "180px"
                 : "100%",
               transition: containerTransition,
             }}
-            layout // Add layout prop for smoother size changes
+            layout
           >
-            <div
-              className={cn(
-                "h-full overflow-y-auto overflow-x-hidden scroll-smooth",
-                selectedShow ? "p-3" : "p-6"
-              )}
-            >
+            <div className={cn(
+              "h-full overflow-y-auto overflow-x-hidden scroll-smooth",
+              selectedShow ? "p-2" : "px-4 py-6"
+            )}>
               {selectedShow ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   <div className="flex items-center justify-between pb-2 border-b">
                     <h2 className="text-sm font-semibold">Show Details</h2>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={handleBackToShows}
-                      className="h-8 w-8 p-0"
+                      className="h-7 w-7 p-0"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     <div>
                       <Label className="text-xs text-gray-500">Show ID</Label>
-                      <div className="text-sm font-medium mt-1">
-                        {(selectedShow as ShowData).id}
-                      </div>
+                      <div className="text-sm font-medium truncate">{selectedShow.showId}</div>
                     </div>
                     <div>
                       <Label className="text-xs text-gray-500">Occr ID</Label>
-                      <div className="text-sm font-medium mt-1">
-                        {(selectedShow as ShowData).occrId}
-                      </div>
+                      <div className="text-sm font-medium truncate">{selectedShow.occrId}</div>
                     </div>
                   </div>
                 </div>
@@ -888,15 +759,9 @@ export default function ShowsPage() {
                       </span>
                     </Button>
                     <Button
-                      className={cn(
-                        "gap-2",
-                        isNewShowOpen
-                          ? "bg-gray-600 hover:bg-gray-700"
-                          : "bg-blue-600 hover:bg-blue-700",
-                        "text-white"
-                      )}
+                      variant="outline"
+                      className="gap-2"
                       onClick={toggleNewShow}
-
                     >
                       <Plus
                         className={`h-4 w-4 transition-transform ${
@@ -906,7 +771,8 @@ export default function ShowsPage() {
                       <span>New Show</span>
                     </Button>
                     <Button
-                      className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                      variant="outline"
+                      className="gap-2"
                       onClick={toggleNewOccr}
                     >
                       <Plus
@@ -914,23 +780,23 @@ export default function ShowsPage() {
                           isNewOccrOpen ? "rotate-45" : ""
                         }`}
                       />
-                      <span>New Occr</span>
+                      <span>New Occurrence</span>
                     </Button>
                   </div>
 
                   {/* Filter Panel */}
                   <motion.div
                     className={cn(
-                      "bg-muted border rounded-md p-4 space-y-3",
-                      "transition-all duration-300 ease-in-out",
+                      "bg-muted border rounded-md p-4",
+                      "transition-all duration-300 ease-in-out absolute z-10 w-full",
                       showFilters
                         ? "max-h-[500px] opacity-100"
                         : "max-h-0 opacity-0 overflow-hidden"
                     )}
                   >
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Show ID</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Show ID</Label>
                         <Input
                           value={filters.showId}
                           onChange={(e) =>
@@ -941,9 +807,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Show Name
-                        </Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Show Name</Label>
                         <Input
                           value={filters.showName}
                           onChange={(e) =>
@@ -954,7 +818,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">Occr ID</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occr ID</Label>
                         <Input
                           value={filters.occrId}
                           onChange={(e) =>
@@ -965,9 +829,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Occr Type
-                        </Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occr Type</Label>
                         <Select
                           value={filters.occrType}
                           onValueChange={(value) =>
@@ -986,11 +848,8 @@ export default function ShowsPage() {
                           </SelectContent>
                         </Select>
                       </div>
-
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Market Type
-                        </Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Market Type</Label>
                         <Select
                           value={filters.marketType}
                           onValueChange={(value) =>
@@ -1010,22 +869,18 @@ export default function ShowsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          Project #
-                        </Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Project #</Label>
                         <Input
-                          value={filters.project}
+                          value={filters.projectNumber}
                           onChange={(e) =>
-                            handleFilterChange("project", e.target.value)
+                            handleFilterChange("projectNumber", e.target.value)
                           }
                           placeholder="Filter by Project #"
                           className="h-9"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          City Org
-                        </Label>
+                        <Label className="text-sm text-gray-500 font-semibold">City Org</Label>
                         <Input
                           value={filters.cityOrg}
                           onChange={(e) =>
@@ -1036,9 +891,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500">
-                          YRMO Range
-                        </Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Year/Month Range</Label>
                         <Input
                           type="text"
                           value={formatYrmoRange(
@@ -1058,13 +911,9 @@ export default function ShowsPage() {
                       <Button variant="outline" onClick={resetFilters}>
                         Reset Filters
                       </Button>
-                      <Button
-                        className="bg-blue-600 text-white hover:bg-blue-700"
-                        onClick={applyFilters}
-                      >
+                      <Button variant="success" onClick={applyFilters}>
                         Apply Filters
                       </Button>
-
                     </div>
                   </motion.div>
 
@@ -1094,235 +943,289 @@ export default function ShowsPage() {
                   )}
 
                   {/* New Show Form */}
-                  {isNewShowOpen && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-3">
-                        <CardTitle>New Show</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-3 gap-6">
+                  <motion.div
+                    style={{ marginTop: "0px" }}
+                    className={cn(
+                      "fixed inset-0 w-[500px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+                      "transition-all duration-300 ease-in-out",
+                      isNewShowOpen
+                        ? "translate-x-0"
+                        : "translate-x-full"
+                    )}
+                  >
+                    <div className="border-b bg-white sticky top-0 z-10">
+                      <div className="flex items-center justify-between p-4">
+                        <h2 className="text-xl font-semibold">New Show</h2>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleCloseShowDialog}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                      <div className="p-6 space-y-4">
+                        <div className="space-y-4">
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Show ID
-                            </Label>
+                            <Label>Show ID</Label>
                             <Input
-                              placeholder="Enter showId"
-                              className="h-9"
-                              value={newShow.id}
-                              onChange={handleNewShowChange("id")}
+                              value={newShow.showId}
+                              onChange={handleNewShowChange("showId")}
+                              placeholder="Enter Show ID"
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Show Name
-                            </Label>
+                            <Label>Show Name</Label>
                             <Input
-                              placeholder="Enter showName"
-                              className="h-9"
-                              value={newShow.name}
-                              onChange={handleNewShowChange("name")}
+                              value={newShow.showName}
+                              onChange={handleNewShowChange("showName")}
+                              placeholder="Enter Show Name"
                             />
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr ID
-                            </Label>
-                            <Input
-                              placeholder="Enter occrId"
-                              className="h-9"
-                              value={newShow.occrId}
-                              onChange={handleNewShowChange("occrId")}
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Occr ID</Label>
+                              <Input
+                                value={newShow.occrId}
+                                onChange={handleNewShowChange("occrId")}
+                                placeholder="Enter Occr ID"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Occr Type</Label>
+                              <Select
+                                value={newShow.occrType}
+                                onValueChange={(value) =>
+                                  setNewShow((prev) => ({ ...prev, occrType: value }))
+                                }
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Occr Type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {OCCR_TYPES.map((type) => (
+                                    <SelectItem key={type} value={type}>
+                                      {type}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr Type
-                            </Label>
-                            <Input
-                              placeholder="Enter occrType"
-                              className="h-9"
-                              value={newShow.occrType}
-                              onChange={handleNewShowChange("occrType")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Market Type
-                            </Label>
-                            <Input
-                              placeholder="Enter marketType"
-                              className="h-9"
+                            <Label>Market Type</Label>
+                            <Select
                               value={newShow.marketType}
-                              onChange={handleNewShowChange("marketType")}
-                            />
+                              onValueChange={(value) =>
+                                setNewShow((prev) => ({ ...prev, marketType: value }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Market Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {MARKET_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Project Number</Label>
+                              <Input
+                                value={newShow.projectNumber}
+                                onChange={handleNewShowChange("projectNumber")}
+                                placeholder="Enter Project Number"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>City Org</Label>
+                              <Input
+                                value={newShow.cityOrg}
+                                onChange={handleNewShowChange("cityOrg")}
+                                placeholder="Enter City Org"
+                              />
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Number
-                            </Label>
+                            <Label>Year/Month</Label>
                             <Input
-                              placeholder="Enter projectNumber"
-                              className="h-9"
-                              value={newShow.project}
-                              onChange={handleNewShowChange("project")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              City Org
-                            </Label>
-                            <Input
-                              placeholder="Enter cityOrg"
-                              className="h-9"
-                              value={newShow.cityOrg}
-                              onChange={handleNewShowChange("cityOrg")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              YRMO
-                            </Label>
-                            <Input
-                              placeholder="Enter yrmo"
-                              className="h-9"
                               value={newShow.yrmo}
                               onChange={handleNewShowChange("yrmo")}
+                              placeholder="YYYY-MM"
                             />
                           </div>
                         </div>
-                        <div className="flex justify-end gap-4 mt-6">
-                          <Button variant="outline" onClick={toggleNewShow}>
-                            Cancel
-                          </Button>
-                          <Button
-                            className="bg-blue-600 text-white hover:bg-blue-700"
-                            onClick={createShow}
-                          >
-                            Create Show
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
+                      </div>
+                    </div>
+                    <div className="border-t p-6">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={handleCloseShowDialog}>
+                          Cancel
+                        </Button>
+                        <Button variant="outline" onClick={handleAddShow}>
+                          Create Show
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
 
-                  {/* New Occr Form */}
-                  {isNewOccrOpen && (
-                    <Card className="shadow-sm">
-                      <CardHeader className="pb-3">
-                        <CardTitle>New Occurrence</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="grid grid-cols-3 gap-6">
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Show ID
-                            </Label>
-                            <Input
-                              placeholder="Enter showId"
-                              className="h-9"
-                              value={newOccr.showId}
-                              onChange={handleNewOccrChange("showId")}
-                            />
+                  {/* New Occurrence Form */}
+                  <motion.div
+                    style={{ marginTop: "0px" }}
+                    className={cn(
+                      "fixed inset-0 w-[500px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+                      "transition-all duration-300 ease-in-out",
+                      isNewOccrOpen
+                        ? "translate-x-0"
+                        : "translate-x-full"
+                    )}
+                  >
+                    <div className="border-b bg-white sticky top-0 z-10">
+                      <div className="flex items-center justify-between p-4">
+                        <h2 className="text-xl font-semibold">New Occurrence</h2>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsNewOccrOpen(false)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto min-h-0">
+                      <div className="p-6 space-y-4">
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Show ID</Label>
+                              <Input
+                                value={newOccr.showId}
+                                onChange={handleNewOccrChange("showId")}
+                                placeholder="Enter Show ID"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Occr ID</Label>
+                              <Input
+                                value={newOccr.occrId}
+                                onChange={handleNewOccrChange("occrId")}
+                                placeholder="Enter Occr ID"
+                              />
+                            </div>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr ID
-                            </Label>
-                            <Input
-                              placeholder="Enter occrId"
-                              className="h-9"
-                              value={newOccr.occrId}
-                              onChange={handleNewOccrChange("occrId")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Occr Type
-                            </Label>
-                            <Input
-                              placeholder="Enter occrType"
-                              className="h-9"
+                            <Label>Occr Type</Label>
+                            <Select
                               value={newOccr.occrType}
-                              onChange={handleNewOccrChange("occrType")}
-                            />
+                              onValueChange={(value) =>
+                                setNewOccr((prev) => ({ ...prev, occrType: value }))
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Occr Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {OCCR_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Description
-                            </Label>
-                            <Input
-                              placeholder="Enter description"
-                              className="h-9"
+                            <Label>Description</Label>
+                            <Textarea
                               value={newOccr.description}
-                              onChange={handleNewOccrChange("description")}
+                              onChange={(e) =>
+                                setNewOccr((prev) => ({
+                                  ...prev,
+                                  description: e.target.value,
+                                }))
+                              }
+                              placeholder="Enter Description"
+                              className="h-20"
                             />
                           </div>
-
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Open
-                            </Label>
-                            <Input
-                              type="datetime-local"
-                              className="h-9 px-3 w-full md:w-3/4"
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Open Date</Label>
+                              <Input
+                                type="text"
+                                placeholder="MM/DD/YYYY"
+                                value={dayjs().format('MM/DD/YYYY')}
+                                onChange={(e) => {
+                                  const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                  if (date.isValid()) {
+                                    setNewOccr((prev) => ({
+                                      ...prev,
+                                      open: e.target.value,
+                                    }));
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-sm text-gray-500">
+                                Close
+                              </Label>
+                              <Input
+                                type="text"
+                                placeholder="MM/DD/YYYY"
+                                className="h-9 px-3 w-full md:w-3/4"
+                                value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+                                onChange={(e) => {
+                                  const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                  if (date.isValid()) {
+                                    setNewOccr((prev) => ({
+                                      ...prev,
+                                      close: e.target.value,
+                                    }));
+                                  }
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Close
-                            </Label>
-                            <Input
-                              type="datetime-local"
-                              className="h-9 px-3 w-full md:w-3/4"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Timezone
-                            </Label>
-                            <Input
-                              placeholder="Enter timezone"
-                              className="h-9 px-3 w-full md:w-3/4"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Number
-                            </Label>
-                            <Input
-                              placeholder="Enter projectNumber"
-                              className="h-9 px-3 w-full md:w-3/4"
-                              value={newOccr.projectNumber}
-                              onChange={handleNewOccrChange("projectNumber")}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Facility ID
-                            </Label>
-                            <Input
-                              placeholder="Enter facilityId"
-                              className="h-9 px-3 w-full md:w-3/4"
-                              value={newOccr.facilityId}
-                              onChange={handleNewOccrChange("facilityId")}
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Project Number</Label>
+                              <Input
+                                value={newOccr.projectNumber}
+                                onChange={handleNewOccrChange("projectNumber")}
+                                placeholder="Enter Project Number"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Facility ID</Label>
+                              <Input
+                                value={newOccr.facilityId}
+                                onChange={handleNewOccrChange("facilityId")}
+                                placeholder="Enter Facility ID"
+                              />
+                            </div>
                           </div>
                         </div>
-                        <div className="flex justify-end gap-4 mt-6">
-                          <Button variant="outline" onClick={toggleNewOccr}>
-                            Cancel
-                          </Button>
-                          <Button
-                            className="bg-blue-600 text-white hover:bg-blue-700"
-                            onClick={createOccr}
-                          >
-                            Create Occurrence
-                          </Button>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
+                      </div>
+                    </div>
+                    <div className="border-t p-6">
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setIsNewOccrOpen(false)}>
+                          Cancel
+                        </Button>
+                        <Button variant="outline" onClick={handleAddShow}>
+                          Create Occurrence
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
 
                   {/* Shows Table */}
                   <Card
@@ -1331,112 +1234,86 @@ export default function ShowsPage() {
                       selectedShow && "border-0 shadow-none"
                     )}
                   >
-                    <CardHeader
-                      className={cn(
-                        "pb-0",
-                        selectedShow ? "px-2 py-2" : "px-4 py-3"
-                      )}
-                    >
-                      <CardTitle
-                        className={cn(
-                          "flex items-center justify-between",
-                          selectedShow
-                            ? "text-sm font-medium"
-                            : "text-base font-semibold"
-                        )}
-                      >
-                        Show Information
-                        {selectedShow && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSelectedShow(null)}
-                            className="h-7 w-7 p-0"
-                          >
-                            <ChevronLeft className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
                     <CardContent
                       className={cn("px-0", selectedShow ? "py-2" : "py-3")}
                     >
-                      <div className="overflow-x-auto">
+                      {/* Section Title above the table */}
+                      <div className="flex items-center justify-between px-4 pb-4">
+                        <h2 className="text-lg font-semibold text-gray-900">Show Information</h2>
+                      </div>
+                      <div className="border-b border-gray-200" />
+                      <div className="overflow-x-auto px-4 mt-4">
                         <Table>
-                          <TableHeader className="bg-gray-50 sticky top-0">
+                          <TableHeader className="bg-[#E6F0FA] sticky top-0">
                             <TableRow className="border-b border-gray-200">
                               <TableHead
                                 className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                onClick={() => handleSort("id")}
+                                onClick={() => handleSort("showId")}
                               >
-                                <div className="flex items-center justify-center gap-2">
-                                  Show ID {getSortIcon("id")}
+                                <div className="flex items-center gap-2">
+                                  Show ID {getSortIcon("showId")}
                                 </div>
                               </TableHead>
                               {!selectedShow && (
                                 <>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                    onClick={() => handleSort("name")}
+                                    onClick={() => handleSort("showName")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
-                                      Show Name {getSortIcon("name")}
+                                    <div className="flex items-center gap-2">
+                                      Show Name {getSortIcon("showName")}
                                     </div>
                                   </TableHead>
-                                </>
-                              )}
-                              <TableHead
-                                className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                onClick={() => handleSort("occrId")}
-                              >
-                                <div className="flex items-center justify-center gap-2">
-                                  Occr ID {getSortIcon("occrId")}
-                                </div>
-                              </TableHead>
-                              {!selectedShow && (
-                                <>
+                                  <TableHead
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    onClick={() => handleSort("occrId")}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      Occurrence ID {getSortIcon("occrId")}
+                                    </div>
+                                  </TableHead>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("occrType")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
-                                      Occr Type {getSortIcon("occrType")}
+                                    <div className="flex items-center gap-2">
+                                      Occurrence Type {getSortIcon("occrType")}
                                     </div>
                                   </TableHead>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("marketType")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
+                                    <div className="flex items-center gap-2">
                                       Market Type {getSortIcon("marketType")}
                                     </div>
                                   </TableHead>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                    onClick={() => handleSort("project")}
+                                    onClick={() => handleSort("projectNumber")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
-                                      Project# {getSortIcon("project")}
+                                    <div className="flex items-center gap-2">
+                                      Project# {getSortIcon("projectNumber")}
                                     </div>
                                   </TableHead>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("cityOrg")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
-                                      City Org {getSortIcon("cityOrg")}
+                                    <div className="flex items-center gap-2">
+                                      Show Location {getSortIcon("cityOrg")}
                                     </div>
                                   </TableHead>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
                                     onClick={() => handleSort("yrmo")}
                                   >
-                                    <div className="flex items-center justify-center gap-2">
-                                      YRMO {getSortIcon("yrmo")}
+                                    <div className="flex items-center gap-2">
+                                      Year/Month {getSortIcon("yrmo")}
                                     </div>
                                   </TableHead>
                                   <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3">
-                                    <div className="flex items-center justify-center">
+                                    <div className="flex items-center gap-2">
                                       Actions
                                     </div>
                                   </TableHead>
@@ -1447,49 +1324,38 @@ export default function ShowsPage() {
                           <TableBody>
                             {paginatedShows.map((show) => (
                               <TableRow
-                                key={show.id}
+                                key={show.showId}
                                 className={cn(
                                   "cursor-pointer hover:bg-gray-50",
-                                  (selectedShow as unknown as ShowData)?.id ===
-                                    show.id && "bg-blue-50 hover:bg-blue-50"
+                                  (selectedShow as unknown as ShowData)?.showId ===
+                                    show.showId && "bg-blue-50 hover:bg-blue-50"
                                 )}
                                 onClick={() => handleShowSelect(show)}
                               >
-                                <TableCell className="text-center py-2 px-4">
-                                  {show.id}
-                                </TableCell>
-                                {!selectedShow && (
-                                  <TableCell className="text-center py-2 px-4">
-                                    {show.name}
-                                  </TableCell>
-                                )}
-                                <TableCell className="text-center py-2 px-4">
-                                  {show.occrId}
-                                </TableCell>
+                                <TableCell className="py-2 px-4">{show.showId}</TableCell>
                                 {!selectedShow && (
                                   <>
-                                    <TableCell className="text-center py-2 px-4">
-                                      <Badge
-                                        variant="secondary"
-                                        className="bg-[#0A0C10] text-white hover:bg-[#0A0C10]/90 px-2 py-0.5 text-xs"
-                                      >
+                                    <TableCell className="py-2 px-4">{show.showName}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.occrId}</TableCell>
+                                    <TableCell className="py-2 px-4">
+                                      <span className={cn(
+                                        'rounded px-2 py-0.5 text-xs font-medium',
+                                        show.occrType.toLowerCase().includes('upcoming') && 'bg-yellow-100 text-yellow-800',
+                                        show.occrType.toLowerCase().includes('ongoing') && 'bg-green-100 text-green-800',
+                                        show.occrType.toLowerCase().includes('conference') && 'bg-blue-100 text-blue-800',
+                                        show.occrType.toLowerCase().includes('exhibition') && 'bg-purple-100 text-purple-800',
+                                        show.occrType.toLowerCase().includes('workshop') && 'bg-pink-100 text-pink-800',
+                                        !show.occrType.toLowerCase().match(/(upcoming|ongoing|conference|exhibition|workshop)/) && 'bg-slate-200 text-slate-800'
+                                      )}>
                                         {show.occrType}
-                                      </Badge>
+                                      </span>
                                     </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.marketType}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.project}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.cityOrg}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      {show.yrmo}
-                                    </TableCell>
-                                    <TableCell className="text-center py-2 px-4">
-                                      <div className="flex items-center justify-center gap-2">
+                                    <TableCell className="py-2 px-4">{show.marketType}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.projectNumber}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.cityOrg}</TableCell>
+                                    <TableCell className="py-2 px-4">{show.yrmo}</TableCell>
+                                    <TableCell className="py-2 px-4">
+                                      <div className="flex items-center gap-2">
                                         <Button
                                           variant="ghost"
                                           size="sm"
@@ -1506,7 +1372,7 @@ export default function ShowsPage() {
                                           size="sm"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleDeleteShow(show);
+                                            handleDeleteShow(show.showId);
                                           }}
                                           className="h-7 w-7 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                                         >
@@ -1514,7 +1380,6 @@ export default function ShowsPage() {
                                         </Button>
                                       </div>
                                     </TableCell>
-
                                   </>
                                 )}
                               </TableRow>
@@ -1522,66 +1387,26 @@ export default function ShowsPage() {
                           </TableBody>
                         </Table>
                       </div>
-
-                      {/* Pagination */}
-                      {!selectedShow && filteredAndSortedShows.length > 0 && (
-                        <div className="flex justify-between items-center px-6 py-4 text-sm border-t">
-                          <div>
-                            SHOWING{" "}
-                            {Math.min(
-                              currentPage * ITEMS_PER_PAGE,
-                              filteredAndSortedShows.length
-                            )}{" "}
-                            OF {filteredAndSortedShows.length} RESULTS
-                          </div>
-                          <div className="flex space-x-1">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setCurrentPage((prev) => Math.max(1, prev - 1))
-                              }
-                              disabled={currentPage === 1}
-                              className="w-8 h-8 p-0"
-                            >
-                              <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            {[...Array(totalPages)].map((_, i) => (
-                              <Button
-                                key={i + 1}
-                                variant={
-                                  currentPage === i + 1 ? "default" : "outline"
-                                }
-                                size="sm"
-                                onClick={() => setCurrentPage(i + 1)}
-                                className={cn(
-                                  "w-8 h-8 p-0",
-                                  currentPage === i + 1 &&
-                                    "bg-blue-500 text-white hover:bg-blue-600"
-                                )}
-                              >
-                                {i + 1}
-                              </Button>
-                            ))}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                setCurrentPage((prev) =>
-                                  Math.min(totalPages, prev + 1)
-                                )
-                              }
-                              disabled={currentPage === totalPages}
-                              className="w-8 h-8 p-0"
-                            >
-                              <ChevronLeft className="h-4 w-4 rotate-180" />
-                            </Button>
-                          </div>
-                        </div>
-                      )}
-
                     </CardContent>
                   </Card>
+                  {/* Pagination controls outside the card */}
+                  <div className="flex items-center justify-between mt-4">
+                    <PageSizeSelector
+                      pageSize={pagination.itemsPerPage}
+                      setPageSize={(value) => {
+                        setPagination(prev => ({
+                          ...prev,
+                          itemsPerPage: value,
+                          currentPage: 1
+                        }));
+                      }}
+                    />
+                    <CustomPagination
+                      currentPage={pagination.currentPage}
+                      totalPages={Math.ceil(filteredAndSortedShows.length / pagination.itemsPerPage)}
+                      onPageChange={handlePageChange}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -1592,14 +1417,14 @@ export default function ShowsPage() {
             {selectedShow && (
               <motion.div
                 className={cn(
-                  "bg-white border-r border-gray-200",
-                  getContainerWidths().occurrences
+                  "bg-white border-r border-gray-200 overflow-hidden shrink-0",
+                  showProjectFacilities ? "w-[200px]" : "flex-1"
                 )}
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{
                   x: 0,
                   opacity: 1,
-                  width: showProjectFacilities ? "25%" : "75%",
+                  width: showProjectFacilities ? "200px" : "auto",
                 }}
                 exit={{
                   x: "100%",
@@ -1612,62 +1437,54 @@ export default function ShowsPage() {
                 transition={containerTransition}
                 layout
               >
-                <div className="h-full overflow-y-auto overflow-x-hidden scroll-smooth">
+                <div className="h-full w-full overflow-y-auto overflow-x-hidden scroll-smooth">
                   {showProjectFacilities ? (
                     // Minimized view when facilities are shown
-                    <div className="p-4 space-y-4">
+                    <div className="p-3 space-y-2">
                       <div className="pb-2 border-b">
                         <h2 className="text-sm font-semibold">Show Summary</h2>
                       </div>
-                      <div className="space-y-3">
+                      <div className="space-y-2">
                         <div>
-                          <Label className="text-xs text-gray-500">
-                            Show Name
-                          </Label>
-                          <div className="text-sm font-medium mt-1">
-                            {selectedShow.name}
+                          <Label className="text-xs text-gray-500">Show Name</Label>
+                          <div 
+                            className="text-sm font-medium truncate cursor-default" 
+                            title={selectedShow.showName}
+                          >
+                            {selectedShow.showName}
                           </div>
                         </div>
                         <div>
                           <Label className="text-xs text-gray-500">YRMO</Label>
-                          <div className="text-sm font-medium mt-1">
-                            {selectedShow.yrmo}
-                          </div>
+                          <div className="text-sm font-medium">{selectedShow.yrmo}</div>
                         </div>
                         <div>
-                          <Label className="text-xs text-gray-500">
-                            Project Number
-                          </Label>
-                          <div className="text-sm font-medium mt-1">
-                            {selectedShow.project}
-                          </div>
+                          <Label className="text-xs text-gray-500">Project Number</Label>
+                          <div className="text-sm font-medium truncate">{selectedShow.projectNumber}</div>
                         </div>
                       </div>
                     </div>
                   ) : (
                     // Full view
-                    <div className="p-4">
-                      <div className="max-w-5xl mx-auto">
+                    <div className="p-3">
+                      <div className="max-w-full mx-auto">
                         {/* Breadcrumb */}
-                        <div className="flex items-center justify-between pb-2 mb-4 border-b">
+                        <div className="flex items-center justify-between pb-2 mb-3 border-b">
                           <div className="flex items-center gap-2 text-sm text-gray-600">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={handleBackToShows}
-                              className="h-8 px-2"
+                              className="h-7 px-2"
                             >
                               <ChevronLeft className="h-4 w-4 mr-1" />
                               Back to Shows
                             </Button>
                             <span className="mx-2">•</span>
-                            <span className="font-medium text-gray-900">
-                              {selectedShow.name}
-                            </span>
+                            <span className="font-medium text-gray-900">{selectedShow.showName}</span>
                             <span className="mx-2">•</span>
-                            <span>{selectedShow.id}</span>
+                            <span>{selectedShow.showId}</span>
                           </div>
-
                         </div>
 
                         {/* Show Occurrences Content */}
@@ -1687,7 +1504,7 @@ export default function ShowsPage() {
                                       Show Name
                                     </Label>
                                     <Input
-                                      value={selectedShow.name}
+                                      value={selectedShow.showName}
                                       readOnly
                                       className="h-9 px-3 w-full md:w-3/4"
                                     />
@@ -1697,7 +1514,7 @@ export default function ShowsPage() {
                                       Show ID
                                     </Label>
                                     <Input
-                                      value={selectedShow.id}
+                                      value={selectedShow.showId}
                                       readOnly
                                       className="h-9 px-3 w-full md:w-3/4"
                                     />
@@ -1716,8 +1533,16 @@ export default function ShowsPage() {
                                       Open
                                     </Label>
                                     <Input
-                                      type="datetime-local"
+                                      type="text"
+                                      placeholder="MM/DD/YYYY"
                                       className="h-9 px-3 w-full md:w-3/4"
+                                      value={dayjs().format('MM/DD/YYYY')}
+                                      onChange={(e) => {
+                                        const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                        if (date.isValid()) {
+                                          // Handle date change
+                                        }
+                                      }}
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -1725,8 +1550,16 @@ export default function ShowsPage() {
                                       Close
                                     </Label>
                                     <Input
-                                      type="datetime-local"
+                                      type="text"
+                                      placeholder="MM/DD/YYYY"
                                       className="h-9 px-3 w-full md:w-3/4"
+                                      value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+                                      onChange={(e) => {
+                                        const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                        if (date.isValid()) {
+                                          // Handle date change
+                                        }
+                                      }}
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -1738,14 +1571,17 @@ export default function ShowsPage() {
                                         placeholder="Enter timezone"
                                         className="h-9 px-3 w-full md:w-3/4"
                                       />
-                                      <Button className="h-9 bg-blue-600 text-white hover:bg-blue-700">
-                                        Customers
+                                      <Button
+                                        variant="success"
+                                        className="h-9"
+                                        onClick={handleCustomerButtonClick}
+                                      >
+                                        Exhibitor
                                       </Button>
                                     </div>
                                   </div>
                                 </div>
                               </div>
-
                             </CardContent>
                           </Card>
 
@@ -1760,19 +1596,19 @@ export default function ShowsPage() {
                                 <TabsList className="grid w-full grid-cols-3 gap-4 bg-transparent h-9">
                                   <TabsTrigger
                                     value="projectInfo"
-                                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-[#E6F3FF] data-[state=active]:text-[#1A4B7A] bg-gray-50 hover:bg-[#D5E8F9] h-9 border border-[#D1E3F8]"
                                   >
                                     Project Info
                                   </TabsTrigger>
                                   <TabsTrigger
                                     value="keyDates"
-                                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-[#E6F3FF] data-[state=active]:text-[#1A4B7A] bg-gray-50 hover:bg-[#D5E8F9] h-9 border border-[#D1E3F8]"
                                   >
                                     Key Dates
                                   </TabsTrigger>
                                   <TabsTrigger
                                     value="generalInfo"
-                                    className="data-[state=active]:bg-blue-600 data-[state=active]:text-white bg-gray-50 hover:bg-gray-100 h-9"
+                                    className="data-[state=active]:bg-[#E6F3FF] data-[state=active]:text-[#1A4B7A] bg-gray-50 hover:bg-[#D5E8F9] h-9 border border-[#D1E3F8]"
                                   >
                                     General Info
                                   </TabsTrigger>
@@ -1788,60 +1624,38 @@ export default function ShowsPage() {
                                       <Table>
                                         <TableHeader className="bg-white">
                                           <TableRow className="border-b border-gray-200">
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Name
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Number
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Type
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Status
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Production City
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Facility ID
-                                            </TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Name</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Number</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Type</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Status</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Production City</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility ID</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                          <TableRow className="hover:bg-white/50">
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.projectName}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.projectNumber}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.projectType}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.status}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.productionCity}
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              {mockProjectData.facilityId}
-                                            </TableCell>
-                                          </TableRow>
+                                          {mockProjectData && mockProjectData.map((project, index) => (
+                                            project.projectNumber === selectedShow?.projectNumber && (
+                                              <TableRow key={index} className="hover:bg-white/50">
+                                                <TableCell className="py-2 text-sm text-center">{project.projectName}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.projectNumber}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.projectType}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.status}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.productionCity}</TableCell>
+                                                <TableCell className="py-2 text-sm text-center">{project.facilityId}</TableCell>
+                                              </TableRow>
+                                            )
+                                          ))}
                                         </TableBody>
                                       </Table>
                                     </div>
                                     <div className="flex justify-end gap-2">
                                       <Button
-                                        onClick={() =>
-                                          setShowProjectFacilities(true)
-                                        }
-                                        className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4"
+                                        onClick={() => setShowProjectFacilities(true)}
+                                        className="bg-[#E6F3FF] text-[#1A4B7A] hover:bg-[#D5E8F9] border border-[#D1E3F8] h-9 px-4"
                                       >
                                         Project Facilities
                                       </Button>
-                                      <Button className="bg-blue-600 text-white hover:bg-blue-700 h-9 px-4">
+                                      <Button className="bg-[#E6F3FF] text-[#1A4B7A] hover:bg-[#D5E8F9] border border-[#D1E3F8] h-9 px-4">
                                         Key Contacts
                                       </Button>
                                     </div>
@@ -1855,60 +1669,31 @@ export default function ShowsPage() {
                                     <div className="bg-gray-50 rounded-md p-4">
                                       <div className="flex items-center gap-4 mb-4">
                                         <Label className="text-sm text-gray-500">
-                                          Show Dates for
+                                          Show Dates
                                         </Label>
-                                        <Select>
-                                          <SelectTrigger className="w-[180px] h-9">
-                                            <SelectValue placeholder="Select dates" />
-                                          </SelectTrigger>
-                                          <SelectContent>
-                                            <SelectItem value="option1">
-                                              Option 1
-                                            </SelectItem>
-                                            <SelectItem value="option2">
-                                              Option 2
-                                            </SelectItem>
-                                          </SelectContent>
-                                        </Select>
                                       </div>
                                       <Table>
                                         <TableHeader className="bg-white">
                                           <TableRow className="border-b border-gray-200">
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Date Type
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Project Number
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Facility ID
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Date/time
-                                            </TableHead>
-                                            <TableHead className="text-xs font-semibold text-gray-700">
-                                              Notes
-                                            </TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Date Type</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Project Number</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Facility ID</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Date/time</TableHead>
+                                            <TableHead className="text-xs font-semibold text-gray-700 text-center">Notes</TableHead>
                                           </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                          <TableRow>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">
-                                              -
-                                            </TableCell>
-                                          </TableRow>
+                                          {selectedShowDetails?.keyDates.map((date, index) => (
+                                            <TableRow key={index}>
+                                              <TableCell className="py-2 text-sm text-center">{date.dateType}</TableCell>
+                                              <TableCell className="py-2 text-sm text-center">{date.projectNumber}</TableCell>
+                                              <TableCell className="py-2 text-sm text-center">{date.facilityId}</TableCell>
+                                              <TableCell className="py-2 text-sm text-center">
+                                                {new Date(date.dateTime).toLocaleString()}
+                                              </TableCell>
+                                              <TableCell className="py-2 text-sm text-center">{date.notes}</TableCell>
+                                            </TableRow>
+                                          ))}
                                         </TableBody>
                                       </Table>
                                     </div>
@@ -1924,172 +1709,157 @@ export default function ShowsPage() {
                                       <div className="space-y-4">
                                         <Card className="shadow-sm">
                                           <CardHeader className="py-3 px-4">
-                                            <CardTitle className="text-sm font-semibold">
-                                              Measurements
-                                            </CardTitle>
+                                            <CardTitle className="text-sm font-semibold">Measurements</CardTitle>
                                           </CardHeader>
                                           <CardContent className="p-4">
                                             <div className="space-y-4">
                                               <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Total Sq Ft (Projected)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Total Sq Ft (Projected)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.totalSqFtProjected} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Total Sq Ft (Actual)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
-                                                </div>
-                                              </div>
-                                              <div className="grid grid-cols-2 gap-4">
-                                                <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Freight (Projected)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
-                                                </div>
-                                                <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Freight (Actual)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Total Sq Ft (Actual)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.totalSqFtActual} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                               </div>
                                               <div className="grid grid-cols-2 gap-4">
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Graphics (Projected)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Freight (Projected)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.freightProjected} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                                 <div className="space-y-2">
-                                                  <Label className="text-sm text-gray-500">
-                                                    Graphics (Actual)
-                                                  </Label>
-                                                  <Input className="h-9 px-3" />
+                                                  <Label className="text-sm text-gray-500">Freight (Actual)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.freightActual} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
+                                                </div>
+                                              </div>
+                                              <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                  <Label className="text-sm text-gray-500">Graphics (Projected)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.graphicsProjected} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
+                                                </div>
+                                                <div className="space-y-2">
+                                                  <Label className="text-sm text-gray-500">Graphics (Actual)</Label>
+                                                  <Input 
+                                                    value={selectedShowDetails?.measurements.graphicsActual} 
+                                                    className="h-9 px-3" 
+                                                    readOnly
+                                                  />
                                                 </div>
                                               </div>
                                             </div>
                                           </CardContent>
                                         </Card>
                                       </div>
-
                                       {/* Show Options */}
                                       <div className="space-y-4">
                                         <Card className="shadow-sm">
                                           <CardHeader className="py-3 px-4">
-                                            <CardTitle className="text-sm font-semibold">
-                                              Show Options
-                                            </CardTitle>
+                                            <CardTitle className="text-sm font-semibold">Show Options</CardTitle>
                                           </CardHeader>
                                           <CardContent className="p-4">
                                             <div className="space-y-4">
                                               <div className="grid grid-cols-2 gap-x-8 gap-y-2">
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="flooring"
+                                                  <Checkbox 
+                                                    id="flooring" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.flooringMandatory}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="flooring"
-                                                    className="text-sm"
-                                                  >
-                                                    Flooring Mandatory
-                                                  </Label>
+                                                  <Label htmlFor="flooring" className="text-sm">Flooring Mandatory</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="targeted"
+                                                  <Checkbox 
+                                                    id="targeted" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.targetedShow}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="targeted"
-                                                    className="text-sm"
-                                                  >
-                                                    Targeted Show
-                                                  </Label>
+                                                  <Label htmlFor="targeted" className="text-sm">Targeted Show</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="marshalling"
+                                                  <Checkbox 
+                                                    id="marshalling" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.marshalling}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="marshalling"
-                                                    className="text-sm"
-                                                  >
-                                                    Marshalling
-                                                  </Label>
+                                                  <Label htmlFor="marshalling" className="text-sm">Marshalling</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="rtw"
+                                                  <Checkbox 
+                                                    id="rtw" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.noRTW}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="rtw"
-                                                    className="text-sm"
-                                                  >
-                                                    No RTW
-                                                  </Label>
+                                                  <Label htmlFor="rtw" className="text-sm">No RTW</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="ops"
+                                                  <Checkbox 
+                                                    id="ops" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.natlOpsTeam}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="ops"
-                                                    className="text-sm"
-                                                  >
-                                                    Natl Ops Team
-                                                  </Label>
+                                                  <Label htmlFor="ops" className="text-sm">Natl Ops Team</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="design"
+                                                  <Checkbox 
+                                                    id="design" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.designCollaboration}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="design"
-                                                    className="text-sm"
-                                                  >
-                                                    Design Collaboration
-                                                  </Label>
+                                                  <Label htmlFor="design" className="text-sm">Design Collaboration</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="clean"
+                                                  <Checkbox 
+                                                    id="clean" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.cleanFloorPolicy}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="clean"
-                                                    className="text-sm"
-                                                  >
-                                                    Clean Floor Policy
-                                                  </Label>
+                                                  <Label htmlFor="clean" className="text-sm">Clean Floor Policy</Label>
                                                 </div>
                                                 <div className="flex items-center space-x-2">
-                                                  <Checkbox
-                                                    id="booth"
+                                                  <Checkbox 
+                                                    id="booth" 
                                                     className="h-4 w-4"
+                                                    checked={selectedShowDetails?.showOptions.showOrgBoothPkg}
+                                                    disabled
                                                   />
-                                                  <Label
-                                                    htmlFor="booth"
-                                                    className="text-sm"
-                                                  >
-                                                    Show Org Booth Pkg
-                                                  </Label>
+                                                  <Label htmlFor="booth" className="text-sm">Show Org Booth Pkg</Label>
                                                 </div>
                                               </div>
                                               <div className="space-y-2">
-                                                <Label className="text-sm text-gray-500">
-                                                  Tier Pricing
-                                                </Label>
-                                                <Input className="h-9 px-3" />
+                                                <Label className="text-sm text-gray-500">Tier Pricing</Label>
+                                                <Input 
+                                                  value={selectedShowDetails?.showOptions.tierPricing} 
+                                                  className="h-9 px-3" 
+                                                  readOnly
+                                                />
                                               </div>
                                             </div>
                                           </CardContent>
@@ -2101,41 +1871,47 @@ export default function ShowsPage() {
                                     <div className="grid grid-cols-1 gap-4">
                                       <Card className="shadow-sm">
                                         <CardHeader className="py-3 px-4">
-                                          <CardTitle className="text-sm font-semibold">
-                                            Comments
-                                          </CardTitle>
+                                          <CardTitle className="text-sm font-semibold">Comments</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4">
                                           <div className="space-y-2">
-                                            <Label className="text-sm text-gray-500">
-                                              Freight Info
-                                            </Label>
-                                            <Textarea className="min-h-[80px] px-3 py-2" />
+                                            <Label className="text-sm text-gray-500">Freight Info</Label>
+                                            <Textarea 
+                                              value={selectedShowDetails?.comments.freightInfo} 
+                                              className="min-h-[80px] px-3 py-2" 
+                                              readOnly
+                                            />
                                           </div>
                                         </CardContent>
                                       </Card>
 
                                       <Card className="shadow-sm">
                                         <CardHeader className="py-3 px-4">
-                                          <CardTitle className="text-sm font-semibold">
-                                            Show Package
-                                          </CardTitle>
+                                          <CardTitle className="text-sm font-semibold">Show Package</CardTitle>
                                         </CardHeader>
                                         <CardContent className="p-4">
                                           <div className="space-y-4">
-                                            <Textarea className="min-h-[80px] px-3 py-2" />
+                                            <Textarea 
+                                              value={selectedShowDetails?.comments.showPackage} 
+                                              className="min-h-[80px] px-3 py-2" 
+                                              readOnly
+                                            />
                                             <div className="grid grid-cols-2 gap-4">
                                               <div className="space-y-2">
-                                                <Label className="text-sm text-gray-500">
-                                                  Specify Logo
-                                                </Label>
-                                                <Input className="h-9 px-3" />
+                                                <Label className="text-sm text-gray-500">Specify Logo</Label>
+                                                <Input 
+                                                  value={selectedShowDetails?.comments.specifyLogo} 
+                                                  className="h-9 px-3" 
+                                                  readOnly
+                                                />
                                               </div>
                                               <div className="space-y-2">
-                                                <Label className="text-sm text-gray-500">
-                                                  Send Exhibitor Survey
-                                                </Label>
-                                                <Input className="h-9 px-3" />
+                                                <Label className="text-sm text-gray-500">Send Exhibitor Survey</Label>
+                                                <Input 
+                                                  value={selectedShowDetails?.comments.exhibitorSurvey} 
+                                                  className="h-9 px-3" 
+                                                  readOnly
+                                                />
                                               </div>
                                             </div>
                                           </div>
@@ -2148,7 +1924,6 @@ export default function ShowsPage() {
                             </CardContent>
                           </Card>
                         </div>
-
                       </div>
                     </div>
                   )}
@@ -2161,7 +1936,7 @@ export default function ShowsPage() {
           <AnimatePresence mode="wait">
             {showProjectFacilities && (
               <motion.div
-                className={cn("bg-white", getContainerWidths().facilities)}
+                className="bg-white flex-1 overflow-hidden"
                 initial={{ x: "100%", opacity: 0 }}
                 animate={{
                   x: 0,
@@ -2178,8 +1953,8 @@ export default function ShowsPage() {
                 transition={containerTransition}
                 layout
               >
-                <div className="h-full overflow-y-auto overflow-x-hidden scroll-smooth">
-                  <div className="p-4 max-w-[1200px] mx-auto">
+                <div className="h-full w-full overflow-y-auto overflow-x-hidden scroll-smooth">
+                  <div className="p-4 w-full">
                     <div className="flex items-center justify-between pb-3 mb-4 border-b">
                       <h2 className="text-lg font-semibold">
                         Project Facilities
@@ -2197,147 +1972,228 @@ export default function ShowsPage() {
 
                     {/* Project Facility content */}
                     <Card className="shadow-sm">
-                      <CardHeader className="py-3 px-4">
+                      <CardHeader className="py-2 px-4">
                         <CardTitle className="text-sm font-semibold">
                           Project Facility Details
                         </CardTitle>
                       </CardHeader>
-                      <CardContent>
+                      <CardContent className="p-4">
                         {/* Project Info */}
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Number
-                            </Label>
-                            <Input
-                              value={mockProjectData.projectNumber}
-                              readOnly
-                              className="h-9"
-                            />
+                        <div className="space-y-6">
+                          {/* Project section */}
+                          <div className="space-y-3">
+                            <div className="text-sm font-medium">Project</div>
+                            <div className="grid grid-cols-2 gap-x-8">
+                              <div>
+                                <Label className="text-sm mb-1 block">Project Number</Label>
+                                <Input 
+                                  value={selectedShow?.projectNumber || ''} 
+                                  readOnly 
+                                  className="h-8 bg-white border-gray-300" 
+                                />
+                              </div>
+                              <div>
+                                <Label className="text-sm mb-1 block">Project Name</Label>
+                                <Input 
+                                  value={selectedShow?.project || ''} 
+                                  readOnly 
+                                  className="h-8 bg-white border-gray-300" 
+                                />
+                              </div>
+                            </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Project Name
-                            </Label>
-                            <Input
-                              value={mockProjectData.projectName}
-                              readOnly
-                              className="h-9"
-                            />
-                          </div>
-                        </div>
 
-                        {/* Registration Header */}
-                        <div className="flex justify-end mb-4">
-                          <Label className="text-sm font-medium">
-                            Registration:
-                          </Label>
-                          <span className="ml-2 text-sm">
-                            ----------------Servicecenter(TM)----------------
-                          </span>
-                        </div>
-
-                        {/* Facilities Table */}
-                        <Table>
-                          <TableHeader>
-                            <TableRow>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Facility ID
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Facility Name
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Hall
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Location
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Location
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Area Code
-                              </TableHead>
-                              <TableHead className="text-xs font-semibold text-gray-700">
-                                Phone
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {mockFacilityData.map((facility) => (
-                              <TableRow key={facility.facilityId}>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.facilityId}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.facilityName}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.hall}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.location1}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.location2}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.areaCode}
-                                </TableCell>
-                                <TableCell className="py-2 text-sm">
-                                  {facility.phone}
-                                </TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-
-                        {/* Notes and Comments */}
-                        <div className="grid grid-cols-3 gap-4 mt-6">
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Notes
-                            </Label>
-                            <Input placeholder="Enter notes" className="h-9" />
+                          {/* Facility Information Table with integrated Servicecenter(TM) */}
+                          <div className="mt-4">
+                            <table className="w-full border-collapse">
+                              <thead>
+                                <tr>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '15%' }}>
+                                    Facility ID
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '25%' }}>
+                                    Facility Name
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '10%' }}>
+                                    Hall
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '15%' }}>
+                                    Registration Location
+                                  </th>
+                                  <th colSpan={3} className="border border-gray-300 bg-gray-100 text-left p-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className="border-t border-gray-300 flex-grow"></span>
+                                      <span className="text-sm font-normal">Servicecenter(TM)</span>
+                                      <span className="border-t border-gray-300 flex-grow"></span>
+                                    </div>
+                                  </th>
+                                </tr>
+                                <tr>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100"></th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '15%' }}>
+                                    Location
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '10%' }}>
+                                    Area Code
+                                  </th>
+                                  <th className="border border-gray-300 bg-gray-100 text-left p-1 text-sm font-normal" style={{ width: '10%' }}>
+                                    Phone
+                                  </th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="MCCORM" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="MCCORMICK PLAC" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                  <td className="border border-gray-300 p-1">
+                                    <Input 
+                                      value="" 
+                                      readOnly 
+                                      className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" 
+                                    />
+                                  </td>
+                                </tr>
+                                {/* Add more empty rows to match the screenshot */}
+                                {[...Array(5)].map((_, index) => (
+                                  <tr key={index}>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                    <td className="border border-gray-300 p-1">
+                                      <Input readOnly className="h-7 w-full bg-white border-gray-300 focus:ring-0 focus:border-gray-300" />
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Comments
-                            </Label>
-                            <Input
-                              placeholder="Enter comments"
-                              className="h-9"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-sm text-gray-500">
-                              Special Instructions
-                            </Label>
-                            <Input
-                              placeholder="Enter special instructions"
-                              className="h-9"
-                            />
-                          </div>
-                        </div>
 
-                        {/* Action Buttons */}
-                        <div className="flex justify-between items-center mt-6">
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
-                            Auto-Out
-                          </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
-                            Details
-                          </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
-                            Schedule
-                          </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
-                            Material Handling
-                          </Button>
-                          <Button className="bg-blue-600 text-white hover:bg-blue-700 px-4 h-9">
-                            Vendor Info
-                          </Button>
+                          {/* Keep the Notes, Comments, and Special Instructions section */}
+                          <div className="space-y-6 mt-8">
+                            <div>
+                              <Label className="text-sm text-gray-600 mb-2 block">Notes</Label>
+                              <Textarea 
+                                placeholder="Enter notes"
+                                className="min-h-[80px] w-full resize-none border-gray-300 rounded-sm"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm text-gray-600 mb-2 block">Comments</Label>
+                              <Textarea 
+                                placeholder="Enter comments"
+                                className="min-h-[80px] w-full resize-none border-gray-300 rounded-sm"
+                              />
+                            </div>
+                            <div>
+                              <Label className="text-sm text-gray-600 mb-2 block">Special Instructions</Label>
+                              <Textarea 
+                                placeholder="Enter special instructions"
+                                className="min-h-[80px] w-full resize-none border-gray-300 rounded-sm"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Action Buttons - Centered with equal spacing */}
+                          <div className="flex justify-center items-center gap-4 mt-8">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleAutoOutClick}
+                            >
+                              Auto-Out
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleDetailsClick}
+                            >
+                              Details
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleScheduleClick}
+                            >
+                              Schedule
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleMaterialHandlingClick}
+                            >
+                              Material Handling
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-6 bg-[#E6F3FF] hover:bg-[#D5E8F9] border-gray-300 min-w-[100px]"
+                              onClick={handleVendorInfoClick}
+                            >
+                              Vendor Info
+                            </Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
@@ -2348,19 +2204,9 @@ export default function ShowsPage() {
           </AnimatePresence>
 
           {/* Back to Top Button */}
-          <AnimatePresence>
-            {showBackToTop && (
-              <motion.button
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 20 }}
-                onClick={scrollToTop}
-                className="fixed bottom-8 right-8 bg-blue-600 text-white rounded-full p-3 shadow-lg hover:bg-blue-700 transition-colors z-50"
-              >
-                <ArrowUp className="h-5 w-5" />
-              </motion.button>
-            )}
-          </AnimatePresence>
+          <div className="relative">
+            <ScrollToTop />
+          </div>
         </div>
       </div>
 
@@ -2385,6 +2231,1482 @@ export default function ShowsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Add Show Dialog */}
+      <Dialog 
+        open={showDialog} 
+        onOpenChange={(open) => setShowDialog(open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add New Show</DialogTitle>
+            <DialogDescription>
+              Fill in the details to add a new show.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="showId" className="text-right">
+                Show ID
+              </Label>
+              <Input
+                id="showId"
+                value={newShow.showId}
+                onChange={(e) => setNewShow({ ...newShow, showId: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="showName" className="text-right">
+                Show Name
+              </Label>
+              <Input
+                id="showName"
+                value={newShow.showName}
+                onChange={(e) => setNewShow({ ...newShow, showName: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="occrId" className="text-right">
+                Occr ID
+              </Label>
+              <Input
+                id="occrId"
+                value={newShow.occrId}
+                onChange={(e) => setNewShow({ ...newShow, occrId: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="occrType" className="text-right">
+                Occr Type
+              </Label>
+              <Input
+                id="occrType"
+                value={newShow.occrType}
+                onChange={(e) => setNewShow({ ...newShow, occrType: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="marketType" className="text-right">
+                Market Type
+              </Label>
+              <Input
+                id="marketType"
+                value={newShow.marketType}
+                onChange={(e) => setNewShow({ ...newShow, marketType: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="projectNumber" className="text-right">
+                Project Number
+              </Label>
+              <Input
+                id="projectNumber"
+                value={newShow.projectNumber}
+                onChange={(e) => setNewShow({ ...newShow, projectNumber: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cityOrg" className="text-right">
+                City Org
+              </Label>
+              <Input
+                id="cityOrg"
+                value={newShow.cityOrg}
+                onChange={(e) => setNewShow({ ...newShow, cityOrg: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="yrmo" className="text-right">
+                YRMO
+              </Label>
+              <Input
+                id="yrmo"
+                value={newShow.yrmo}
+                onChange={(e) => setNewShow({ ...newShow, yrmo: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleAddShow}>
+              Add Show
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Auto-Out Slide-out Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[500px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showAutoOut
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Labor Orders</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowAutoOut(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Facility Info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Facility ID</Label>
+                  <Input
+                    value="MCCORM"
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Project Number</Label>
+                  <Input
+                    value="0716022"
+                    readOnly
+                    className="bg-gray-50"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-sm text-gray-500">Facility Name</Label>
+                <Input
+                  value="MCCORMICK PLACE CONVENTION CENTER"
+                  readOnly
+                  className="bg-gray-50"
+                />
+              </div>
+            </div>
+
+            {/* Auto-Out Table */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-semibold">Labor Auto-Out Settings</h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-24">Item</TableHead>
+                    <TableHead>Item Description</TableHead>
+                    <TableHead className="w-24">LOB</TableHead>
+                    <TableHead className="w-24">Auto-Out %</TableHead>
+                    <TableHead className="w-24">ST %</TableHead>
+                    <TableHead className="w-24">OT %</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow>
+                    <TableCell>705011</TableCell>
+                    <TableCell>LABOR, PLUMBING</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>50</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705060</TableCell>
+                    <TableCell>LABOR, ELECTRICAL</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705061</TableCell>
+                    <TableCell>LABOR, ELECTRICAL BOOTH WORK</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705066</TableCell>
+                    <TableCell>LABOR, ELECTRICAL HIGH LIFT</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                  <TableRow>
+                    <TableCell>705112</TableCell>
+                    <TableCell>LABOR, HANGING SIGN CREW</TableCell>
+                    <TableCell></TableCell>
+                    <TableCell>50</TableCell>
+                    <TableCell>100</TableCell>
+                    <TableCell>0</TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowAutoOut(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Facility Details Slide-out Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showFacilityDetails
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Facility</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowFacilityDetails(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Basic Facility Info */}
+            <div className="space-y-4">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Facility ID</Label>
+                  <Input className="h-9" />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-sm text-gray-500">Facility Name</Label>
+                  <Input className="h-9" />
+                </div>
+              </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Organization</Label>
+                  <Input className="h-9" />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label className="text-sm text-gray-500">Type</Label>
+                  <Select defaultValue="convention-center">
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="convention-center">Convention Center</SelectItem>
+                      <SelectItem value="hotel">Hotel</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Address Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Address</h3>
+              <div className="grid gap-3">
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Address 1</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Address 2</Label>
+                    <Input className="h-8" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-4 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">City</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">State</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Zip</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Country</Label>
+                    <Input className="h-8" defaultValue="United States" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Primary Contact Section */}
+            <div className="space-y-3">
+              <h3 className="text-sm font-semibold">Primary Contact</h3>
+              <div className="grid gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Last Name</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">First Name</Label>
+                    <Input className="h-8" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Phone</Label>
+                    <Input className="h-8" />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-gray-500">Email</Label>
+                    <Input className="h-8" type="email" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Main container for both sections */}
+            <div className="grid grid-cols-2 gap-6">
+              {/* Facility Specific Services */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Facility Specific Services</h3>
+                <div className="grid grid-cols-[1fr,auto] gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Service Type</Label>
+                    <div className="border rounded-md h-[200px] overflow-y-auto bg-white">
+                      <div className="grid grid-cols-1 divide-y">
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                        <div className="px-4 py-2 h-8"></div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Supplied</Label>
+                    <div className="border rounded-md h-[200px] overflow-y-auto bg-white w-[100px]">
+                      <div className="grid grid-cols-1 divide-y">
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                        <div className="px-2 py-2 h-8 flex items-center justify-center">
+                          <Checkbox className="h-4 w-4" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Floor Plan Attachment */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Floor Plan Attachment</h3>
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-4">
+                      <Label className="text-sm text-gray-500">Attached</Label>
+                      <Checkbox />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Last Updated By</Label>
+                    <Input className="h-9" readOnly />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm text-gray-500">Last Updated Date</Label>
+                    <Input className="h-9" type="date" readOnly />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Zones, Halls, and Rooms */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Zones</h3>
+                <div className="border rounded-md h-[200px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Zones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-sm">A1</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">A2</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">A3</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">A4</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Halls</h3>
+                <div className="border rounded-md h-[200px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Hall</TableHead>
+                        <TableHead className="text-xs">Sq Ft</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall A</TableCell>
+                        <TableCell className="text-sm">25,000</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall B</TableCell>
+                        <TableCell className="text-sm">30,000</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall C</TableCell>
+                        <TableCell className="text-sm">28,000</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Hall D</TableCell>
+                        <TableCell className="text-sm">22,000</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex justify-between items-center">
+                  <Label className="text-sm text-gray-500">Sub Total:</Label>
+                  <Input className="h-9 w-32 bg-gray-50" value="105,000" readOnly />
+                </div>
+              </div>
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold">Rooms</h3>
+                <div className="border rounded-md h-[200px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="text-xs">Rooms</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 101</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 102</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 201</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 202</TableCell>
+                      </TableRow>
+                      <TableRow>
+                        <TableCell className="text-sm">Room 301</TableCell>
+                      </TableRow>
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowFacilityDetails(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Material Handling Slide-out Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showMaterialHandling
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Material Handling</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowMaterialHandling(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Show Occurrence and Facility sections side by side */}
+            <div className="grid grid-cols-2 gap-8">
+              {/* Show Occurrence Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Show Occurrence</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Occr ID</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.occrId || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Number</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.projectNumber || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Name</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.project || ''} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Facility Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Facility</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility ID</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Name</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Address</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Tabs Section */}
+            <div className="space-y-4">
+              <Tabs
+                value={activeWarehouseTab}
+                onValueChange={setActiveWarehouseTab}
+                className="w-full"
+              >
+                <TabsList className="grid w-full grid-cols-5 gap-1 bg-gray-100 p-1 h-9">
+                  <TabsTrigger
+                    value="warehouse"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Warehouse
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="showSite"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Show Site
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="marshalling"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Marshalling
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="freightDates"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    Freight Dates
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="generalInfo"
+                    className="data-[state=active]:bg-white data-[state=active]:text-primary h-7"
+                  >
+                    General Info
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="warehouse" className="mt-4">
+                  <div className="space-y-6">
+                    {/* Warehouse Timings */}
+                    <div className="space-y-4">
+                      <h3 className="text-sm font-semibold">Warehouse Timings</h3>
+                      <div className="border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader className="bg-gray-50">
+                            <TableRow>
+                              <TableHead className="text-xs font-medium w-32">Day</TableHead>
+                              <TableHead className="text-xs font-medium text-center" colSpan={2}>----- Driver Check In -----</TableHead>
+                              <TableHead className="text-xs font-medium text-center" colSpan={2}>Open/Close</TableHead>
+                              <TableHead className="text-xs font-medium text-center" colSpan={2}>----- Lunch Time -----</TableHead>
+                            </TableRow>
+                            <TableRow className="bg-gray-50">
+                              <TableHead></TableHead>
+                              <TableHead className="text-xs font-medium text-center">From</TableHead>
+                              <TableHead className="text-xs font-medium text-center">To</TableHead>
+                              <TableHead className="text-xs font-medium text-center">Open</TableHead>
+                              <TableHead className="text-xs font-medium text-center">Close</TableHead>
+                              <TableHead className="text-xs font-medium text-center">From</TableHead>
+                              <TableHead className="text-xs font-medium text-center">To</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell className="font-medium">Monday - Friday</TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="08:00:00" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="14:30:00" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="11:30:00" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                  defaultValue="12:30:00" 
+                                />
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">Saturday</TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell className="font-medium">Sunday</TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input 
+                                  className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                />
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="showSite" className="mt-4">
+                  <div className="space-y-6">
+                    {/* Show Site Address Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-8">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Label className="text-sm text-gray-600 w-32">Show Site Address</Label>
+                            <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Checkbox id="onsite-docks" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          <Label htmlFor="onsite-docks" className="text-sm">Onsite Docks</Label>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Label className="text-sm text-gray-600 w-32">Show Site Add Desc</Label>
+                        <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                      </div>
+                    </div>
+
+                    {/* Timings Table */}
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-gray-50">
+                          <TableRow>
+                            <TableHead className="text-xs font-medium w-32">Week Day</TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Driver Check In----------
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Unloading----------
+                            </TableHead>
+                          </TableRow>
+                          <TableRow className="bg-gray-50">
+                            <TableHead></TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {[...Array(7)].map((_, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="marshalling" className="mt-4">
+                  <div className="space-y-6">
+                    {/* Yard Information Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-8">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Label className="text-sm text-gray-600 w-32">Yard</Label>
+                            <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          </div>
+                        </div>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-4">
+                            <Label className="text-sm text-gray-600 w-32">Yard Address</Label>
+                            <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <Label className="text-sm text-gray-600 w-32">Yard Add Desc</Label>
+                        <Input className="flex-1 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                      </div>
+                    </div>
+
+                    {/* Timings Table */}
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-gray-50">
+                          <TableRow>
+                            <TableHead className="text-xs font-medium w-32">Week Day</TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Driver Check In----------
+                            </TableHead>
+                            <TableHead className="text-xs font-medium text-center" colSpan={2}>
+                              ----------Unloading----------
+                            </TableHead>
+                          </TableRow>
+                          <TableRow className="bg-gray-50">
+                            <TableHead></TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">From Time</TableHead>
+                            <TableHead className="text-xs font-medium text-center">To Time</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {[...Array(7)].map((_, index) => (
+                            <TableRow key={index}>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                              <TableCell className="p-1">
+                                <Input className="h-8 text-center border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="freightDates" className="mt-4">
+                  <div className="space-y-6">
+                    <div className="border rounded-md overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-gray-50">
+                          <TableRow>
+                            <TableHead className="text-xs font-medium w-[250px]">Business Type</TableHead>
+                            <TableHead className="text-xs font-medium w-[150px]">Week Day</TableHead>
+                            <TableHead className="text-xs font-medium">Delivery Date & Time</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Thursday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="20-MAR-2025 18:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Sunday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="23-MAR-2025 12:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Friday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="21-MAR-2025 14:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Outbound Carrier Check In"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="Saturday"
+                              />
+                            </TableCell>
+                            <TableCell className="p-1">
+                              <Input 
+                                className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                                defaultValue="22-MAR-2025 12:00:00"
+                              />
+                            </TableCell>
+                          </TableRow>
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="generalInfo" className="mt-4">
+                  <div className="space-y-6">
+                    {/* OT Surcharge Rules Section */}
+                    <div className="border rounded-md p-4 space-y-4">
+                      <div>
+                        <Label className="text-sm font-medium">OT Surcharge Rules</Label>
+                        <Input 
+                          className="mt-1 w-full h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" 
+                        />
+                      </div>
+
+                      {/* Left Column Checkboxes */}
+                      <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="pov-rules" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="pov-rules" className="text-sm">Pov Rules</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="cart-load" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="cart-load" className="text-sm">Cart Load</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="hand-carry" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="hand-carry" className="text-sm">Hand Carry</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="freight-pkg" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="freight-pkg" className="text-sm">Freight Pkg</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="vehicle-spotting" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="vehicle-spotting" className="text-sm">Vehicle Spotting</Label>
+                          </div>
+                        </div>
+
+                        {/* Right Column Checkboxes */}
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="machinery" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="machinery" className="text-sm">Machinery</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="access-storage" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="access-storage" className="text-sm">Access Storage</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="refrigeration" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="refrigeration" className="text-sm">Refrigeration</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="freezer" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="freezer" className="text-sm">Freezer</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox id="special-handling" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="special-handling" className="text-sm">Special Handling</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <Checkbox defaultChecked id="targeted-show" className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            <Label htmlFor="targeted-show" className="text-sm">Targeted Show</Label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Transportation Plus Section */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Transportation Plus</Label>
+                        <div className="grid grid-cols-2 gap-8">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm">Available?</Label>
+                              <Checkbox defaultChecked className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <Label className="text-sm w-20">Discount %</Label>
+                              <Input 
+                                className="w-24 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                                defaultValue="10"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2">
+                              <Label className="text-sm">Maximum?</Label>
+                              <Checkbox defaultChecked className="border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                            </div>
+                            <div className="flex items-center gap-4">
+                              <Label className="text-sm w-32">Maximum Weight (cwt)</Label>
+                              <Input 
+                                className="w-24 h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                                defaultValue="50"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowMaterialHandling(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Facility Schedules Form Container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showSchedules
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Facility Schedules Form</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSchedules(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Show Occurrence and Facility sections side by side */}
+            <div className="grid grid-cols-2 gap-8">
+              {/* Show Occurrence Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Show Occurrence</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Occr ID</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.occrId || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Number</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.projectNumber || ''} 
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Project Name</Label>
+                    <Input 
+                      className="mt-1 w-[250px] h-8" 
+                      readOnly 
+                      value={selectedShow?.project || ''} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Facility Section */}
+              <div>
+                <h3 className="text-base font-semibold mb-4">Facility</h3>
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility ID</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Name</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-600">Facility Address</Label>
+                    <Input className="mt-1 w-[250px] h-8" readOnly />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Schedule Section */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Label className="text-sm font-medium">Schedule For</Label>
+                <Select defaultValue="hours-by-date">
+                  <SelectTrigger className="w-[200px] h-8">
+                    <SelectValue placeholder="Select schedule type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hours-by-date">Hours By Date</SelectItem>
+                    <SelectItem value="other">Other Options</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="border rounded-md overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-gray-50">
+                    <TableRow>
+                      <TableHead className="text-xs font-medium">Schedule Type</TableHead>
+                      <TableHead className="text-xs font-medium">Schedule Date / Time From</TableHead>
+                      <TableHead className="text-xs font-medium">From Day</TableHead>
+                      <TableHead className="text-xs font-medium">Schedule Date/Time To</TableHead>
+                      <TableHead className="text-xs font-medium">To Day</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>17-MAR-2025 10:00:00</TableCell>
+                      <TableCell>Monday</TableCell>
+                      <TableCell>17-MAR-2025 17:00:00</TableCell>
+                      <TableCell>Monday</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>18-MAR-2025 10:00:00</TableCell>
+                      <TableCell>Tuesday</TableCell>
+                      <TableCell>18-MAR-2025 17:00:00</TableCell>
+                      <TableCell>Tuesday</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>19-MAR-2025 10:00:00</TableCell>
+                      <TableCell>Wednesday</TableCell>
+                      <TableCell>19-MAR-2025 17:00:00</TableCell>
+                      <TableCell>Wednesday</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell>Show Hours</TableCell>
+                      <TableCell>20-MAR-2025 09:00:00</TableCell>
+                      <TableCell>Thursday</TableCell>
+                      <TableCell>20-MAR-2025 13:00:00</TableCell>
+                      <TableCell>Thursday</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+          </div>
+        </div>
+        <div className="border-t p-6">
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowSchedules(false)}>
+              Cancel
+            </Button>
+            <Button variant="success">
+              Save Changes
+            </Button>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* Facility Vendors Form container */}
+      <motion.div
+        style={{ marginTop: "0px" }}
+        className={cn(
+          "fixed inset-0 w-[800px] bg-white shadow-xl z-50 border-l flex flex-col ml-auto",
+          "transition-all duration-300 ease-in-out",
+          showVendorInfo
+            ? "translate-x-0"
+            : "translate-x-full"
+        )}
+      >
+        <div className="border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between p-4">
+            <h2 className="text-xl font-semibold">Facility Vendors Form</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowVendorInfo(false)}
+              className="h-8 w-8 p-0"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <div className="p-6 space-y-6">
+            {/* Facility Details Section */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-lg font-medium">Facility Details</h3>
+              <div className="grid grid-cols-2 gap-x-8 gap-y-4">
+                <div className="space-y-2">
+                  <Label className="text-sm">Show Occurrence ID</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Project Name</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Project Number</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Facility Name</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm">Facility ID</Label>
+                  <Input 
+                    className="h-8 border border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400"
+                    readOnly
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Vendor Information Table */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-lg font-medium">Vendor Information</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border px-4 py-2 text-left text-sm">Vendor Type</th>
+                      <th className="border px-4 py-2 text-left text-sm">Vendor Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">PO Number</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">Area Code</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Number</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...Array(4)].map((_, index) => (
+                      <tr key={index}>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* GES Subcontractor Information Table */}
+            <div className="border rounded-md p-4 space-y-4">
+              <h3 className="text-lg font-medium">GES Subcontractor Information</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-gray-50">
+                      <th className="border px-4 py-2 text-left text-sm">Subcont. Type</th>
+                      <th className="border px-4 py-2 text-left text-sm">Vendor Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">PO Number</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Name</th>
+                      <th className="border px-4 py-2 text-left text-sm">Area Code</th>
+                      <th className="border px-4 py-2 text-left text-sm">Contact Number</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...Array(4)].map((_, index) => (
+                      <tr key={index}>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                        <td className="border px-4 py-2">
+                          <Input className="h-8 w-full border-gray-300 rounded-sm focus:ring-1 focus:ring-gray-400" />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </motion.div>
     </MainLayout>
   );
 }
+

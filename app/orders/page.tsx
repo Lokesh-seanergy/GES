@@ -85,6 +85,10 @@ export default function OrdersPage() {
             >
                <div className="flex flex-col gap-0.5">
         <div className="font-semibold text-blue-900">Order ID: {order.orderId}</div>
+<<<<<<< Updated upstream
+=======
+        
+>>>>>>> Stashed changes
         <div className="text-gray-600">Customer PO: {order.customerPo}</div>
         <div className="text-gray-600">Order Date: {order.orderDate}</div>
               </div>

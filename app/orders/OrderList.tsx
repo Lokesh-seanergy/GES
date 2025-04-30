@@ -45,10 +45,20 @@ export default function OrderList({ orders, selectedOrderId, onSelect, search }:
           }`}
           onClick={() => onSelect(order.orderId)}
         >
+<<<<<<< Updated upstream
           <div className="font-bold text-blue-900">ORDER ID:{order.orderId}</div>
           <div className="text-xs text-gray-600">Customer PO: {order.customerPo}</div>
           <div className="text-xs text-gray-500">Order Date: {order.orderDate}</div>
         </div>
+=======
+          <div className="text-sm flex flex-row flex-wrap gap-x-4 gap-y-1 whitespace-nowrap">
+  <span className="font-bold text-blue-900">Order ID: {order.orderId}</span>
+  
+  <span className="text-gray-600">Customer PO: {order.customerPo}</span>
+  <span className="text-gray-500">Order Date: {order.orderDate}</span>
+</div>
+</div>
+>>>>>>> Stashed changes
       ))}
       {filtered.length === 0 && (
         <div className="text-center text-gray-400 mt-8">No orders found.</div>

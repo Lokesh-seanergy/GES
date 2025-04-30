@@ -15,11 +15,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Download, Search } from "lucide-react";
+
 import { mockOrders } from "@/lib/mockData";
 import { formatDate } from "@/lib/utils";
 import type { Order } from "@/types/orders";
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
+
 import {
   BarChart,
   Bar,
@@ -49,9 +51,11 @@ const groupAndSum = (
   data: Order[],
   key: keyof Order,
   valueKey: keyof Order = "total"
+
 ): ChartData[] => {
   return Object.entries(
     data.reduce((acc: Record<string, number>, item: Order) => {
+
       const groupKey = String(item[key]);
       if (!acc[groupKey]) {
         acc[groupKey] = 0;
@@ -93,14 +97,18 @@ export default function ReportsPage() {
     filteredOrders.map((order) => order.customerPO)
   ).size;
   const showCounts = filteredOrders.reduce(
+
     (acc: Record<string, number>, order) => {
+
       acc[order.showId] = (acc[order.showId] || 0) + 1;
       return acc;
     },
     {}
   );
   const mostPopularShow = Object.entries(showCounts).reduce(
+
     (a, b) => (a[1] > b[1] ? a : b),
+
     ["No shows", 0]
   )[0];
 
@@ -359,6 +367,7 @@ export default function ReportsPage() {
               <div className="flex justify-between items-center">
                 <CardTitle>Recent Orders</CardTitle>
                 <Button variant="default" asChild>
+
                   <CSVLink
                     data={filteredOrders.map((order) => ({
                       orderId: order.orderId,

@@ -57,6 +57,9 @@ import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import dayjs from "dayjs";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar as CalendarIcon } from "lucide-react";
 
 interface ShowData {
   showId: string;
@@ -153,6 +156,102 @@ interface PaginationState {
   currentPage: number;
   itemsPerPage: number;
   totalItems: number;
+}
+
+function YearMonthPicker({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [hasUserSelected, setHasUserSelected] = useState(false);
+
+  // Reset user selection when popover is opened, value is cleared, or month/year changes
+  useEffect(() => {
+    if (open === true && !value) {
+      setHasUserSelected(false);
+    }
+  }, [open, value]);
+
+  // Reset user selection when the calendar month/year changes
+  const calendarContentRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const calendarNode = calendarContentRef.current;
+    if (!calendarNode) return;
+    const observer = new MutationObserver(() => {
+      setHasUserSelected(false);
+    });
+    const caption = calendarNode.querySelector('.rdp-caption_label');
+    if (caption) {
+      observer.observe(caption, { childList: true, subtree: true });
+    }
+    return () => observer.disconnect();
+  }, [open]);
+
+  // Only highlight a date if the user has explicitly selected one
+  const isValidYrmo = /^\d{4}-\d{2}$/.test(value);
+  let selectedDate: Date | undefined = undefined;
+  if (isValidYrmo && value !== "" && hasUserSelected) {
+    const date = new Date(value + '-01');
+    if (!isNaN(date.getTime())) {
+      selectedDate = date;
+    }
+  } else {
+    selectedDate = undefined;
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="w-full justify-start text-left font-normal"
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {value ? value : <span>Pick a date</span>}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start" ref={calendarContentRef}>
+        <Calendar
+          mode="single"
+          selected={hasUserSelected ? selectedDate : undefined}
+          onSelect={(date) => {
+            if (date) {
+              const year = date.getFullYear();
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              onChange(`${year}-${month}`);
+              setHasUserSelected(true);
+              setOpen(false);
+            }
+          }}
+          showOutsideDays={false}
+          className="w-[320px] bg-black text-white rounded-md border border-gray-700 shadow"
+          classNames={{
+            months: "flex flex-col space-y-4",
+            month: "space-y-4",
+            caption: "flex justify-center items-center pt-1 relative",
+            caption_label: "text-lg font-semibold text-white mx-8",
+            nav: "flex items-center absolute left-0 right-0 justify-between px-2 top-1 z-10",
+            nav_button: "h-7 w-7 bg-gray-800 text-white p-0 rounded hover:bg-gray-700 focus:bg-gray-700 border-none",
+            nav_button_previous: "",
+            nav_button_next: "",
+            table: "w-full border-collapse space-y-1",
+            head_row: "flex",
+            head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
+            row: "flex w-full mt-2",
+            cell: "h-9 w-9 text-center text-sm p-0 relative",
+            day_selected: hasUserSelected ? "bg-white text-black font-bold border border-white rounded-full" : "",
+            day_today: hasUserSelected ? "bg-gray-700 text-white font-bold border border-white rounded-full" : "",
+            day: "hover:bg-gray-800 hover:text-white",
+            ...{},
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 // Main component
@@ -818,18 +917,18 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Occr ID</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occurrence ID</Label>
                         <Input
                           value={filters.occrId}
                           onChange={(e) =>
                             handleFilterChange("occrId", e.target.value)
                           }
-                          placeholder="Filter by Occr ID"
+                          placeholder="Filter by Occurrence ID"
                           className="h-9"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Occr Type</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occurrence Type</Label>
                         <Select
                           value={filters.occrType}
                           onValueChange={(value) =>
@@ -837,7 +936,7 @@ export default function ShowsPage() {
                           }
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select Occr Type" />
+                            <SelectValue placeholder="Select Occurrence Type" />
                           </SelectTrigger>
                           <SelectContent>
                             {OCCR_TYPES.map((type) => (
@@ -880,30 +979,21 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">City Org</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Show Location</Label>
                         <Input
                           value={filters.cityOrg}
                           onChange={(e) =>
                             handleFilterChange("cityOrg", e.target.value)
                           }
-                          placeholder="Filter by City Org"
+                          placeholder="Filter by Show Location"
                           className="h-9"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Year/Month Range</Label>
-                        <Input
-                          type="text"
-                          value={formatYrmoRange(
-                            filters.yrmoStart,
-                            filters.yrmoEnd
-                          )}
-                          onChange={(e) =>
-                            handleFilterChange("yrmoStart", e.target.value)
-                          }
-                          className="h-9"
-                          placeholder="YYYY-MM : YYYY-MM"
-                          maxLength={21}
+                        <Label className="text-sm text-gray-500 font-semibold">Year-Month</Label>
+                        <YearMonthPicker
+                          value={filters.yrmoStart}
+                          onChange={(val) => handleFilterChange('yrmoStart', val)}
                         />
                       </div>
                     </div>

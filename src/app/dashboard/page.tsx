@@ -2,7 +2,6 @@
 
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
-import { mockShows, mockProjectData, mockOrders } from "@/lib/mockData";
 import {
   Table,
   TableBody,
@@ -13,19 +12,23 @@ import {
 } from "@/components/ui/table";
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell } from "lucide-react";
+import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell, ClipboardList, ClipboardCheck, Hourglass } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  BarChart as RechartsBarChart, Bar
+  BarChart as RechartsBarChart, Bar, Legend, PieChart as RechartsPieChart, Pie, Cell
 } from "recharts";
 import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNotifications } from "@/components/NotificationContext";
+import * as React from "react"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
 
 // Define a type for dashboard tasks
 interface DashboardTask {
@@ -38,6 +41,147 @@ interface DashboardTask {
   timestamp?: string;
 }
 
+// Example day-wise data
+const dayData = [
+  { date: "2024-04-01", shows: 2, exhibitors: 10 },
+  { date: "2024-04-02", shows: 1, exhibitors: 8 },
+  { date: "2024-05-01", shows: 3, exhibitors: 15 },
+  { date: "2024-05-02", shows: 2, exhibitors: 12 },
+  { date: "2024-06-01", shows: 4, exhibitors: 20 },
+  { date: "2024-06-02", shows: 2, exhibitors: 10 },
+  // ... add more daily data as needed
+];
+
+function aggregateByMonth(data: { date: string; shows: number; exhibitors: number }[]): { month: string; shows: number; exhibitors: number }[] {
+  const result: Record<string, { month: string; shows: number; exhibitors: number }> = {};
+  data.forEach((item) => {
+    const month = item.date.slice(0, 7); // "YYYY-MM"
+    if (!result[month]) result[month] = { month, shows: 0, exhibitors: 0 };
+    result[month].shows += item.shows;
+    result[month].exhibitors += item.exhibitors;
+  });
+  return Object.values(result);
+}
+
+function aggregateByYear(data: { date: string; shows: number; exhibitors: number }[]): { year: string; shows: number; exhibitors: number }[] {
+  const result: Record<string, { year: string; shows: number; exhibitors: number }> = {};
+  data.forEach((item) => {
+    const year = item.date.slice(0, 4); // "YYYY"
+    if (!result[year]) result[year] = { year, shows: 0, exhibitors: 0 };
+    result[year].shows += item.shows;
+    result[year].exhibitors += item.exhibitors;
+  });
+  return Object.values(result);
+}
+
+export function ShowsExhibitorsChart() {
+  const [granularity, setGranularity] = useState("day");
+
+  // Helper to get all dates between min and max in MM/DD/YYYY
+  function getContinuousDates(data: { date: string }[]) {
+    if (!data.length) return [];
+    const sorted = [...data].sort((a, b) => dayjs(a.date).diff(dayjs(b.date)));
+    const start = dayjs(sorted[0].date);
+    const end = dayjs(sorted[sorted.length - 1].date);
+    const days = [];
+    let d = start;
+    while (d.isBefore(end) || d.isSame(end, 'day')) {
+      days.push(d.format('YYYY-MM-DD'));
+      d = d.add(1, 'day');
+    }
+    return days;
+  }
+
+  const chartData = useMemo(() => {
+    if (granularity === "day") {
+      // Fill in missing days with 0s
+      const allDays = getContinuousDates(dayData);
+      const map = Object.fromEntries(dayData.map(d => [d.date, d]));
+      return allDays.map(date => ({
+        ...map[date],
+        label: dayjs(date).format('MM/DD/YYYY'),
+        date,
+        shows: map[date]?.shows || 0,
+        exhibitors: map[date]?.exhibitors || 0,
+      }));
+    } else if (granularity === "month") {
+      return aggregateByMonth(dayData).map(d => ({ ...d, label: dayjs(d.month + '-01').format('MM/YYYY') }));
+    } else if (granularity === "year") {
+      return aggregateByYear(dayData).map(d => ({ ...d, label: d.year }));
+    }
+    return [];
+  }, [granularity]);
+
+  return (
+    <Card className="p-6 rounded-2xl shadow-xl bg-white border border-indigo-100">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold text-indigo-700">Shows & Exhibitors</CardTitle>
+            <CardDescription className="text-indigo-500">Modern visualization with day, month, or year view</CardDescription>
+          </div>
+          {/* Granularity Selector */}
+          <div className="flex gap-2 bg-indigo-100 rounded-lg p-1 w-fit">
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'day' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('day')}
+            >Day</button>
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'month' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('month')}
+            >Month</button>
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'year' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('year')}
+            >Year</button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={280}>
+          <AreaChart data={chartData} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis dataKey="label" tick={{ fontWeight: 'bold', fill: '#6366f1', fontSize: 14 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontWeight: 'bold', fill: '#22c55e', fontSize: 14 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ borderRadius: 12, boxShadow: '0 2px 12px #0001', border: 'none' }} />
+            <Legend iconType="circle" wrapperStyle={{ paddingTop: 8 }} />
+            <Area
+              type="monotone"
+              dataKey="shows"
+              stroke="#6366f1"
+              fill="url(#showsGradient)"
+              name="Shows"
+              dot={{ r: 3, fill: '#6366f1' }}
+              strokeWidth={3}
+              activeDot={{ r: 6, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="exhibitors"
+              stroke="#22c55e"
+              fill="url(#exhibitorsGradient)"
+              name="Exhibitors"
+              dot={{ r: 3, fill: '#22c55e' }}
+              strokeWidth={3}
+              activeDot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
   // This will automatically redirect to login if not authenticated
   useAuthProtection();
@@ -45,62 +189,71 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
-  // Use mockShows for dashboard tables
-  const paginatedShows = mockShows.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // TODO: Replace with real data source
+  // const paginatedShows = mockShows.slice(
+  //   (currentPage - 1) * itemsPerPage,
+  //   currentPage * itemsPerPage
+  // );
 
-  // Assign statuses: first 3 as Ongoing, next 7 as Complete, rest as Upcoming
-  const demoOngoingShows = mockShows.map((show, idx) => {
-    if (idx < 3) return { ...show, occrType: "Ongoing" };
-    if (idx < 10) return { ...show, occrType: "Complete" };
-    return { ...show, occrType: "Upcoming" };
-  });
+  // TODO: Replace with real data source
+  // const demoOngoingShows = mockShows.map((show, idx) => {
+  //   if (idx < 3) return { ...show, occrType: "Ongoing" };
+  //   if (idx < 10) return { ...show, occrType: "Complete" };
+  //   return { ...show, occrType: "Upcoming" };
+  // });
+
+  // TODO: Replace with real data source
+  // const showIdx = i % mockShows.length;
+  // const show = mockShows[showIdx];
+
+  // TODO: Replace with real data source
+  // const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
+  // const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
 
   // Generate additional mock orders with future dates for demo
   const futureOrderBaseDate = dayjs().add(1, 'day');
   const additionalOrders = Array.from({ length: 20 }).map((_, i) => {
-    const showIdx = i % mockShows.length;
-    const show = mockShows[showIdx];
+    // TODO: Replace with real data source
+    // const showIdx = i % mockShows.length;
+    // const show = mockShows[showIdx];
     return {
       orderId: `FUTURE-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-FUTURE`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 10000 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 1000,
       orderType: "New",
-      customerPO: `PO-FUTURE-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-FUTURE-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: futureOrderBaseDate.add(i, 'day').format('YYYY-MM-DD'),
-      boothInfo: `Booth #${i + 100}`,
-      billingAddress: `123 Future St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 11000 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Future Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 10000,
-          newPrice: 10000,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 10000,
-          userItemDescription: "Demo booth for future show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: futureOrderBaseDate.add(i, 'day').format('YYYY-MM-DD'),
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-FUTURE-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
@@ -108,93 +261,96 @@ export default function DashboardPage() {
   });
 
   // Add exhibitors for January and February shows
-  const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
-  const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
+  // TODO: Replace with real data source
+  // const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
+  // const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
   const janOrders = Array.from({ length: 5 }).map((_, i) => {
-    const show = janShows[i % janShows.length];
+    // TODO: Replace with real data source
+    // const show = janShows[i % janShows.length];
     return {
       orderId: `JAN-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-JAN`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 9000 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 900,
       orderType: "New",
-      customerPO: `PO-JAN-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-JAN-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: `2024-01-${(i + 5).toString().padStart(2, '0')}`,
-      boothInfo: `Booth #J${i + 1}`,
-      billingAddress: `123 Jan St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 9900 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Jan Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 9000,
-          newPrice: 9000,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 9000,
-          userItemDescription: "Demo booth for Jan show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: `2024-01-${(i + 5).toString().padStart(2, '0')}`,
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-JAN-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
     };
   });
   const febOrders = Array.from({ length: 3 }).map((_, i) => {
-    const show = febShows[i % febShows.length];
+    // TODO: Replace with real data source
+    // const show = febShows[i % febShows.length];
     return {
       orderId: `FEB-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-FEB`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 9500 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 950,
       orderType: "New",
-      customerPO: `PO-FEB-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-FEB-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: `2024-02-0${i + 2}`,
-      boothInfo: `Booth #F${i + 1}`,
-      billingAddress: `123 Feb St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 10450 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Feb Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 9500,
-          newPrice: 9500,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 9500,
-          userItemDescription: "Demo booth for Feb show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: `2024-02-0${i + 2}`,
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-FEB-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
@@ -215,7 +371,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW001`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: dayjs().add(i + 1, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L1${i + 1}`,
       billingAddress: `123 Live St, City 1, USA`,
@@ -257,7 +413,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW002-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW002`,
+      project: 'P2024-LIVE-SHW002',
       orderDate: dayjs().add(i + 2, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L2${i + 1}`,
       billingAddress: `123 Live St, City 2, USA`,
@@ -299,7 +455,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW003-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW003`,
+      project: 'P2024-LIVE-SHW003',
       orderDate: dayjs().add(i + 3, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L3${i + 1}`,
       billingAddress: `123 Live St, City 3, USA`,
@@ -331,18 +487,18 @@ export default function DashboardPage() {
     })),
   ];
 
-  const allOrders = [...mockOrders, ...additionalOrders, ...janOrders, ...febOrders, ...moreOrders];
+  const allOrders = [...janOrders, ...febOrders, ...moreOrders];
 
   // Calculate monthly breakdowns for each status
   const months = ["01", "02", "03", "04", "05", "06"];
   const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
   const monthlyStatusCounts = months.map((m) => {
-    const showsInMonth = demoOngoingShows.filter(s => s.yrmo.endsWith(`-${m}`));
+    const showsInMonth = allOrders.filter(o => o.orderDate.includes(`-${m}-`));
     return {
       month: m,
-      upcoming: showsInMonth.filter(s => s.occrType === "Upcoming").length,
-      ongoing: showsInMonth.filter(s => s.occrType === "Ongoing").length,
-      complete: showsInMonth.filter(s => s.occrType === "Complete").length,
+      upcoming: showsInMonth.filter(o => o.orderDate.includes("-01-")).length,
+      ongoing: showsInMonth.filter(o => o.orderDate.includes("-02-")).length,
+      complete: showsInMonth.filter(o => o.orderDate.includes("-03-")).length,
       total: showsInMonth.length,
     };
   });
@@ -375,17 +531,15 @@ export default function DashboardPage() {
   };
 
   // Table of all closed shows
-  const closedShowsTable = demoOngoingShows.filter(s => s.occrType === "Complete").map(show => ({
-    id: show.showId,
-    name: show.showName,
-    date: show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo,
-    location: show.cityOrg,
+  const closedShowsTable = allOrders.filter(o => o.orderDate.includes("-01-")).map(order => ({
+    id: order.showId,
+    name: order.showId,
+    date: order.orderDate,
+    location: order.billingAddress,
   }));
 
   // Only consider ongoing shows for these stats
-  const ongoingShowIds = demoOngoingShows
-    .filter(s => s.occrType === "Ongoing")
-    .map(s => s.showId);
+  const ongoingShowIds = allOrders.map(o => o.showId);
 
   const ongoingOrders = allOrders.filter(o => ongoingShowIds.includes(o.showId));
 
@@ -394,9 +548,9 @@ export default function DashboardPage() {
 
   // Active Locations (unique cityOrg in ongoing shows)
   const ongoingLocations = new Set(
-    demoOngoingShows
-      .filter(s => s.occrType === "Ongoing")
-      .map(s => s.cityOrg)
+    allOrders
+      .filter(o => o.orderDate.includes("-01-"))
+      .map(o => o.billingAddress)
   ).size;
 
   // Total Revenue (sum of ongoing orders)
@@ -404,7 +558,7 @@ export default function DashboardPage() {
 
   // Fix closed shows count: count all shows with yrmo before today as closed
   const today = dayjs();
-  const closedShows = demoOngoingShows.filter(s => dayjs(s.yrmo + '-01').isBefore(today, 'day'));
+  const closedShows = allOrders.filter(o => dayjs(o.orderDate).isBefore(today, 'day'));
   const closedCount = closedShows.length;
 
   // Update stats to use hardcoded closed shows count
@@ -457,20 +611,20 @@ export default function DashboardPage() {
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const bellRef = useRef(null);
 
-  // Table data from demoOngoingShows (first 5 for example)
+  // Table data from allOrders (first 5 for example)
   const currentYear = dayjs().year();
-  const showsTable = demoOngoingShows.slice(0, 5).map(show => {
-    let dateStr = show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo;
+  const showsTable = allOrders.slice(0, 5).map(order => {
+    let dateStr = order.orderDate;
     // Replace the year with the current year if dateStr is in YYYY-MM-DD format
     if (dateStr && dateStr.length === 10) {
       dateStr = `${currentYear}${dateStr.slice(4)}`;
     }
     return {
-      id: show.showId,
-      name: show.showName,
+      id: order.showId,
+      name: order.showId,
       date: dateStr,
-      location: show.cityOrg,
-      status: ["Exhibition", "Workshop"].includes(show.occrType) ? "Upcoming" : (show.occrType || "Upcoming")
+      location: order.billingAddress,
+      status: ["Exhibition", "Workshop"].includes(order.showId) ? "Upcoming" : (order.showId || "Upcoming")
     };
   });
   // Bar chart for top 3 shows with most upcoming orders
@@ -485,15 +639,15 @@ export default function DashboardPage() {
 
   // Create a mapping from showId to the 3-letter shortcut and to the full show name
   const showShortcuts = Object.fromEntries(
-    mockShows.map(show => [
+    allOrders.map(show => [
       show.showId,
-      show.showName ? show.showName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() : show.showId
+      show.showId ? show.showId.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() : show.showId
     ])
   );
   const showNames = Object.fromEntries(
-    mockShows.map(show => [
+    allOrders.map(show => [
       showShortcuts[show.showId] || show.showId,
-      show.showName || show.showId
+      show.showId || show.showId
     ])
   );
 
@@ -589,122 +743,32 @@ export default function DashboardPage() {
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          {stats.map((stat) => (
-            <Card key={stat.label} className="flex flex-row items-center p-6 gap-4">
-              <div>{stat.icon}</div>
-              <div className="h-10 w-px bg-gray-200 mx-3" />
-              <div className="flex flex-col items-center pl-2">
-                <div className="text-3xl font-bold leading-tight">{stat.value}</div>
-                <div className="text-sm text-gray-500 mt-1">{stat.label}</div>
+        {/* Top section: Chart left, stat cards right; Show Details below chart */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
+          {/* Left column: Chart and Show Tasks below */}
+          <div className="flex flex-col gap-6 col-span-2">
+            <ShowsExhibitorsChart />
+            {/* Show Tasks Card below the chart */}
+            <Card className="p-6 rounded-2xl shadow bg-white border border-blue-100">
+              <div className="mb-4">
+                <div className="flex items-center gap-2 text-2xl font-bold text-blue-700 mb-4">
+                  <ClipboardList className="w-7 h-7 text-blue-500" />
+                  Show Tasks
               </div>
-            </Card>
-          ))}
-        </div>
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 font-semibold">
-                <LineChart className="w-5 h-5 text-blue-500" />
-                Shows & Exhibitors By Month
-              </div>
-              <div className="text-xs text-gray-400">Jan - Jun {dayjs().year()}</div>
-            </div>
-            <div className="h-56 bg-white rounded-lg shadow border p-4 flex flex-col justify-between">
-              <ResponsiveContainer width="100%" height="85%">
-                <AreaChart data={chartData.labels.map((label, i) => ({
-                  name: label,
-                  Shows: chartData.datasets[0].data[i],
-                  Exhibitors: chartData.datasets[1].data[i],
-                }))}>
-                  <XAxis dataKey="name" axisLine={true} tickLine={true} interval={0} padding={{ left: 20, right: 20 }} />
-                  <YAxis allowDecimals={false} axisLine={true} tickLine={true} tickCount={6} />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="Shows"
-                    stroke="#2563eb" // blue-600
-                    fill="rgba(37, 99, 235, 0.15)"
-                    strokeWidth={2}
-                    name="Shows"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="Exhibitors"
-                    stroke="#22c55e" // green-500
-                    fill="rgba(34, 197, 94, 0.10)"
-                    strokeWidth={2}
-                    name="Exhibitors"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-              {/* Legend */}
-              <div className="flex gap-6 justify-center items-center mt-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="inline-block w-4 h-2 rounded bg-[#2563eb]" /> Shows
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-block w-4 h-2 rounded bg-[#22c55e]" /> Exhibitors
-                </div>
-              </div>
-            </div>
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 font-semibold">
-                <BarChart className="w-5 h-5 text-green-500 animate-pulse" />
-                Orders for Ongoing Shows
-              </div>
-            </div>
-            <div className="h-64 bg-white rounded-lg shadow border p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsBarChart
-                  data={barData}
-                  layout="vertical"
-                  barCategoryGap="30%"
-                >
-                  <XAxis
-                    type="number"
-                    axisLine={false}
-                    tickLine={false}
-                    hide
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tick={{ fontWeight: 'bold', fill: '#222' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="Orders" fill="#60a5fa" barSize={32} radius={[16, 16, 16, 16]} activeBar={false} />
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
-        {/* Show Tasks */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Show Tasks</h2>
-            <Button
-              variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Task </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {/* To Do */}
             <div>
-              <h3 className="font-semibold mb-2">To Do</h3>
-              <ul className="space-y-2">
+                    <div className="flex items-center gap-2 text-base font-semibold text-blue-600 mb-3">
+                      <ClipboardCheck className="w-5 h-5" /> To Do
+                    </div>
+                    <ul className="space-y-4">
                 {notifications.filter((n: DashboardTask) => n.status === "pending").map((task: DashboardTask) => (
-                  <li key={task.id} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                    <span>
-                      {task.task}
-                      {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
-                      {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
-                    </span>
-                    <Button
-                      variant="outline" size="sm" className="ml-4 h-10 min-w-[140px] px-6 font-semibold"
+                        <li key={task.id} className="bg-white rounded-lg p-3 flex flex-row items-center border-l-2 border-blue-400 shadow-sm justify-between">
+                          <div>
+                            <span className="font-medium">{task.task}</span>
+                            <span className="block text-xs text-gray-500">Zone: {task.boothZone} | Customer: {task.customerName}</span>
+                          </div>
+                          <Button className="bg-gradient-to-r from-blue-400 to-blue-600 text-white rounded-lg shadow px-4 py-2 ml-4 font-semibold" size="sm"
                       onClick={() => {
                         setShowTasks((prev) => ({
                           ...prev,
@@ -715,32 +779,32 @@ export default function DashboardPage() {
                         }));
                         setNotifications((prev: DashboardTask[]) => prev.filter((n: DashboardTask) => n.id !== task.id));
                       }}
-                    >
-                      Accept
-                    </Button>
+                          >Accept</Button>
                   </li>
                 ))}
                 {showTasks.todo.map((task: DashboardTask) => (
-                  <li key={task.task} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                    <span>
-                      {task.task}
-                      {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
-                      {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
-                    </span>
+                        <li key={task.task} className="bg-white rounded-lg p-3 flex flex-row items-center border-l-2 border-blue-400 shadow-sm justify-between">
+                          <div>
+                            <span className="font-medium">{task.task}</span>
+                            <span className="block text-xs text-gray-500">Zone: {task.boothZone} | Customer: {task.customerName}</span>
+                          </div>
                   </li>
                 ))}
               </ul>
             </div>
+                  {/* In Progress */}
             <div>
-              <h3 className="font-semibold mb-2">In Progress</h3>
-              <ul className="space-y-2">
+                    <div className="flex items-center gap-2 text-base font-semibold text-yellow-600 mb-3">
+                      <Hourglass className="w-5 h-5" /> In Progress
+                    </div>
+                    <ul className="space-y-4">
                 {showTasks.inProgress.map((task: DashboardTask) => (
-                  <li key={task.id} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                    <span>
-                      {task.task} | <b>Zone:</b> {task.boothZone} | <b>Customer:</b> {task.customerName}
-                    </span>
-                    <Button
-                      variant="outline" size="sm" className="ml-4 h-10 min-w-[140px] px-6 font-semibold"
+                        <li key={task.id} className="bg-white rounded-lg p-3 flex flex-row items-center border-l-2 border-yellow-400 shadow-sm justify-between">
+                          <div>
+                            <span className="font-medium">{task.task}</span>
+                            <span className="block text-xs text-gray-500">Zone: {task.boothZone} | Customer: {task.customerName}</span>
+                          </div>
+                          <Button className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white rounded-lg shadow px-4 py-2 ml-4 font-semibold" size="sm"
                       onClick={() => {
                         setShowTasks((prev) => ({
                           ...prev,
@@ -751,25 +815,23 @@ export default function DashboardPage() {
                           ],
                         }));
                       }}
-                    >
-                      Mark as Completed
-                    </Button>
+                          >Mark as Completed</Button>
                   </li>
                 ))}
               </ul>
             </div>
+                  {/* Completed */}
             <div>
-              <h3 className="font-semibold mb-2">Completed</h3>
-              <ul className="space-y-2">
+                    <div className="flex items-center gap-2 text-base font-semibold text-green-600 mb-3">
+                      <CheckCircle className="w-5 h-5" /> Completed
+                    </div>
+                    <ul className="space-y-4">
                 {showTasks.completed
-                  .slice(0, 5) // Only show the 5 most recent completed tasks
+                        .slice(0, 5)
                   .map((task: DashboardTask) => (
-                    <li key={task.task} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                      <span>
-                        {task.task}
-                        {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
-                        {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
-                      </span>
+                          <li key={task.task} className="bg-white rounded-lg p-3 flex flex-col gap-1 border-l-2 border-green-400 shadow-sm">
+                            <span className="font-medium">{task.task}</span>
+                            <span className="text-xs text-gray-500">Zone: {task.boothZone} | Customer: {task.customerName}</span>
                       <span className="text-xs text-gray-400">Due: {task.due}</span>
                     </li>
                   ))}
@@ -777,89 +839,124 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
-        {/* Upcoming & Ongoing Shows Table */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Upcoming & Ongoing Shows</h2>
-            <Button
-              variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Show </Button>
+            </Card>
           </div>
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-blue-50">
-                <TableHead>SHOW ID</TableHead>
-                <TableHead>SHOW NAME</TableHead>
-                <TableHead>DATE</TableHead>
-                <TableHead>LOCATION</TableHead>
-                <TableHead>STATUS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {showsTable.map((show) => (
-                <TableRow key={show.id}>
-                  <TableCell>{show.id}</TableCell>
-                  <TableCell>{show.name.split(' - ')[0]}</TableCell>
-                  <TableCell>
-                    {show.status === "Ongoing"
-                      ? dayjs().format('MM/DD/YYYY')
-                      : (dayjs(show.date).isValid() ? dayjs(show.date).format('MM/DD/YYYY') : show.date)
-                    }
-                  </TableCell>
-                  <TableCell>{show.location}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-semibold
-                        ${show.status === "Ongoing"
-                          ? "bg-green-100 text-green-800"
-                          : show.status === "Complete"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-yellow-100 text-yellow-800"}
-                      `}
+          {/* Right column: Stat cards grid and Show Details below */}
+          <div className="flex flex-col gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-2xl ml-auto">
+              {/* First row: Upcoming, Closed */}
+              <Card className="flex flex-row items-center p-6 gap-4 rounded-2xl shadow-lg bg-white hover:scale-[1.03] transition-transform duration-200 border-0">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-blue-100 shadow-inner">
+                  {stats[0].icon}
+                </div>
+                <div className="flex-1 flex flex-col items-start pl-2">
+                  <div className="text-4xl font-extrabold text-blue-700 drop-shadow">{stats[0].value}</div>
+                  <div className="text-base text-blue-600 mt-1 font-medium">{stats[0].label}</div>
+                </div>
+              </Card>
+              <Card className="flex flex-row items-center p-6 gap-4 rounded-2xl shadow-lg bg-white hover:scale-[1.03] transition-transform duration-200 border-0">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-gray-200 shadow-inner">
+                  {stats[1].icon}
+                </div>
+                <div className="flex-1 flex flex-col items-start pl-2">
+                  <div className="text-4xl font-extrabold text-gray-700 drop-shadow">{stats[1].value}</div>
+                  <div className="text-base text-gray-600 mt-1 font-medium">{stats[1].label}</div>
+                </div>
+              </Card>
+              {/* Second row: Ongoing, spanning both columns */}
+              <Card className="flex flex-row items-center p-6 gap-4 col-span-2 rounded-2xl shadow-lg bg-white hover:scale-[1.03] transition-transform duration-200 border-0">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-green-100 shadow-inner">
+                  {stats[2].icon}
+                </div>
+                <div className="flex-1 flex flex-col items-start pl-2">
+                  <div className="text-4xl font-extrabold text-green-700 drop-shadow">{stats[2].value}</div>
+                  <div className="text-base text-green-600 mt-1 font-medium">{stats[2].label}</div>
+                </div>
+              </Card>
+              {/* Third row: Total Exhibitors, Active Locations */}
+              <Card className="flex flex-row items-center p-6 gap-4 rounded-2xl shadow-lg bg-white hover:scale-[1.03] transition-transform duration-200 border-0">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-purple-100 shadow-inner">
+                  {stats[3].icon}
+                </div>
+                <div className="flex-1 flex flex-col items-start pl-2">
+                  <div className="text-4xl font-extrabold text-purple-700 drop-shadow">{stats[3].value}</div>
+                  <div className="text-base text-purple-600 mt-1 font-medium">{stats[3].label}</div>
+                </div>
+              </Card>
+              <Card className="flex flex-row items-center p-6 gap-4 rounded-2xl shadow-lg bg-white hover:scale-[1.03] transition-transform duration-200 border-0">
+                <div className="flex items-center justify-center w-14 h-14 rounded-full bg-pink-100 shadow-inner">
+                  {stats[4].icon}
+                </div>
+                <div className="flex-1 flex flex-col items-start pl-2">
+                  <div className="text-4xl font-extrabold text-pink-700 drop-shadow">{stats[4].value}</div>
+                  <div className="text-base text-pink-600 mt-1 font-medium">{stats[4].label}</div>
+                </div>
+              </Card>
+            </div>
+            {/* Show Details Card below stat cards */}
+            <Card className="lg:row-span-3 flex flex-col justify-between p-6 rounded-2xl shadow-lg bg-white">
+              <div className="mb-4">
+                <div className="text-2xl font-bold text-indigo-700 mb-2">Show Details</div>
+                {/* Notification-style list of shows */}
+                <div className="space-y-3">
+                  {showsTable.slice(0, 5).map((show) => (
+                    <div
+                      key={show.id}
+                      className="flex items-center justify-between bg-white/80 rounded-xl shadow p-4 hover:bg-indigo-50 transition"
                     >
-                      {show.status === "Complete" ? "Upcoming" : show.status}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-indigo-700">{show.id}</span>
+                          <span className="font-medium text-base">{show.name}</span>
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">{show.location}</div>
+                      </div>
+                      <div className="text-sm text-indigo-600 font-semibold whitespace-nowrap ml-4">
+                        {dayjs(show.date).isValid() ? dayjs(show.date).format('MM/DD/YYYY') : show.date}
+                      </div>
+                    </div>
+                  ))}
         </div>
-        {/* <div className="space-y-2">
-          <Label className="text-sm text-gray-500">
-            Open
-          </Label>
-          <Input
-            type="text"
-            placeholder="MM/DD/YYYY"
-            className="h-9 px-3 w-full md:w-3/4"
-            value={dayjs().format('MM/DD/YYYY')}
-            onChange={(e) => {
-              const date = dayjs(e.target.value, 'MM/DD/YYYY');
-              if (date.isValid()) {
-                // Handle date change
-              }
-            }}
-          />
-        </div> */}
-        {/* <div className="space-y-2">
-          <Label className="text-sm text-gray-500">
-            Close
-          </Label>
-          <Input
-            type="text"
-            placeholder="MM/DD/YYYY"
-            className="h-9 px-3 w-full md:w-3/4"
-            value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
-            onChange={(e) => {
-              const date = dayjs(e.target.value, 'MM/DD/YYYY');
-              if (date.isValid()) {
-                // Handle date change
-              }
-            }}
-          />
-        </div> */}
       </div>
-      {/* <ScrollToTop /> */}
+            </Card>
+          </div>
+        </div>
+        {/* Charts */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="p-6">
+            <div className="flex items-center gap-2 font-semibold mb-4">
+              <BarChart className="w-5 h-5 text-green-500" />
+              Orders for Ongoing Shows
+            </div>
+            <ResponsiveContainer width="100%" height={260}>
+              <RechartsBarChart
+                data={barData}
+                layout="vertical"
+                barCategoryGap="30%"
+                margin={{ top: 16, right: 24, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontWeight: 'bold', fill: '#2563eb', fontSize: 16 }}
+                />
+                <YAxis
+                  dataKey="name"
+                  type="category"
+                  tick={{ fontWeight: 'bold', fill: '#222', fontSize: 16 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <Tooltip contentStyle={{ borderRadius: 12, boxShadow: '0 2px 12px #0001', border: 'none' }} />
+                <Legend iconType="circle" wrapperStyle={{ paddingTop: 8 }} />
+                <Bar dataKey="Orders" fill="#60a5fa" barSize={32} radius={[16, 16, 16, 16]} animationDuration={1200} animationEasing="ease-out" />
+              </RechartsBarChart>
+            </ResponsiveContainer>
+          </Card>
+        </div>
+      </div>
     </MainLayout>
   );
 }

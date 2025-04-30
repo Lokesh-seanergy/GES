@@ -16,10 +16,10 @@ import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import { useState, useRef, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell } from "lucide-react";
+import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell, ClipboardCheck, ListChecks, ClipboardList, Clock, Loader } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  BarChart as RechartsBarChart, Bar
+  BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, Legend
 } from "recharts";
 import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
@@ -408,7 +408,7 @@ export default function DashboardPage() {
   const closedCount = closedShows.length;
 
   // Update stats to use hardcoded closed shows count
-  const stats = [
+const stats = [
     { label: "Upcoming Shows", value: upcomingCount, icon: <Calendar className="w-8 h-8 text-blue-500" /> },
     { label: "Closed Shows", value: 47, icon: <CheckCircle className="w-8 h-8 text-gray-500" /> },
     { label: "Ongoing Shows", value: ongoingCount, icon: <Activity className="w-8 h-8 text-green-500" /> },
@@ -586,280 +586,496 @@ export default function DashboardPage() {
     );
   }, [showTasks, setNotifications]);
 
+  // Add at the top of the component
+  const [chartView, setChartView] = useState<'month' | 'year'>('month');
+
+  // Mock data for day and year views
+  const chartDataDay = [
+    { name: '01', Shows: 2, Exhibitors: 5 },
+    { name: '02', Shows: 3, Exhibitors: 7 },
+    { name: '03', Shows: 1, Exhibitors: 4 },
+    { name: '04', Shows: 4, Exhibitors: 8 },
+    { name: '05', Shows: 2, Exhibitors: 6 },
+    { name: '06', Shows: 3, Exhibitors: 9 },
+    { name: '07', Shows: 2, Exhibitors: 5 },
+  ];
+
+  // Add state for quick range selection
+  const [chartRange, setChartRange] = useState<'1m' | '3m' | '6m' | 'yr' | 'ytd'>('ytd');
+
+  // Helper to get start date for each range
+  const getRangeStart = () => {
+    const today = dayjs();
+    switch (chartRange) {
+      case '1m': return today.subtract(1, 'month').startOf('day');
+      case '3m': return today.subtract(3, 'month').startOf('day');
+      case '6m': return today.subtract(6, 'month').startOf('day');
+      case 'yr': return today.subtract(1, 'year').startOf('day');
+      case 'ytd': return today.startOf('year');
+      default: return today.startOf('year');
+    }
+  };
+  const rangeStart = getRangeStart();
+
+  // Filter orders and shows for the selected range
+  const filteredOrders = allOrders.filter(o => {
+    const orderDate = dayjs(o.orderDate);
+    return orderDate.isAfter(rangeStart.subtract(1, 'day')) && orderDate.isBefore(today.add(1, 'day'));
+  });
+  const filteredShows = demoOngoingShows.filter(s => {
+    const showDate = dayjs(s.yrmo + '-01');
+    return showDate.isAfter(rangeStart.subtract(1, 'day')) && showDate.isBefore(today.add(1, 'day'));
+  });
+
+  // Generate chart data for months in the selected range
+  const monthsInRange = [];
+  let iterMonth = rangeStart.startOf('month');
+  while (iterMonth.isBefore(today, 'month') || iterMonth.isSame(today, 'month')) {
+    monthsInRange.push(iterMonth.format('MMMM'));
+    iterMonth = iterMonth.add(1, 'month');
+  }
+  const chartDataMonth = monthsInRange.map((month, i) => {
+    const monthNum = (rangeStart.month() + i + 1).toString().padStart(2, '0');
+    const year = rangeStart.year() + Math.floor((rangeStart.month() + i) / 12);
+    return {
+      name: month,
+      Shows: filteredShows.filter(s => s.yrmo === `${year}-${monthNum}`).length,
+      Exhibitors: filteredOrders.filter(o => o.orderDate.startsWith(`${year}-${monthNum}`)).length,
+    };
+  });
+
+  // Only declare 'today' once at the top of the quick range logic
+  // Define chartDataYear for the year view
+  const chartDataYear = [
+    { name: '2022', Shows: demoOngoingShows.filter(s => s.yrmo.startsWith('2022')).length, Exhibitors: allOrders.filter(o => o.orderDate.startsWith('2022')).length },
+    { name: '2023', Shows: demoOngoingShows.filter(s => s.yrmo.startsWith('2023')).length, Exhibitors: allOrders.filter(o => o.orderDate.startsWith('2023')).length },
+    { name: '2024', Shows: demoOngoingShows.filter(s => s.yrmo.startsWith('2024')).length, Exhibitors: allOrders.filter(o => o.orderDate.startsWith('2024')).length },
+  ];
+  // Only allow 'month' and 'year' views
+  const chartDataMap = {
+    month: chartDataMonth,
+    year: chartDataYear,
+  };
+
+  // Add state for undo action
+  const [undoInfo, setUndoInfo] = useState<null | {
+    task: DashboardTask;
+    from: 'todo' | 'inProgress' | 'completed';
+    to: 'todo' | 'inProgress' | 'completed';
+    timeoutId: NodeJS.Timeout;
+  }>(null);
+
+  // Helper to handle Accept with Undo
+  const handleAccept = (task: DashboardTask) => {
+    // Move to In Progress
+    setShowTasks((prev) => ({
+      ...prev,
+      inProgress: [...prev.inProgress, { ...task, status: 'inProgress' }],
+    }));
+    setNotifications((prev: DashboardTask[]) => prev.filter((n: DashboardTask) => n.id !== task.id));
+    // Set undo info
+    const timeoutId = setTimeout(() => setUndoInfo(null), 5000);
+    setUndoInfo({ task, from: 'todo', to: 'inProgress', timeoutId });
+  };
+
+  // Helper to handle Mark as Completed with Undo
+  const handleMarkCompleted = (task: DashboardTask) => {
+    setShowTasks((prev) => ({
+      ...prev,
+      inProgress: prev.inProgress.filter((t) => t.id !== task.id),
+      completed: [
+        ...prev.completed,
+        { ...task, status: 'completed', due: dayjs().format('MMM D') },
+      ],
+    }));
+    const timeoutId = setTimeout(() => setUndoInfo(null), 5000);
+    setUndoInfo({ task, from: 'inProgress', to: 'completed', timeoutId });
+  };
+
+  // Undo handler
+  const handleUndo = () => {
+    if (!undoInfo) return;
+    clearTimeout(undoInfo.timeoutId);
+    if (undoInfo.from === 'todo' && undoInfo.to === 'inProgress') {
+      // Move back from inProgress to todo (only add to notifications)
+      setShowTasks((prev) => ({
+        ...prev,
+        inProgress: prev.inProgress.filter((t) => t.id !== undoInfo.task.id),
+        // Do NOT add to todo here
+      }));
+      setNotifications((prev: DashboardTask[]) => [...prev, { ...undoInfo.task, status: 'pending' }]);
+    } else if (undoInfo.from === 'inProgress' && undoInfo.to === 'completed') {
+      // Move back from completed to inProgress
+      setShowTasks((prev) => ({
+        ...prev,
+        completed: prev.completed.filter((t) => t.id !== undoInfo.task.id),
+        inProgress: [...prev.inProgress, { ...undoInfo.task, status: 'inProgress' }],
+      }));
+    }
+    setUndoInfo(null);
+  };
+
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-          {stats.map((stat) => (
-            <Card key={stat.label} className="flex flex-row items-center p-6 gap-4">
-              <div>{stat.icon}</div>
-              <div className="h-10 w-px bg-gray-200 mx-3" />
-              <div className="flex flex-col items-center pl-2">
-                <div className="text-3xl font-bold leading-tight">{stat.value}</div>
-                <div className="text-sm text-gray-500 mt-1">{stat.label}</div>
-              </div>
-            </Card>
-          ))}
+        <div className="flex w-full gap-6">
+          {/* Left: Main Content */}
+          <div className="w-[70%]">
+            {/* Shows & Exhibitors Chart */}
+            <div className="flex flex-col gap-6">
+              <Card className="p-0 rounded-xl shadow-md border border-gray-100 bg-white">
+                <div className="flex items-center justify-between px-6 py-5">
+                  <div>
+                    <div className="font-extrabold text-2xl text-blue-800 tracking-tight">Shows & Exhibitors</div>
+                    <div className="text-base font-medium text-blue-400">Modern visualization with day, month, or year view</div>
+                  </div>
+                  <div className="flex gap-2 bg-gray-100 rounded-full p-1">
+                    {[
+                      { label: '1m', value: '1m' },
+                      { label: '3m', value: '3m' },
+                      { label: '6m', value: '6m' },
+                      { label: 'Yr', value: 'yr' },
+                      { label: 'YTD', value: 'ytd' },
+                    ].map(btn => (
+                      <button
+                        key={btn.value}
+                        onClick={() => setChartRange(btn.value as typeof chartRange)}
+                        className={`px-4 py-1 rounded-full font-semibold transition
+                          ${chartRange === btn.value ? 'bg-blue-600 text-white shadow' : 'text-blue-600 hover:bg-blue-200'}
+                        `}
+                      >
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="px-6 pt-6 pb-2">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <AreaChart
+                      data={chartDataMap[chartView]}
+                      margin={{ top: 30, right: 30, left: 0, bottom: 30 }}
+                    >
+                      <defs>
+                        <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
+                        </linearGradient>
+                        <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} strokeDasharray="4 4" />
+                      <XAxis
+                        dataKey="name"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        minTickGap={32}
+                        tick={{ fontSize: 14, fontWeight: 600, fill: '#222' }}
+                        tickFormatter={(value: string) => {
+                          const monthMap: Record<string, string> = { Jan: "January", Feb: "February", Mar: "March", Apr: "April", May: "May", Jun: "June" };
+                          if (chartView === 'month') return monthMap[value] || value;
+                          return value;
+                        }}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fontWeight: 500, fill: '#2563eb' }}
+                      />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-white rounded-lg shadow p-3 text-xs">
+                                <div className="font-bold text-base mb-1">{label}</div>
+                                {payload.map((entry, idx) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                      {entry.name}:
+                                    </span>
+                                    <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                      {entry.value}
+                                    </span>
+                                  </div>
+                                ))}
         </div>
-        {/* Charts */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 font-semibold">
-                <LineChart className="w-5 h-5 text-blue-500" />
-                Shows & Exhibitors By Month
-              </div>
-              <div className="text-xs text-gray-400">Jan - Jun {dayjs().year()}</div>
-            </div>
-            <div className="h-56 bg-white rounded-lg shadow border p-4 flex flex-col justify-between">
-              <ResponsiveContainer width="100%" height="85%">
-                <AreaChart data={chartData.labels.map((label, i) => ({
-                  name: label,
-                  Shows: chartData.datasets[0].data[i],
-                  Exhibitors: chartData.datasets[1].data[i],
-                }))}>
-                  <XAxis dataKey="name" axisLine={true} tickLine={true} interval={0} padding={{ left: 20, right: 20 }} />
-                  <YAxis allowDecimals={false} axisLine={true} tickLine={true} tickCount={6} />
-                  <Tooltip />
-                  <Area
-                    type="monotone"
-                    dataKey="Shows"
-                    stroke="#2563eb" // blue-600
-                    fill="rgba(37, 99, 235, 0.15)"
-                    strokeWidth={2}
-                    name="Shows"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="Exhibitors"
-                    stroke="#22c55e" // green-500
-                    fill="rgba(34, 197, 94, 0.10)"
-                    strokeWidth={2}
-                    name="Exhibitors"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-              {/* Legend */}
-              <div className="flex gap-6 justify-center items-center mt-2 text-sm">
-                <div className="flex items-center gap-2">
-                  <span className="inline-block w-4 h-2 rounded bg-[#2563eb]" /> Shows
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area
+                        dataKey="Shows"
+                        name="Shows"
+                        type="monotone"
+                        fill="url(#showsGradient)"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                      />
+                      <Area
+                        dataKey="Exhibitors"
+                        name="Exhibitors"
+                        type="monotone"
+                        fill="url(#exhibitorsGradient)"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                  <div className="flex justify-center gap-8 mt-4 text-base font-semibold">
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-1 rounded bg-blue-600 inline-block" />
+                      <span className="text-blue-600">Shows</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-1 rounded bg-green-600 inline-block" />
+                      <span className="text-green-600">Exhibitors</span>
+                    </span>
+          </div>
+        </div>
+              </Card>
+              {/* Show Tasks Section */}
+              <Card className="bg-white rounded-lg shadow p-6 w-full">
+                <div className="flex items-center gap-2 mb-4">
+                  <ListChecks className="w-6 h-6 text-blue-600" />
+                  <h2 className="text-xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="inline-block w-4 h-2 rounded bg-[#22c55e]" /> Exhibitors
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* To Do */}
+                  <Card className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
+                    <h3 className="flex items-center gap-2 font-bold text-base text-blue-600 mb-2">
+                      <ClipboardList className="w-5 h-5 text-blue-600" /> To Do ({notifications.filter((n: DashboardTask) => n.status === "pending").length + showTasks.todo.length})
+                    </h3>
+                    <ul className="space-y-2">
+                      {notifications.filter((n: DashboardTask) => n.status === "pending").map((task: DashboardTask) => (
+                        <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-blue-500 mb-2">
+                          <div className="flex-1">
+                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                            <span className="block text-gray-500 text-sm font-medium mt-1">
+                              {task.boothZone && <>Zone: {task.boothZone} | </>}
+                              {task.customerName && <>Customer: {task.customerName}</>}
+                            </span>
+                          </div>
+                          <Button
+                            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white transition-colors duration-200 mt-3 md:mt-0 md:ml-4 hover:from-blue-600 hover:to-blue-700"
+                            onClick={() => handleAccept(task)}
+                          >
+                            Accept
+                          </Button>
+                        </Card>
+                      ))}
+                      {showTasks.todo.map((task: DashboardTask) => (
+                        <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-blue-500 mb-2">
+                          <div className="flex-1">
+                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                            <span className="block text-gray-500 text-sm font-medium mt-1">
+                              {task.boothZone && <>Zone: {task.boothZone} | </>}
+                              {task.customerName && <>Customer: {task.customerName}</>}
+                            </span>
+                          </div>
+                        </Card>
+                      ))}
+                    </ul>
+                  </Card>
+                  {/* In Progress */}
+                  <Card className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
+                    <h3 className="flex items-center gap-2 font-bold text-base text-yellow-600 mb-2">
+                      <Activity className="w-5 h-5 text-yellow-600" /> In Progress ({showTasks.inProgress.length})
+                    </h3>
+                    <ul className="space-y-2">
+                      {showTasks.inProgress.map((task: DashboardTask) => (
+                        <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-yellow-400 mb-2">
+                          <div className="flex-1">
+                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                            <span className="block text-gray-500 text-sm font-medium mt-1">
+                              {task.boothZone && <>Zone: {task.boothZone} | </>}
+                              {task.customerName && <>Customer: {task.customerName}</>}
+                            </span>
+                          </div>
+                          <Button
+                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white transition-colors duration-200 mt-3 md:mt-0 md:ml-4 hover:from-yellow-500 hover:to-yellow-600"
+                            onClick={() => handleMarkCompleted(task)}
+                          >
+                            Mark as Completed
+                          </Button>
+                        </Card>
+                      ))}
+                    </ul>
+                  </Card>
+                  {/* Completed */}
+                  <Card className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
+                    <h3 className="flex items-center gap-2 font-bold text-base text-green-600 mb-2">
+                      <CheckCircle className="w-5 h-5 text-green-600" /> Completed ({showTasks.completed.slice(0, 5).length})
+                    </h3>
+                    <ul className="space-y-2">
+                      {showTasks.completed
+                        .slice(0, 5)
+                        .map((task: DashboardTask) => (
+                          <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-green-500 mb-2">
+                            <div className="flex-1 flex items-center">
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                              <div>
+                                <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                                <span className="block text-gray-500 text-sm font-medium mt-1">
+                                  {task.boothZone && <>Zone: {task.boothZone} | </>}
+                                  {task.customerName && <>Customer: {task.customerName}</>}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-xs text-gray-400">Due: {task.due}</span>
+                          </Card>
+                        ))}
+                    </ul>
+                  </Card>
                 </div>
-              </div>
+              </Card>
             </div>
-          </Card>
-          <Card className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2 font-semibold">
-                <BarChart className="w-5 h-5 text-green-500 animate-pulse" />
-                Orders for Ongoing Shows
-              </div>
-            </div>
-            <div className="h-64 bg-white rounded-lg shadow border p-4">
-              <ResponsiveContainer width="100%" height="100%">
-                <RechartsBarChart
-                  data={barData}
-                  layout="vertical"
-                  barCategoryGap="30%"
+          </div>
+          {/* Right: Stat Cards */}
+          <div className="w-[30%]">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* First two stat cards */}
+              {stats.slice(0, 2).map((stat) => (
+                <Card
+                  key={stat.label}
+                  className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
                 >
-                  <XAxis
-                    type="number"
-                    axisLine={false}
-                    tickLine={false}
-                    hide
-                  />
-                  <YAxis
-                    dataKey="name"
-                    type="category"
-                    tick={{ fontWeight: 'bold', fill: '#222' }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="Orders" fill="#60a5fa" barSize={32} radius={[16, 16, 16, 16]} activeBar={false} />
-                </RechartsBarChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
-        {/* Show Tasks */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Show Tasks</h2>
-            <Button
-              variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Task </Button>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div>
-              <h3 className="font-semibold mb-2">To Do</h3>
-              <ul className="space-y-2">
-                {notifications.filter((n: DashboardTask) => n.status === "pending").map((task: DashboardTask) => (
-                  <li key={task.id} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                    <span>
-                      {task.task}
-                      {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
-                      {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
-                    </span>
-                    <Button
-                      variant="outline" size="sm" className="ml-4 h-10 min-w-[140px] px-6 font-semibold"
-                      onClick={() => {
-                        setShowTasks((prev) => ({
-                          ...prev,
-                          inProgress: [
-                            ...prev.inProgress,
-                            { ...task, status: "inProgress" }
-                          ]
-                        }));
-                        setNotifications((prev: DashboardTask[]) => prev.filter((n: DashboardTask) => n.id !== task.id));
-                      }}
-                    >
-                      Accept
-                    </Button>
-                  </li>
-                ))}
-                {showTasks.todo.map((task: DashboardTask) => (
-                  <li key={task.task} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                    <span>
-                      {task.task}
-                      {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
-                      {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">In Progress</h3>
-              <ul className="space-y-2">
-                {showTasks.inProgress.map((task: DashboardTask) => (
-                  <li key={task.id} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                    <span>
-                      {task.task} | <b>Zone:</b> {task.boothZone} | <b>Customer:</b> {task.customerName}
-                    </span>
-                    <Button
-                      variant="outline" size="sm" className="ml-4 h-10 min-w-[140px] px-6 font-semibold"
-                      onClick={() => {
-                        setShowTasks((prev) => ({
-                          ...prev,
-                          inProgress: prev.inProgress.filter((t) => t.id !== task.id),
-                          completed: [
-                            ...prev.completed,
-                            { ...task, status: "completed", due: dayjs().format('MMM D') },
-                          ],
-                        }));
-                      }}
-                    >
-                      Mark as Completed
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">Completed</h3>
-              <ul className="space-y-2">
-                {showTasks.completed
-                  .slice(0, 5) // Only show the 5 most recent completed tasks
-                  .map((task: DashboardTask) => (
-                    <li key={task.task} className="bg-gray-50 rounded p-3 flex flex-col md:flex-row justify-between items-center">
-                      <span>
-                        {task.task}
-                        {task.boothZone && <> | <b>Zone:</b> {task.boothZone}</>}
-                        {task.customerName && <> | <b>Customer:</b> {task.customerName}</>}
-                      </span>
-                      <span className="text-xs text-gray-400">Due: {task.due}</span>
-                    </li>
-                  ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-        {/* Upcoming & Ongoing Shows Table */}
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold">Upcoming & Ongoing Shows</h2>
-            <Button
-              variant="outline" size="sm" className="h-10 min-w-[140px] px-6 font-semibold"> <Plus className="h-4 w-4 mr-2" /> New Show </Button>
-          </div>
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-blue-50">
-                <TableHead>SHOW ID</TableHead>
-                <TableHead>SHOW NAME</TableHead>
-                <TableHead>DATE</TableHead>
-                <TableHead>LOCATION</TableHead>
-                <TableHead>STATUS</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {showsTable.map((show) => (
-                <TableRow key={show.id}>
-                  <TableCell>{show.id}</TableCell>
-                  <TableCell>{show.name.split(' - ')[0]}</TableCell>
-                  <TableCell>
-                    {show.status === "Ongoing"
-                      ? dayjs().format('MM/DD/YYYY')
-                      : (dayjs(show.date).isValid() ? dayjs(show.date).format('MM/DD/YYYY') : show.date)
-                    }
-                  </TableCell>
-                  <TableCell>{show.location}</TableCell>
-                  <TableCell>
-                    <span
-                      className={`px-2 py-1 rounded text-xs font-semibold
-                        ${show.status === "Ongoing"
-                          ? "bg-green-100 text-green-800"
-                          : show.status === "Complete"
-                          ? "bg-orange-100 text-orange-800"
-                          : "bg-yellow-100 text-yellow-800"}
-                      `}
-                    >
-                      {show.status === "Complete" ? "Upcoming" : show.status}
-                    </span>
-                  </TableCell>
-                </TableRow>
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
+                    stat.label === "Upcoming Shows" ? "bg-blue-100 text-blue-600" :
+                    stat.label === "Closed Shows" ? "bg-gray-100 text-gray-600" :
+                    stat.label === "Ongoing Shows" ? "bg-green-100 text-green-600" :
+                    stat.label === "Total Exhibitors" ? "bg-purple-100 text-purple-600" :
+                    stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {stat.icon}
+                  </div>
+                  <div className="w-px h-10 bg-gray-200 mx-2" />
+                  <div className="flex flex-col justify-center">
+                    <div className={`text-3xl font-extrabold ${
+                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                      stat.label === "Closed Shows" ? "text-gray-600" :
+                      stat.label === "Ongoing Shows" ? "text-green-600" :
+                      stat.label === "Total Exhibitors" ? "text-purple-600" :
+                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                    }`}>{stat.value}</div>
+                    <div className={`text-base font-semibold mt-1 ${
+                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                      stat.label === "Closed Shows" ? "text-gray-600" :
+                      stat.label === "Ongoing Shows" ? "text-green-600" :
+                      stat.label === "Total Exhibitors" ? "text-purple-600" :
+                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                    }`}>{stat.label}</div>
+                  </div>
+                </Card>
               ))}
-            </TableBody>
-          </Table>
+              {/* Ongoing Shows card, full width */}
+              {stats.filter(stat => stat.label === "Ongoing Shows").map((stat) => (
+                <Card
+                  key={stat.label}
+                  className="flex items-center justify-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full md:col-span-2"
+                >
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
+                    stat.label === "Upcoming Shows" ? "bg-blue-100 text-blue-600" :
+                    stat.label === "Closed Shows" ? "bg-gray-100 text-gray-600" :
+                    stat.label === "Ongoing Shows" ? "bg-green-100 text-green-600" :
+                    stat.label === "Total Exhibitors" ? "bg-purple-100 text-purple-600" :
+                    stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {stat.icon}
+              </div>
+                  <div className="w-px h-10 bg-gray-200 mx-2" />
+                  <div className="flex flex-col justify-center">
+                    <div className={`text-3xl font-extrabold ${
+                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                      stat.label === "Closed Shows" ? "text-gray-600" :
+                      stat.label === "Ongoing Shows" ? "text-green-600" :
+                      stat.label === "Total Exhibitors" ? "text-purple-600" :
+                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                    }`}>{stat.value}</div>
+                    <div className={`text-base font-semibold mt-1 ${
+                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                      stat.label === "Closed Shows" ? "text-gray-600" :
+                      stat.label === "Ongoing Shows" ? "text-green-600" :
+                      stat.label === "Total Exhibitors" ? "text-purple-600" :
+                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                    }`}>{stat.label}</div>
+                  </div>
+                </Card>
+              ))}
+              {/* Remaining stat cards */}
+              {stats.slice(3).map((stat) => (
+                <Card
+                  key={stat.label}
+                  className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
+                >
+                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
+                    stat.label === "Upcoming Shows" ? "bg-blue-100 text-blue-600" :
+                    stat.label === "Closed Shows" ? "bg-gray-100 text-gray-600" :
+                    stat.label === "Ongoing Shows" ? "bg-green-100 text-green-600" :
+                    stat.label === "Total Exhibitors" ? "bg-purple-100 text-purple-600" :
+                    stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
+                  }`}>
+                    {stat.icon}
+          </div>
+                  <div className="w-px h-10 bg-gray-200 mx-2" />
+                  <div className="flex flex-col justify-center">
+                    <div className={`text-3xl font-extrabold ${
+                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                      stat.label === "Closed Shows" ? "text-gray-600" :
+                      stat.label === "Ongoing Shows" ? "text-green-600" :
+                      stat.label === "Total Exhibitors" ? "text-purple-600" :
+                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                    }`}>{stat.value}</div>
+                    <div className={`text-base font-semibold mt-1 ${
+                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                      stat.label === "Closed Shows" ? "text-gray-600" :
+                      stat.label === "Ongoing Shows" ? "text-green-600" :
+                      stat.label === "Total Exhibitors" ? "text-purple-600" :
+                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                    }`}>{stat.label}</div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+            {/* Show Details Card */}
+            <div className="mt-6">
+              <Card className="p-4 rounded-xl shadow-md border border-gray-100 bg-white">
+                <div className="font-bold text-xl mb-3 text-gray-700">Show Details</div>
+                <div className="space-y-3">
+                  {showsTable.map((show) => (
+                    <Card
+                      key={show.id}
+                      className="flex items-center justify-between p-3 rounded-lg border border-gray-100 shadow-sm bg-white hover:bg-blue-100 hover:shadow-md cursor-pointer transition"
+                    >
+                      <div>
+                        <span className={`font-bold ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>{show.id}</span>
+                        <span className={`ml-2 font-semibold ${show.status === "Ongoing" ? "text-green-600" : "text-gray-700"}`}>{show.name}</span>
+                        <div className={`text-xs font-semibold ${show.status === "Ongoing" ? "text-green-500" : "text-gray-400"}`}>{show.location}</div>
+                      </div>
+                      <div className={`text-sm font-semibold ${show.status === "Ongoing" ? "text-green-600" : "text-gray-500"}`}>{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</div>
+                    </Card>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </div>
         </div>
-        {/* <div className="space-y-2">
-          <Label className="text-sm text-gray-500">
-            Open
-          </Label>
-          <Input
-            type="text"
-            placeholder="MM/DD/YYYY"
-            className="h-9 px-3 w-full md:w-3/4"
-            value={dayjs().format('MM/DD/YYYY')}
-            onChange={(e) => {
-              const date = dayjs(e.target.value, 'MM/DD/YYYY');
-              if (date.isValid()) {
-                // Handle date change
-              }
-            }}
-          />
-        </div> */}
-        {/* <div className="space-y-2">
-          <Label className="text-sm text-gray-500">
-            Close
-          </Label>
-          <Input
-            type="text"
-            placeholder="MM/DD/YYYY"
-            className="h-9 px-3 w-full md:w-3/4"
-            value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
-            onChange={(e) => {
-              const date = dayjs(e.target.value, 'MM/DD/YYYY');
-              if (date.isValid()) {
-                // Handle date change
-              }
-            }}
-          />
-        </div> */}
       </div>
-      {/* <ScrollToTop /> */}
+      {/* Undo notification */}
+      {undoInfo && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded shadow-lg flex items-center gap-4 z-50">
+          <span>Action undone for: <span className="font-bold">{undoInfo.task.task}</span></span>
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white font-semibold px-3 py-1 rounded"
+            onClick={handleUndo}
+          >
+            Undo
+          </button>
+        </div>
+      )}
     </MainLayout>
   );
 }

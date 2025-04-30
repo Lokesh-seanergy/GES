@@ -1160,10 +1160,10 @@ export default function ShowsPage() {
                               <Label>Open Date</Label>
                               <Input
                                 type="text"
-                                placeholder="MM/DD/YYYY"
-                                value={dayjs().format('MM/DD/YYYY')}
+                                placeholder="MM-dd-yyyy"
+                                value={dayjs().format('MM-dd-yyyy')}
                                 onChange={(e) => {
-                                  const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                  const date = dayjs(e.target.value, 'MM-dd-yyyy');
                                   if (date.isValid()) {
                                     setNewOccr((prev) => ({
                                       ...prev,
@@ -1179,11 +1179,11 @@ export default function ShowsPage() {
                               </Label>
                               <Input
                                 type="text"
-                                placeholder="MM/DD/YYYY"
+                                placeholder="MM-dd-yyyy"
                                 className="h-9 px-3 w-full md:w-3/4"
-                                value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+                                value={dayjs().add(1, 'day').format('MM-dd-yyyy')}
                                 onChange={(e) => {
-                                  const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                  const date = dayjs(e.target.value, 'MM-dd-yyyy');
                                   if (date.isValid()) {
                                     setNewOccr((prev) => ({
                                       ...prev,
@@ -1534,11 +1534,11 @@ export default function ShowsPage() {
                                     </Label>
                                     <Input
                                       type="text"
-                                      placeholder="MM/DD/YYYY"
+                                      placeholder="MM-dd-yyyy"
                                       className="h-9 px-3 w-full md:w-3/4"
-                                      value={dayjs().format('MM/DD/YYYY')}
+                                      value={dayjs().format('MM-dd-yyyy')}
                                       onChange={(e) => {
-                                        const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                        const date = dayjs(e.target.value, 'MM-dd-yyyy');
                                         if (date.isValid()) {
                                           // Handle date change
                                         }
@@ -1551,11 +1551,11 @@ export default function ShowsPage() {
                                     </Label>
                                     <Input
                                       type="text"
-                                      placeholder="MM/DD/YYYY"
+                                      placeholder="MM-dd-yyyy"
                                       className="h-9 px-3 w-full md:w-3/4"
-                                      value={dayjs().add(1, 'day').format('MM/DD/YYYY')}
+                                      value={dayjs().add(1, 'day').format('MM-dd-yyyy')}
                                       onChange={(e) => {
-                                        const date = dayjs(e.target.value, 'MM/DD/YYYY');
+                                        const date = dayjs(e.target.value, 'MM-dd-yyyy');
                                         if (date.isValid()) {
                                           // Handle date change
                                         }

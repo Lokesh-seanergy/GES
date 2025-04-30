@@ -88,7 +88,7 @@ function OrdersContent() {
 
   const formatDate = (dateString: string) => {
     try {
-      return format(new Date(dateString), "MMM dd, yyyy");
+      return format(new Date(dateString), "MM-dd-yyyy");
     } catch {
       return dateString;
     }
@@ -97,6 +97,9 @@ function OrdersContent() {
   const handlePageChange = (newPage: number) => {
     setCurrentPage(newPage);
   };
+
+  // Format price as $12,000.00
+  const formatPrice = (value: number) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   return (
     <MainLayout
@@ -237,7 +240,7 @@ function OrdersContent() {
                             Total
                           </Label>
                           <div className="text-sm font-medium">
-                            ${selectedOrder.items.reduce((sum, item) => sum + (item.newPrice || 0), 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                            {formatPrice(selectedOrder.items.reduce((sum, item) => sum + (item.newPrice || 0), 0))}
                           </div>
                         </div>
                       </div>
@@ -256,7 +259,7 @@ function OrdersContent() {
                                       <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Serial No</TableHead>
                                       <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ordered Item</TableHead>
                                       <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantity</TableHead>
-                                      <TableHead className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Price</TableHead>
+                                      <TableHead className="px-3 py-3.5 text-sm font-semibold text-gray-900">Price</TableHead>
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
@@ -308,7 +311,7 @@ function OrdersContent() {
                                                   }}
                                                 />
                                               ) : (
-                                                item.newPrice
+                                                formatPrice(item.newPrice)
                                               )}
                                             </TableCell>
                                           </TableRow>
@@ -323,7 +326,7 @@ function OrdersContent() {
                                               {item.quantity}
                                             </TableCell>
                                             <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                              {item.newPrice}
+                                              {formatPrice(item.newPrice)}
                                             </TableCell>
                                           </TableRow>
                                         ))}
@@ -341,7 +344,7 @@ function OrdersContent() {
                             <>
                               {diff > 0 && (
                                 <div className="mt-2 text-green-700 font-semibold">
-                                  Additional amount to be paid: ${diff.toLocaleString()}
+                                  Additional amount to be paid: {formatPrice(diff)}
                                 </div>
                               )}
                               <div className="flex gap-2 mt-4 items-center">

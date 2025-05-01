@@ -26,6 +26,7 @@ import type { TooltipProps } from 'recharts';
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNotifications } from "@/components/NotificationContext";
+import { useAuthStore } from '@/store/authStore';
 
 // Define a type for dashboard tasks
 interface DashboardTask {
@@ -36,6 +37,7 @@ interface DashboardTask {
   status: string;
   due?: string;
   timestamp?: string;
+  acceptedBy?: string;
 }
 
 export default function DashboardPage() {
@@ -416,27 +418,31 @@ const stats = [
     { label: "Active Locations", value: ongoingLocations, icon: <MapPin className="w-8 h-8 text-pink-500" /> },
   ];
   const { notifications, setNotifications } = useNotifications();
-  // On mount, add sample notifications if none exist
+  const { userProfile } = useAuthStore();
+  // On mount, add sample To Do tasks if none exist
   useEffect(() => {
-    if (notifications.length === 0) {
-      setNotifications([
-        {
-          id: 1,
-          task: "Review Floor Plan",
-          boothZone: "A1",
-          customerName: "Acme Corp",
-          status: "pending",
-          timestamp: new Date().toISOString(),
-        },
-        {
-          id: 2,
-          task: "Update Booth Layout",
-          boothZone: "B2",
-          customerName: "Globex Corporation",
-          status: "pending",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+    if (showTasks.todo.length === 0) {
+      setShowTasks(prev => ({
+        ...prev,
+        todo: [
+          {
+            id: 1,
+            task: "Review Floor Plan",
+            boothZone: "A1",
+            customerName: "Acme Corp",
+            status: "pending",
+            timestamp: new Date().toISOString(),
+          },
+          {
+            id: 2,
+            task: "Update Booth Layout",
+            boothZone: "B2",
+            customerName: "Globex Corporation",
+            status: "pending",
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      }));
     }
   }, []);
   const [showTasks, setShowTasks] = useState<{
@@ -667,13 +673,14 @@ const stats = [
 
   // Helper to handle Accept with Undo
   const handleAccept = (task: DashboardTask) => {
-    // Move to In Progress
     setShowTasks((prev) => ({
       ...prev,
-      inProgress: [...prev.inProgress, { ...task, status: 'inProgress' }],
+      todo: prev.todo.filter((t) => t.id !== task.id),
+      inProgress: [
+        ...prev.inProgress,
+        { ...task, status: 'inProgress', acceptedBy: userProfile?.displayName || userProfile?.email || 'Unknown User' },
+      ],
     }));
-    setNotifications((prev: DashboardTask[]) => prev.filter((n: DashboardTask) => n.id !== task.id));
-    // Set undo info
     const timeoutId = setTimeout(() => setUndoInfo(null), 5000);
     setUndoInfo({ task, from: 'todo', to: 'inProgress', timeoutId });
   };
@@ -697,15 +704,12 @@ const stats = [
     if (!undoInfo) return;
     clearTimeout(undoInfo.timeoutId);
     if (undoInfo.from === 'todo' && undoInfo.to === 'inProgress') {
-      // Move back from inProgress to todo (only add to notifications)
       setShowTasks((prev) => ({
         ...prev,
         inProgress: prev.inProgress.filter((t) => t.id !== undoInfo.task.id),
-        // Do NOT add to todo here
+        todo: [...prev.todo, { ...undoInfo.task, status: 'pending' }],
       }));
-      setNotifications((prev: DashboardTask[]) => [...prev, { ...undoInfo.task, status: 'pending' }]);
     } else if (undoInfo.from === 'inProgress' && undoInfo.to === 'completed') {
-      // Move back from completed to inProgress
       setShowTasks((prev) => ({
         ...prev,
         completed: prev.completed.filter((t) => t.id !== undoInfo.task.id),
@@ -715,6 +719,37 @@ const stats = [
     setUndoInfo(null);
   };
 
+  // Update markNotificationAsRead to also add the task to showTasks.todo if not present
+  const markNotificationAsRead = (id: number) => {
+    setNotifications(prev =>
+      prev.map(n =>
+        n.id === id ? { ...n, status: "read" } : n
+      )
+    );
+    const notif = notifications.find(n => n.id === id);
+    if (notif && !showTasks.todo.some(t => t.id === notif.id)) {
+      setShowTasks(prev => ({
+        ...prev,
+        todo: [...prev.todo, { ...notif, status: "pending" }]
+      }));
+    }
+  };
+  // Update markAllAsRead to add all unread notification tasks to showTasks.todo if not present
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(n =>
+        n.status === "pending" ? { ...n, status: "read" } : n
+      )
+    );
+    const unreadNotifs = notifications.filter(n => n.status === "pending");
+    setShowTasks(prev => ({
+      ...prev,
+      todo: [
+        ...prev.todo,
+        ...unreadNotifs.filter(notif => !prev.todo.some(t => t.id === notif.id)).map(notif => ({ ...notif, status: "pending" }))
+      ]
+    }));
+  };
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
@@ -723,13 +758,104 @@ const stats = [
           <div className="w-[70%]">
             {/* Shows & Exhibitors Chart */}
             <div className="flex flex-col gap-6">
-              <Card className="p-0 rounded-xl shadow-md border border-gray-100 bg-white">
-                <div className="flex items-center justify-between px-6 py-5">
+              <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden">
+                <div className="flex items-center justify-between px-8 pt-8 pb-4">
                   <div>
-                    <div className="font-extrabold text-2xl text-blue-800 tracking-tight">Shows & Exhibitors</div>
+                    <div className="text-2xl font-extrabold text-blue-800 tracking-tight">Shows & Exhibitors</div>
                     <div className="text-base font-medium text-blue-400">Modern visualization with day, month, or year view</div>
                   </div>
-                  <div className="flex gap-2 bg-gray-100 rounded-full p-1">
+                  {/* Vertical legend at top right */}
+                  <div className="flex flex-col items-end gap-2">
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-1 rounded bg-blue-600 inline-block" />
+                      <span className="text-blue-600">Shows</span>
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-4 h-1 rounded bg-green-600 inline-block" />
+                      <span className="text-green-600">Exhibitors</span>
+                    </span>
+                  </div>
+                </div>
+                <div className="px-8 pb-6">
+                  <div className="bg-gray-50 rounded-xl shadow-inner p-6">
+                    <ResponsiveContainer width="100%" height={250}>
+                      <AreaChart
+                        data={chartDataMap[chartView]}
+                        margin={{ top: 30, right: 30, left: 0, bottom: 30 }}
+                      >
+                        <defs>
+                          <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
+                          </linearGradient>
+                          <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid vertical={false} strokeDasharray="4 4" />
+                        <XAxis
+                          dataKey="name"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          minTickGap={32}
+                          tick={{ fontSize: 14, fontWeight: 600, fill: '#222' }}
+                          tickFormatter={(value: string) => {
+                            const monthMap: Record<string, string> = { Jan: "January", Feb: "February", Mar: "March", Apr: "April", May: "May", Jun: "June" };
+                            if (chartView === 'month') return monthMap[value] || value;
+                            return value;
+                          }}
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 12, fontWeight: 500, fill: '#2563eb' }}
+                        />
+                        <Tooltip
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-white rounded-lg shadow p-3 text-xs">
+                                  <div className="font-bold text-base mb-1">{label}</div>
+                                  {payload.map((entry, idx) => (
+                                    <div key={idx} className="flex items-center gap-2">
+                                      <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                        {entry.name}:
+                                      </span>
+                                      <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                        {entry.value}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Area
+                          dataKey="Shows"
+                          name="Shows"
+                          type="monotone"
+                          fill="url(#showsGradient)"
+                          stroke="#2563eb"
+                          strokeWidth={2}
+                        />
+                        <Area
+                          dataKey="Exhibitors"
+                          name="Exhibitors"
+                          type="monotone"
+                          fill="url(#exhibitorsGradient)"
+                          stroke="#22c55e"
+                          strokeWidth={2}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Quick range buttons below chart */}
+                  <div className="flex gap-2 bg-white rounded-full p-1 justify-center mt-6">
                     {[
                       { label: '1m', value: '1m' },
                       { label: '3m', value: '3m' },
@@ -749,133 +875,36 @@ const stats = [
                     ))}
                   </div>
                 </div>
-                <div className="px-6 pt-6 pb-2">
-                  <ResponsiveContainer width="100%" height={250}>
-                    <AreaChart
-                      data={chartDataMap[chartView]}
-                      margin={{ top: 30, right: 30, left: 0, bottom: 30 }}
-                    >
-                      <defs>
-                        <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
-                        </linearGradient>
-                        <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid vertical={false} strokeDasharray="4 4" />
-                      <XAxis
-                        dataKey="name"
-                        tickLine={false}
-                        axisLine={false}
-                        tickMargin={8}
-                        minTickGap={32}
-                        tick={{ fontSize: 14, fontWeight: 600, fill: '#222' }}
-                        tickFormatter={(value: string) => {
-                          const monthMap: Record<string, string> = { Jan: "January", Feb: "February", Mar: "March", Apr: "April", May: "May", Jun: "June" };
-                          if (chartView === 'month') return monthMap[value] || value;
-                          return value;
-                        }}
-                      />
-                      <YAxis
-                        allowDecimals={false}
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 12, fontWeight: 500, fill: '#2563eb' }}
-                      />
-                      <Tooltip
-                        content={({ active, payload, label }) => {
-                          if (active && payload && payload.length) {
-                            return (
-                              <div className="bg-white rounded-lg shadow p-3 text-xs">
-                                <div className="font-bold text-base mb-1">{label}</div>
-                                {payload.map((entry, idx) => (
-                                  <div key={idx} className="flex items-center gap-2">
-                                    <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                      {entry.name}:
-                                    </span>
-                                    <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                      {entry.value}
-                                    </span>
-                                  </div>
-                                ))}
-        </div>
-                            );
-                          }
-                          return null;
-                        }}
-                      />
-                      <Area
-                        dataKey="Shows"
-                        name="Shows"
-                        type="monotone"
-                        fill="url(#showsGradient)"
-                        stroke="#2563eb"
-                        strokeWidth={2}
-                      />
-                      <Area
-                        dataKey="Exhibitors"
-                        name="Exhibitors"
-                        type="monotone"
-                        fill="url(#exhibitorsGradient)"
-                        stroke="#22c55e"
-                        strokeWidth={2}
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                  <div className="flex justify-center gap-8 mt-4 text-base font-semibold">
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-1 rounded bg-blue-600 inline-block" />
-                      <span className="text-blue-600">Shows</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-1 rounded bg-green-600 inline-block" />
-                      <span className="text-green-600">Exhibitors</span>
-                    </span>
-          </div>
-        </div>
               </Card>
               {/* Show Tasks Section */}
-              <Card className="bg-white rounded-lg shadow p-6 w-full">
-                <div className="flex items-center gap-2 mb-4">
+              <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden">
+                <div className="flex items-center gap-2 mb-4 px-8 pt-8 pb-4">
                   <ListChecks className="w-6 h-6 text-blue-600" />
-                  <h2 className="text-xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
+                  <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8 pb-6">
                   {/* To Do */}
                   <Card className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
                     <h3 className="flex items-center gap-2 font-bold text-base text-blue-600 mb-2">
-                      <ClipboardList className="w-5 h-5 text-blue-600" /> To Do ({notifications.filter((n: DashboardTask) => n.status === "pending").length + showTasks.todo.length})
+                      <ClipboardList className="w-5 h-5 text-blue-600" /> To Do ({showTasks.todo.length})
                     </h3>
                     <ul className="space-y-2">
-                      {notifications.filter((n: DashboardTask) => n.status === "pending").map((task: DashboardTask) => (
-                        <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-blue-500 mb-2">
-                          <div className="flex-1">
-                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                            <span className="block text-gray-500 text-sm font-medium mt-1">
-                              {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Customer: {task.customerName}</>}
-                            </span>
-                          </div>
-                          <Button
-                            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white transition-colors duration-200 mt-3 md:mt-0 md:ml-4 hover:from-blue-600 hover:to-blue-700"
-                            onClick={() => handleAccept(task)}
-                          >
-                            Accept
-                          </Button>
-                        </Card>
-                      ))}
                       {showTasks.todo.map((task: DashboardTask) => (
                         <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-blue-500 mb-2">
                           <div className="flex-1">
                             <span className="block text-gray-900 font-bold text-base">{task.task}</span>
                             <span className="block text-gray-500 text-sm font-medium mt-1">
                               {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Customer: {task.customerName}</>}
+                              {task.customerName && <>Exhibitor: {task.customerName}</>}
                             </span>
                           </div>
+                          <Button
+                            className="flex items-center gap-2 px-6 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold shadow-sm hover:from-blue-600 hover:to-blue-700 hover:scale-105 active:scale-95 transition-all duration-150"
+                            onClick={() => handleAccept(task)}
+                          >
+                            <CheckCircle className="w-5 h-5" />
+                            Accept
+                          </Button>
                         </Card>
                       ))}
                     </ul>
@@ -892,13 +921,17 @@ const stats = [
                             <span className="block text-gray-900 font-bold text-base">{task.task}</span>
                             <span className="block text-gray-500 text-sm font-medium mt-1">
                               {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Customer: {task.customerName}</>}
+                              {task.customerName && <>Exhibitor: {task.customerName}</>}
                             </span>
+                            {task.acceptedBy && (
+                              <span className="block text-xs text-gray-400 mt-1">Accepted by: {task.acceptedBy}</span>
+                            )}
                           </div>
                           <Button
-                            className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-white transition-colors duration-200 mt-3 md:mt-0 md:ml-4 hover:from-yellow-500 hover:to-yellow-600"
+                            className="flex items-center gap-2 px-6 py-2 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-semibold shadow-sm hover:from-yellow-500 hover:to-yellow-600 hover:scale-105 active:scale-95 transition-all duration-150"
                             onClick={() => handleMarkCompleted(task)}
                           >
+                            <CheckCircle className="w-5 h-5 text-white" />
                             Mark as Completed
                           </Button>
                         </Card>
@@ -921,7 +954,7 @@ const stats = [
                                 <span className="block text-gray-900 font-bold text-base">{task.task}</span>
                                 <span className="block text-gray-500 text-sm font-medium mt-1">
                                   {task.boothZone && <>Zone: {task.boothZone} | </>}
-                                  {task.customerName && <>Customer: {task.customerName}</>}
+                                  {task.customerName && <>Exhibitor: {task.customerName}</>}
                                 </span>
                               </div>
                             </div>
@@ -985,7 +1018,7 @@ const stats = [
                     stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
                   }`}>
                     {stat.icon}
-              </div>
+                  </div>
                   <div className="w-px h-10 bg-gray-200 mx-2" />
                   <div className="flex flex-col justify-center">
                     <div className={`text-3xl font-extrabold ${
@@ -1019,7 +1052,7 @@ const stats = [
                     stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
                   }`}>
                     {stat.icon}
-          </div>
+                  </div>
                   <div className="w-px h-10 bg-gray-200 mx-2" />
                   <div className="flex flex-col justify-center">
                     <div className={`text-3xl font-extrabold ${
@@ -1042,18 +1075,23 @@ const stats = [
             </div>
             {/* Show Details Card */}
             <div className="mt-6">
-              <Card className="p-4 rounded-xl shadow-md border border-gray-100 bg-white">
-                <div className="font-bold text-xl mb-3 text-gray-700">Show Details</div>
-                <div className="space-y-3">
+              <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-8 pt-8 pb-6">
+                <div className="font-extrabold text-2xl mb-6 text-blue-800 tracking-tight">Show Details</div>
+                <div className="space-y-4">
                   {showsTable.map((show) => (
                     <Card
                       key={show.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-gray-100 shadow-sm bg-white hover:bg-blue-100 hover:shadow-md cursor-pointer transition"
+                      className="flex items-center justify-between p-4 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
                     >
                       <div>
-                        <span className={`font-bold ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>{show.id}</span>
-                        <span className={`ml-2 font-semibold ${show.status === "Ongoing" ? "text-green-600" : "text-gray-700"}`}>{show.name}</span>
-                        <div className={`text-xs font-semibold ${show.status === "Ongoing" ? "text-green-500" : "text-gray-400"}`}>{show.location}</div>
+                        <span className={`font-bold ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>
+                          {show.name}
+                        </span>
+                        <div className="flex items-center gap-1 text-xs font-semibold text-gray-400 mt-1">
+                          <MapPin className="w-3 h-3" />
+                          <span>Location:</span>
+                          <span className="ml-1">{show.location}</span>
+                        </div>
                       </div>
                       <div className={`text-sm font-semibold ${show.status === "Ongoing" ? "text-green-600" : "text-gray-500"}`}>{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</div>
                     </Card>

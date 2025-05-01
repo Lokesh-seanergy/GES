@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Bell, ChevronDown, LogOut, User } from "lucide-react";
 import { Roboto } from "next/font/google";
 import { SearchBar } from "../ui/SearchBar";
@@ -22,6 +22,25 @@ export default function Header() {
   const [imageError, setImageError] = useState(false);
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const bellRef = useRef(null);
+  const profileRef = useRef(null);
+
+  // Add effect to close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      // Notification dropdown
+      if (showNotificationDropdown && bellRef.current && !(bellRef.current as any).contains(event.target)) {
+        setShowNotificationDropdown(false);
+      }
+      // Profile dropdown
+      if (isProfileOpen && profileRef.current && !(profileRef.current as any).contains(event.target)) {
+        setIsProfileOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showNotificationDropdown, isProfileOpen]);
 
   const handleLogout = () => {
     try {
@@ -48,56 +67,97 @@ export default function Header() {
     setImageError(true);
   };
 
+  // Mark notification as read
+  const markNotificationAsRead = (id: number) => {
+    setNotifications(prev =>
+      prev.map(n =>
+        n.id === id ? { ...n, status: "read" } : n
+      )
+    );
+  };
+
+  // Mark all as read
+  const markAllAsRead = () => {
+    setNotifications(prev =>
+      prev.map(n =>
+        n.status === "pending" ? { ...n, status: "read" } : n
+      )
+    );
+  };
+
   return (
-    <header className="bg-white shadow-sm px-6 h-16 flex items-center justify-between">
-      <div className="flex items-center">
-        <h1
-          className={`${roboto.className} text-[26px] leading-[100%] tracking-[0%] ml-8`}
-        >
-          <span className="font-[400] ">Show Workbench</span>
-        </h1>
+    <header className="bg-white shadow-sm border-b border-gray-100 h-16 flex items-center px-8 justify-between">
+      {/* Left: Logo & App Name */}
+      <div className="flex items-center gap-3">
+        <span className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Workbench</span>
       </div>
 
-      <div className="flex items-center">
-        {/* Search Bar */}
-        <div className="mr-8">
-          <SearchBar placeholder="Search Here..." className="w-64" />
-        </div>
-
+      {/* Right: Search Bar, Notifications, Profile */}
+      <div className="flex items-center gap-4">
+        <SearchBar className="w-64" />
         {/* Notifications */}
         <div className="relative" ref={bellRef}>
           <button
-            className="relative p-2 text-gray-500 hover:text-blue-600 mr-2 focus:outline-none"
-            onClick={() => setShowNotificationDropdown((prev) => !prev)}
+            className="relative h-10 w-10 flex items-center justify-center rounded-full bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600 shadow transition-all duration-200 focus:outline-none"
             aria-label="Show notifications"
+            role="button"
+            onClick={() => setShowNotificationDropdown((prev) => !prev)}
           >
-            <Bell size={20} />
+            <Bell size={22} />
             {notifications.filter(n => n.status === "pending").length > 0 && (
-              <span className="absolute top-1 right-1 h-4 w-4 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center">
+              <span className="absolute top-1 right-1 h-5 w-5 bg-blue-500 rounded-full text-white text-xs flex items-center justify-center font-bold shadow ring-2 ring-white">
                 {notifications.filter(n => n.status === "pending").length}
               </span>
             )}
           </button>
           {showNotificationDropdown && (
-            <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded shadow-lg z-50">
-              <div className="p-4 font-semibold border-b">Notifications</div>
-              {notifications.filter(n => n.status === "pending").length === 0 ? (
-                <div className="p-4 text-gray-500">No new notifications</div>
-              ) : (
-                notifications.filter(n => n.status === "pending").map((note) => (
-                  <div key={note.id} className="p-4 border-b flex items-center gap-2">
-                    <span>
-                      {note.task} | <b>Zone:</b> {note.boothZone} | <b>Customer:</b> {note.customerName}
-                    </span>
+            <div className="absolute right-0 mt-2 w-96 bg-white border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden">
+              <div className="flex items-center justify-between p-4 font-semibold border-b bg-gray-50">
+                <span>Notifications</span>
+                <button
+                  className="text-xs text-blue-600 hover:underline"
+                  onClick={markAllAsRead}
+                >
+                  Mark all as read
+                </button>
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                {notifications.filter(n => n.status === "pending" || n.status === "read").length === 0 ? (
+                  <div className="flex flex-col items-center justify-center p-8 text-gray-400">
+                    <Bell className="w-8 h-8 mb-2" />
+                    <span>No new notifications</span>
                   </div>
-                ))
-              )}
+                ) : (
+                  notifications
+                    .filter(n => n.status === "pending" || n.status === "read")
+                    .map((note) => (
+                      <div
+                        key={note.id}
+                        className={`flex items-start gap-3 p-4 border-b last:border-b-0 transition
+                          ${note.status === "pending" ? "bg-blue-50 hover:bg-blue-100" : "bg-white hover:bg-gray-50"}
+                          cursor-pointer`}
+                        onClick={() => markNotificationAsRead(note.id)}
+                      >
+                        {note.status === "pending" && (
+                          <span className="mt-1 h-2 w-2 rounded-full bg-blue-500 flex-shrink-0" />
+                        )}
+                        <div className="flex-1">
+                          <div className={`font-semibold ${note.status === "pending" ? "text-blue-900" : "text-gray-700"}`}>{note.task}</div>
+                          <div className="text-xs text-gray-500 mt-1">
+                            <b>Zone:</b> {note.boothZone} | <b>Customer:</b> {note.customerName}
+                          </div>
+                        </div>
+                        {/* Optionally, add a timestamp here */}
+                        {/* <span className="text-xs text-gray-400 ml-2">{formatTimeAgo(note.timestamp)}</span> */}
+                      </div>
+                    ))
+                )}
+              </div>
             </div>
           )}
         </div>
-
         {/* User Profile Dropdown */}
-        <div className="relative">
+        <div className="relative" ref={profileRef}>
           <button
             onClick={toggleProfile}
             className="flex items-center gap-2 border-l pl-4 ml-2"
@@ -127,18 +187,39 @@ export default function Header() {
 
           {/* Dropdown Menu */}
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-              <div className="px-4 py-2 border-b border-gray-100">
-                <p className="text-sm font-medium text-gray-900">{displayName}</p>
-                <p className="text-xs text-gray-500">{email}</p>
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl py-4 z-50 overflow-hidden border border-gray-100">
+              {/* User Info */}
+              <div className="flex items-center gap-3 px-5 pb-4 border-b border-gray-100">
+                <div className="h-12 w-12 rounded-full overflow-hidden bg-gray-200 flex items-center justify-center">
+                  {imageError && !photoURL.startsWith('/') ? (
+                    <User className="text-gray-500" size={28} />
+                  ) : (
+                    <Image
+                      src={photoURL}
+                      alt="User profile"
+                      width={48}
+                      height={48}
+                      className="object-cover"
+                      onError={handleImageError}
+                      unoptimized={photoURL.startsWith('https://')}
+                    />
+                  )}
+                </div>
+                <div>
+                  <div className="font-bold text-lg text-gray-900">{displayName}</div>
+                  <div className="text-xs text-gray-500">{email}</div>
+                  <div className="text-xs text-blue-600 font-semibold">{role}</div>
+                </div>
               </div>
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              >
-                <LogOut size={16} />
-                <span>Logout</span>
-              </button>
+              {/* Actions */}
+              <div className="flex flex-col py-2">
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-5 py-2 text-sm text-red-600 hover:bg-red-50 transition font-semibold"
+                >
+                  <LogOut size={16} /> Logout
+                </button>
+              </div>
             </div>
           )}
         </div>

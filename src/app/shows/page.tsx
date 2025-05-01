@@ -239,13 +239,13 @@ function YearMonthPicker({
             nav_button_previous: "",
             nav_button_next: "",
             table: "w-full border-collapse space-y-1",
-            head_row: "flex",
-            head_cell: "text-gray-400 rounded-md w-9 font-normal text-[0.8rem]",
-            row: "flex w-full mt-2",
-            cell: "h-9 w-9 text-center text-sm p-0 relative",
-            day_selected: hasUserSelected ? "bg-white text-black font-bold border border-white rounded-full" : "",
-            day_today: hasUserSelected ? "bg-gray-700 text-white font-bold border border-white rounded-full" : "",
-            day: "hover:bg-gray-800 hover:text-white",
+            head_row: "hidden",
+            head_cell: "hidden",
+            row: "hidden",
+            cell: "hidden",
+            day: "hidden",
+            day_selected: "",
+            day_today: "",
             ...{},
           }}
         />
@@ -781,6 +781,25 @@ export default function ShowsPage() {
     setShowVendorInfo(true);
   };
 
+  const filtersRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Ignore clicks on the Filters button itself
+      if (target.closest('button')?.textContent?.includes('Filters')) {
+        return;
+      }
+      // Close filters if click is outside the container
+      if (filtersRef.current && !filtersRef.current.contains(target)) {
+        setShowFilters(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
@@ -885,6 +904,7 @@ export default function ShowsPage() {
 
                   {/* Filter Panel */}
                   <motion.div
+                    ref={filtersRef}
                     className={cn(
                       "bg-muted border rounded-md p-4",
                       "transition-all duration-300 ease-in-out absolute z-10 w-full",
@@ -1445,18 +1465,7 @@ export default function ShowsPage() {
                                     <TableCell className="py-2 px-4">{show.cityOrg}</TableCell>
                                     <TableCell className="py-2 px-4">{show.yrmo}</TableCell>
                                     <TableCell className="py-2 px-4">
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleShowSelect(show);
-                                          }}
-                                          className="h-7 w-7 p-0"
-                                        >
-                                          <Pencil className="h-3 w-3" />
-                                        </Button>
+                                      <div className="flex justify-center">
                                         <Button
                                           variant="ghost"
                                           size="sm"

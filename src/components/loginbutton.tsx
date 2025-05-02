@@ -10,7 +10,7 @@ export default function LoginButton() {
       className="w-full flex items-center justify-center gap-3 px-4 py-2.5 border border-gray-300 rounded-md"
     >
       <Image
-        src="/ges-workbench/google.png"
+        src="/GES/google.png"
         alt="Google"
         width={20}
         height={20}

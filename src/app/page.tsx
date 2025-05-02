@@ -14,9 +14,9 @@ export default function Home() {
   useEffect(() => {
     const isAuthenticated = checkAuth();
     if (!isAuthenticated) {
-      router.replace('/ges-workbench/login');
+      router.replace('/GES/login');
     } else {
-      router.replace('/ges-workbench/dashboard');
+      router.replace('/GES/dashboard');
     }
   }, [router, checkAuth]);
 

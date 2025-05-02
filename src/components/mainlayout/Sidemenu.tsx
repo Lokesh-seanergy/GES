@@ -22,19 +22,18 @@ interface MenuItem {
   hasChildren?: boolean;
 }
 
-export default function Sidemenu() {
-  const pathname = usePathname();
-  // Sidebar is collapsed by default everywhere, expands on hover
-  const [isCollapsed, setIsCollapsed] = useState(true);
-  const [isHovered, setIsHovered] = useState(false);
+interface SidemenuProps {
+  expanded: boolean;
+  setExpanded: (expanded: boolean) => void;
+}
 
-  // Sidebar is expanded if hovered
-  const expanded = isHovered;
+export default function Sidemenu({ expanded, setExpanded }: SidemenuProps) {
+  const pathname = usePathname();
 
   // Collapse sidebar when menu item is clicked (except dashboard)
   const handleMenuClick = (href: string) => {
     if (href !== "/dashboard") {
-      setIsCollapsed(true); // This line is now redundant but kept for future click-collapse if needed
+      setExpanded(false);
     }
   };
 
@@ -89,14 +88,14 @@ export default function Sidemenu() {
   return (
     <aside
       className={`h-screen ${expanded ? "w-56" : "w-16"} text-white flex flex-col transition-all duration-300 overflow-hidden`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => setExpanded(true)}
+      onMouseLeave={() => setExpanded(false)}
       style={{ cursor: !expanded ? 'pointer' : 'default' }}
     >
       {/* Logo section */}
       <div className={`relative bg-[#88c5cf] w-full h-16 p-0 m-0 flex items-center justify-center overflow-hidden transition-all duration-300`}> 
         <img
-          src={expanded ? "/ges-workbench/swb.png" : "/ges-workbench/geslogo.png"}
+          src={expanded ? "/GES/swb.png" : "/GES/geslogo.png"}
           alt="GES Logo"
           className={expanded ? "w-full h-full object-cover" : "h-10 w-10 rounded-full object-cover border-2 border-white shadow"}
           style={{ display: 'block', transition: 'all 0.3s' }}

@@ -8,6 +8,8 @@ export interface ShowData {
   projectNumber: string;
   cityOrg: string;
   yrmo: string;
+  openDate: string;
+  closeDate: string;
 }
 
 export interface ProjectData {
@@ -101,6 +103,10 @@ const generateShowData = (index: number): ShowData => {
   const cityOrg = CITIES[Math.floor(Math.random() * CITIES.length)];
   const yrmo = `${year}-${formattedMonth}`;
   
+  // Generate open and close dates
+  const openDate = `${year}-${formattedMonth}-01`;
+  const closeDate = `${year}-${formattedMonth}-02`;
+  
   return {
     showId,
     showName: `${occrType} ${year} - ${cityOrg.split(',')[0]}`,
@@ -109,7 +115,9 @@ const generateShowData = (index: number): ShowData => {
     marketType,
     projectNumber: `${getShowAbbreviation(occrType)}${getYearMonth(yrmo)}`,
     cityOrg,
-    yrmo
+    yrmo,
+    openDate,
+    closeDate
   };
 };
 
@@ -123,7 +131,9 @@ const predefinedShows: ShowData[] = [
     marketType: 'Software Development',
     projectNumber: `${getShowAbbreviation('Developer Conference')}${getYearMonth('2025-04')}`,
     cityOrg: 'San Francisco, CA',
-    yrmo: '2025-04'
+    yrmo: '2025-04',
+    openDate: '2025-04-01',
+    closeDate: '2025-04-02'
   },
   {
     showId: 'SHW002',
@@ -133,7 +143,9 @@ const predefinedShows: ShowData[] = [
     marketType: 'Technology',
     projectNumber: `${getShowAbbreviation('Annual Tech Summit')}${getYearMonth('2025-05')}`,
     cityOrg: 'Las Vegas, NV',
-    yrmo: '2025-05'
+    yrmo: '2025-05',
+    openDate: '2025-05-01',
+    closeDate: '2025-05-02'
   },
   {
     showId: 'SHW003',
@@ -143,7 +155,9 @@ const predefinedShows: ShowData[] = [
     marketType: 'Healthcare',
     projectNumber: `${getShowAbbreviation('Healthcare Expo')}${getYearMonth('2025-06')}`,
     cityOrg: 'Boston, MA',
-    yrmo: '2025-06'
+    yrmo: '2025-06',
+    openDate: '2025-06-01',
+    closeDate: '2025-06-02'
   }
 ];
 

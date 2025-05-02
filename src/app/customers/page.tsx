@@ -1139,8 +1139,7 @@ function CustomersContent() {
                         <div className="mt-6 pt-4 border-t flex gap-2">
                           <Button
                             onClick={() => {
-                              // TODO: Implement order functionality
-                              alert('Order functionality coming soon!');
+                              router.push("/orders");
                             }}
                           >
                             Order

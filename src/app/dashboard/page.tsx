@@ -3,7 +3,6 @@
 import React from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
-import { mockShows, mockProjectData, mockOrders } from "@/lib/mockData";
 import {
   Table,
   TableBody,
@@ -14,21 +13,31 @@ import {
 } from "@/components/ui/table";
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
 import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell, ClipboardCheck, ListChecks, ClipboardList, Clock, Loader } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, Legend,
   PieChart, Pie, Cell, Label, LabelList
+
 } from "recharts";
 import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
 import { Label as RechartsLabel } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNotifications } from "@/components/NotificationContext";
+
 import { useAuthStore } from '@/store/authStore';
+import { useSidebar } from "@/components/mainlayout/SidebarContext";
+
+import * as React from "react"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
+
 
 // Define a type for dashboard tasks
 interface DashboardTask {
@@ -42,69 +51,224 @@ interface DashboardTask {
   acceptedBy?: string;
 }
 
+interface DashboardPageProps {
+  sidebarExpanded?: boolean;
+}
+
+// Example day-wise data
+const dayData = [
+  { date: "2024-04-01", shows: 2, exhibitors: 10 },
+  { date: "2024-04-02", shows: 1, exhibitors: 8 },
+  { date: "2024-05-01", shows: 3, exhibitors: 15 },
+  { date: "2024-05-02", shows: 2, exhibitors: 12 },
+  { date: "2024-06-01", shows: 4, exhibitors: 20 },
+  { date: "2024-06-02", shows: 2, exhibitors: 10 },
+  // ... add more daily data as needed
+];
+
+function aggregateByMonth(data: { date: string; shows: number; exhibitors: number }[]): { month: string; shows: number; exhibitors: number }[] {
+  const result: Record<string, { month: string; shows: number; exhibitors: number }> = {};
+  data.forEach((item) => {
+    const month = item.date.slice(0, 7); // "YYYY-MM"
+    if (!result[month]) result[month] = { month, shows: 0, exhibitors: 0 };
+    result[month].shows += item.shows;
+    result[month].exhibitors += item.exhibitors;
+  });
+  return Object.values(result);
+}
+
+function aggregateByYear(data: { date: string; shows: number; exhibitors: number }[]): { year: string; shows: number; exhibitors: number }[] {
+  const result: Record<string, { year: string; shows: number; exhibitors: number }> = {};
+  data.forEach((item) => {
+    const year = item.date.slice(0, 4); // "YYYY"
+    if (!result[year]) result[year] = { year, shows: 0, exhibitors: 0 };
+    result[year].shows += item.shows;
+    result[year].exhibitors += item.exhibitors;
+  });
+  return Object.values(result);
+}
+
+export function ShowsExhibitorsChart() {
+  const [granularity, setGranularity] = useState("day");
+
+  // Helper to get all dates between min and max in MM/DD/YYYY
+  function getContinuousDates(data: { date: string }[]) {
+    if (!data.length) return [];
+    const sorted = [...data].sort((a, b) => dayjs(a.date).diff(dayjs(b.date)));
+    const start = dayjs(sorted[0].date);
+    const end = dayjs(sorted[sorted.length - 1].date);
+    const days = [];
+    let d = start;
+    while (d.isBefore(end) || d.isSame(end, 'day')) {
+      days.push(d.format('YYYY-MM-DD'));
+      d = d.add(1, 'day');
+    }
+    return days;
+  }
+
+  const chartData = useMemo(() => {
+    if (granularity === "day") {
+      // Fill in missing days with 0s
+      const allDays = getContinuousDates(dayData);
+      const map = Object.fromEntries(dayData.map(d => [d.date, d]));
+      return allDays.map(date => ({
+        ...map[date],
+        label: dayjs(date).format('MM/DD/YYYY'),
+        date,
+        shows: map[date]?.shows || 0,
+        exhibitors: map[date]?.exhibitors || 0,
+      }));
+    } else if (granularity === "month") {
+      return aggregateByMonth(dayData).map(d => ({ ...d, label: dayjs(d.month + '-01').format('MM/YYYY') }));
+    } else if (granularity === "year") {
+      return aggregateByYear(dayData).map(d => ({ ...d, label: d.year }));
+    }
+    return [];
+  }, [granularity]);
+
+  return (
+    <Card className="p-6 rounded-2xl shadow-xl bg-white border border-indigo-100">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold text-indigo-700">Shows & Exhibitors</CardTitle>
+            <CardDescription className="text-indigo-500">Modern visualization with day, month, or year view</CardDescription>
+          </div>
+          {/* Granularity Selector */}
+          <div className="flex gap-2 bg-indigo-100 rounded-lg p-1 w-fit">
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'day' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('day')}
+            >Day</button>
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'month' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('month')}
+            >Month</button>
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'year' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('year')}
+            >Year</button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={280}>
+          <AreaChart data={chartData} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis dataKey="label" tick={{ fontWeight: 'bold', fill: '#6366f1', fontSize: 14 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontWeight: 'bold', fill: '#22c55e', fontSize: 14 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ borderRadius: 12, boxShadow: '0 2px 12px #0001', border: 'none' }} />
+            <Legend iconType="circle" wrapperStyle={{ paddingTop: 8 }} />
+            <Area
+              type="monotone"
+              dataKey="shows"
+              stroke="#6366f1"
+              fill="url(#showsGradient)"
+              name="Shows"
+              dot={{ r: 3, fill: '#6366f1' }}
+              strokeWidth={3}
+              activeDot={{ r: 6, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="exhibitors"
+              stroke="#22c55e"
+              fill="url(#exhibitorsGradient)"
+              name="Exhibitors"
+              dot={{ r: 3, fill: '#22c55e' }}
+              strokeWidth={3}
+              activeDot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
+  const { expanded: sidebarExpanded } = useSidebar();
   // This will automatically redirect to login if not authenticated
   useAuthProtection();
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
-  // Use mockShows for dashboard tables
-  const paginatedShows = mockShows.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // TODO: Replace with real data source
+  // const paginatedShows = mockShows.slice(
+  //   (currentPage - 1) * itemsPerPage,
+  //   currentPage * itemsPerPage
+  // );
 
-  // Assign statuses: first 3 as Ongoing, next 7 as Complete, rest as Upcoming
-  const demoOngoingShows = mockShows.map((show, idx) => {
-    if (idx < 3) return { ...show, occrType: "Ongoing" };
-    if (idx < 10) return { ...show, occrType: "Complete" };
-    return { ...show, occrType: "Upcoming" };
-  });
+  // TODO: Replace with real data source
+  // const demoOngoingShows = mockShows.map((show, idx) => {
+  //   if (idx < 3) return { ...show, occrType: "Ongoing" };
+  //   if (idx < 10) return { ...show, occrType: "Complete" };
+  //   return { ...show, occrType: "Upcoming" };
+  // });
+
+  // TODO: Replace with real data source
+  // const showIdx = i % mockShows.length;
+  // const show = mockShows[showIdx];
+
+  // TODO: Replace with real data source
+  // const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
+  // const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
 
   // Generate additional mock orders with future dates for demo
   const futureOrderBaseDate = dayjs().add(1, 'day');
   const additionalOrders = Array.from({ length: 20 }).map((_, i) => {
-    const showIdx = i % mockShows.length;
-    const show = mockShows[showIdx];
+    // TODO: Replace with real data source
+    // const showIdx = i % mockShows.length;
+    // const show = mockShows[showIdx];
     return {
       orderId: `FUTURE-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-FUTURE`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 10000 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 1000,
       orderType: "New",
-      customerPO: `PO-FUTURE-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-FUTURE-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: futureOrderBaseDate.add(i, 'day').format('YYYY-MM-DD'),
-      boothInfo: `Booth #${i + 100}`,
-      billingAddress: `123 Future St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 11000 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Future Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 10000,
-          newPrice: 10000,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 10000,
-          userItemDescription: "Demo booth for future show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: futureOrderBaseDate.add(i, 'day').format('YYYY-MM-DD'),
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-FUTURE-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
@@ -112,93 +276,96 @@ export default function DashboardPage() {
   });
 
   // Add exhibitors for January and February shows
-  const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
-  const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
+  // TODO: Replace with real data source
+  // const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
+  // const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
   const janOrders = Array.from({ length: 5 }).map((_, i) => {
-    const show = janShows[i % janShows.length];
+    // TODO: Replace with real data source
+    // const show = janShows[i % janShows.length];
     return {
       orderId: `JAN-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-JAN`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 9000 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 900,
       orderType: "New",
-      customerPO: `PO-JAN-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-JAN-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: `2024-01-${(i + 5).toString().padStart(2, '0')}`,
-      boothInfo: `Booth #J${i + 1}`,
-      billingAddress: `123 Jan St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 9900 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Jan Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 9000,
-          newPrice: 9000,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 9000,
-          userItemDescription: "Demo booth for Jan show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: `2024-01-${(i + 5).toString().padStart(2, '0')}`,
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-JAN-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
     };
   });
   const febOrders = Array.from({ length: 3 }).map((_, i) => {
-    const show = febShows[i % febShows.length];
+    // TODO: Replace with real data source
+    // const show = febShows[i % febShows.length];
     return {
       orderId: `FEB-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-FEB`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 9500 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 950,
       orderType: "New",
-      customerPO: `PO-FEB-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-FEB-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: `2024-02-0${i + 2}`,
-      boothInfo: `Booth #F${i + 1}`,
-      billingAddress: `123 Feb St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 10450 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Feb Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 9500,
-          newPrice: 9500,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 9500,
-          userItemDescription: "Demo booth for Feb show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: `2024-02-0${i + 2}`,
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-FEB-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
@@ -219,7 +386,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW001`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: dayjs().add(i + 1, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L1${i + 1}`,
       billingAddress: `123 Live St, City 1, USA`,
@@ -261,7 +428,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW002-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW002`,
+      project: 'P2024-LIVE-SHW002',
       orderDate: dayjs().add(i + 2, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L2${i + 1}`,
       billingAddress: `123 Live St, City 2, USA`,
@@ -303,7 +470,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW003-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW003`,
+      project: 'P2024-LIVE-SHW003',
       orderDate: dayjs().add(i + 3, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L3${i + 1}`,
       billingAddress: `123 Live St, City 3, USA`,
@@ -335,18 +502,18 @@ export default function DashboardPage() {
     })),
   ];
 
-  const allOrders = [...mockOrders, ...additionalOrders, ...janOrders, ...febOrders, ...moreOrders];
+  const allOrders = [...janOrders, ...febOrders, ...moreOrders];
 
   // Calculate monthly breakdowns for each status
   const months = ["01", "02", "03", "04", "05", "06"];
   const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
   const monthlyStatusCounts = months.map((m) => {
-    const showsInMonth = demoOngoingShows.filter(s => s.yrmo.endsWith(`-${m}`));
+    const showsInMonth = allOrders.filter(o => o.orderDate.includes(`-${m}-`));
     return {
       month: m,
-      upcoming: showsInMonth.filter(s => s.occrType === "Upcoming").length,
-      ongoing: showsInMonth.filter(s => s.occrType === "Ongoing").length,
-      complete: showsInMonth.filter(s => s.occrType === "Complete").length,
+      upcoming: showsInMonth.filter(o => o.orderDate.includes("-01-")).length,
+      ongoing: showsInMonth.filter(o => o.orderDate.includes("-02-")).length,
+      complete: showsInMonth.filter(o => o.orderDate.includes("-03-")).length,
       total: showsInMonth.length,
     };
   });
@@ -379,17 +546,15 @@ export default function DashboardPage() {
   };
 
   // Table of all closed shows
-  const closedShowsTable = demoOngoingShows.filter(s => s.occrType === "Complete").map(show => ({
-    id: show.showId,
-    name: show.showName,
-    date: show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo,
-    location: show.cityOrg,
+  const closedShowsTable = allOrders.filter(o => o.orderDate.includes("-01-")).map(order => ({
+    id: order.showId,
+    name: order.showId,
+    date: order.orderDate,
+    location: order.billingAddress,
   }));
 
   // Only consider ongoing shows for these stats
-  const ongoingShowIds = demoOngoingShows
-    .filter(s => s.occrType === "Ongoing")
-    .map(s => s.showId);
+  const ongoingShowIds = allOrders.map(o => o.showId);
 
   const ongoingOrders = allOrders.filter(o => ongoingShowIds.includes(o.showId));
 
@@ -398,9 +563,9 @@ export default function DashboardPage() {
 
   // Active Locations (unique cityOrg in ongoing shows)
   const ongoingLocations = new Set(
-    demoOngoingShows
-      .filter(s => s.occrType === "Ongoing")
-      .map(s => s.cityOrg)
+    allOrders
+      .filter(o => o.orderDate.includes("-01-"))
+      .map(o => o.billingAddress)
   ).size;
 
   // Total Revenue (sum of ongoing orders)
@@ -408,7 +573,7 @@ export default function DashboardPage() {
 
   // Fix closed shows count: count all shows with yrmo before today as closed
   const today = dayjs();
-  const closedShows = demoOngoingShows.filter(s => dayjs(s.yrmo + '-01').isBefore(today, 'day'));
+  const closedShows = allOrders.filter(o => dayjs(o.orderDate).isBefore(today, 'day'));
   const closedCount = closedShows.length;
 
   // Update stats to use hardcoded closed shows count
@@ -447,31 +612,31 @@ const stats = [
       { id: 8, task: "Check AV Setup", boothZone: "D5", customerName: "Stark Industries", status: "pending", timestamp: new Date().toISOString() },
     ],
     inProgress: [
-      { id: 3, task: "Exhibitor Setup", due: "Jan 7", boothZone: "D4", customerName: "Umbrella Corp", status: "inProgress" },
-      { id: 4, task: "Marketing Materials", due: "Jan 12", boothZone: "E5", customerName: "Hooli", status: "inProgress" },
+      { id: 3, task: "Exhibitor Setup", due: "Jan 7", boothZone: "D4", customerName: "Umbrella Corp", status: "inProgress", acceptedBy: "Jhon" },
+      { id: 4, task: "Marketing Materials", due: "Jan 12", boothZone: "E5", customerName: "Hooli", status: "inProgress", acceptedBy: "Jhon" },
     ],
     completed: [
-      { id: 5, task: "Budget Approval", due: "Jan 3", boothZone: "F6", customerName: "Wayne Enterprises", status: "completed" },
-      { id: 6, task: "Venue Booking", due: "Jan 1", boothZone: "G7", customerName: "Stark Industries", status: "completed" },
+      { id: 5, task: "Budget Approval", due: "Jan 3", boothZone: "F6", customerName: "Wayne Enterprises", status: "completed", acceptedBy: "Jhon" },
+      { id: 6, task: "Venue Booking", due: "Jan 1", boothZone: "G7", customerName: "Stark Industries", status: "completed", acceptedBy: "Jhon" },
     ],
   });
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const bellRef = useRef(null);
 
-  // Table data from demoOngoingShows (first 5 for example)
+  // Table data from allOrders (first 5 for example)
   const currentYear = dayjs().year();
-  const showsTable = demoOngoingShows.slice(0, 5).map(show => {
-    let dateStr = show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo;
+  const showsTable = allOrders.slice(0, 5).map(order => {
+    let dateStr = order.orderDate;
     // Replace the year with the current year if dateStr is in YYYY-MM-DD format
     if (dateStr && dateStr.length === 10) {
       dateStr = `${currentYear}${dateStr.slice(4)}`;
     }
     return {
-      id: show.showId,
-      name: show.showName,
+      id: order.showId,
+      name: order.showId,
       date: dateStr,
-      location: show.cityOrg,
-      status: ["Exhibition", "Workshop"].includes(show.occrType) ? "Upcoming" : (show.occrType || "Upcoming")
+      location: order.billingAddress,
+      status: ["Exhibition", "Workshop"].includes(order.showId) ? "Upcoming" : (order.showId || "Upcoming")
     };
   });
   // Bar chart for top 3 shows with most upcoming orders
@@ -486,15 +651,15 @@ const stats = [
 
   // Create a mapping from showId to the 3-letter shortcut and to the full show name
   const showShortcuts = Object.fromEntries(
-    mockShows.map(show => [
+    allOrders.map(show => [
       show.showId,
-      show.showName ? show.showName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() : show.showId
+      show.showId ? show.showId.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() : show.showId
     ])
   );
   const showNames = Object.fromEntries(
-    mockShows.map(show => [
+    allOrders.map(show => [
       showShortcuts[show.showId] || show.showId,
-      show.showName || show.showId
+      show.showId || show.showId
     ])
   );
 
@@ -618,28 +783,41 @@ const stats = [
   };
   const rangeStart = getRangeStart();
 
+  // Helper to get end date for each range
+  const getRangeEnd = () => {
+    switch (chartRange) {
+      case '1m': return rangeStart.add(1, 'month').subtract(1, 'day');
+      case '3m': return rangeStart.add(3, 'month').subtract(1, 'day');
+      case '6m': return rangeStart.add(6, 'month').subtract(1, 'day');
+      case 'yr': return rangeStart.add(1, 'year').subtract(1, 'day');
+      case 'ytd': return today; // YTD should end at today
+      default: return today;
+    }
+  };
+  const rangeEnd = getRangeEnd();
+
   // Filter orders and shows for the selected range
   const filteredOrders = allOrders.filter(o => {
     const orderDate = dayjs(o.orderDate);
-    return orderDate.isAfter(rangeStart.subtract(1, 'day')) && orderDate.isBefore(today.add(1, 'day'));
+    return orderDate.isAfter(rangeStart.subtract(1, 'day')) && orderDate.isBefore(rangeEnd.add(1, 'day'));
   });
   const filteredShows = demoOngoingShows.filter(s => {
     const showDate = dayjs(s.yrmo + '-01');
-    return showDate.isAfter(rangeStart.subtract(1, 'day')) && showDate.isBefore(today.add(1, 'day'));
+    return showDate.isAfter(rangeStart.subtract(1, 'day')) && showDate.isBefore(rangeEnd.add(1, 'day'));
   });
 
   // Generate chart data for months in the selected range
   const monthsInRange = [];
   let iterMonth = rangeStart.startOf('month');
-  while (iterMonth.isBefore(today, 'month') || iterMonth.isSame(today, 'month')) {
-    monthsInRange.push(iterMonth.format('MMMM'));
+  while (iterMonth.isBefore(rangeEnd) || iterMonth.isSame(rangeEnd, 'month')) {
+    monthsInRange.push(iterMonth.clone());
     iterMonth = iterMonth.add(1, 'month');
   }
-  const chartDataMonth = monthsInRange.map((month, i) => {
-    const monthNum = (rangeStart.month() + i + 1).toString().padStart(2, '0');
-    const year = rangeStart.year() + Math.floor((rangeStart.month() + i) / 12);
+  const chartDataMonth = monthsInRange.map((date) => {
+    const monthNum = date.format('MM');
+    const year = date.format('YYYY');
     return {
-      name: month,
+      name: `${monthNum}-${year}`,
       Shows: filteredShows.filter(s => s.yrmo === `${year}-${monthNum}`).length,
       Exhibitors: filteredOrders.filter(o => o.orderDate.startsWith(`${year}-${monthNum}`)).length,
     };
@@ -763,7 +941,7 @@ const stats = [
   const [todoPage, setTodoPage] = useState(0);
   const [inProgressPage, setInProgressPage] = useState(0);
   const [completedPage, setCompletedPage] = useState(0);
-  const tasksPerPage = 2;
+  const tasksPerPage = 1;
 
   const todoPages = Math.ceil(showTasks.todo.length / tasksPerPage);
   const inProgressPages = Math.ceil(showTasks.inProgress.length / tasksPerPage);
@@ -782,45 +960,125 @@ const stats = [
     completedPage * tasksPerPage + tasksPerPage
   );
 
+  // Refs for dynamic height sync
+  const pieCardRef = useRef<HTMLDivElement>(null);
+  const showDetailsRef = useRef<HTMLDivElement>(null);
+  const upcomingOrderRef = useRef<HTMLDivElement>(null);
+  const showTasksRef = useRef<HTMLDivElement>(null);
+
+  // Extend the effect to sync Upcoming Show Order card height to Show Tasks card
+  useEffect(() => {
+    function syncHeight() {
+      if (pieCardRef.current && showDetailsRef.current) {
+        const pieHeight = pieCardRef.current.offsetHeight;
+        showDetailsRef.current.style.height = pieHeight + 'px';
+      }
+      if (showTasksRef.current && upcomingOrderRef.current) {
+        const showTasksHeight = showTasksRef.current.offsetHeight;
+        upcomingOrderRef.current.style.height = showTasksHeight + 'px';
+      }
+    }
+    syncHeight();
+    window.addEventListener('resize', syncHeight);
+    return () => window.removeEventListener('resize', syncHeight);
+  }, []);
+
+  // Static Show Details Data
+  const staticShowDetails = [
+    {
+      id: '1',
+      name: 'Developer Conference',
+      location: 'San Francisco, CA',
+      date: '2025-05-01',
+      closeDate: '2025-05-02',
+      status: 'Ongoing',
+    },
+    {
+      id: '2',
+      name: 'Annual Tech Summit',
+      location: 'Las Vegas, NV',
+      date: '2025-05-01',
+      closeDate: '2025-05-02',
+      status: 'Ongoing',
+    },
+    {
+      id: '3',
+      name: 'Healthcare Expo',
+      location: 'Boston, MA',
+      date: '2025-05-01',
+      closeDate: '2025-05-02',
+      status: 'Ongoing',
+    },
+    {
+      id: '4',
+      name: 'Workshop 2025 - Denver',
+      location: 'Denver, CO',
+      date: '2025-05-05',
+      closeDate: '2025-05-06',
+      status: 'Upcoming',
+    },
+    {
+      id: '5',
+      name: 'Training Session 2025 - Seattle',
+      location: 'Seattle, WA',
+      date: '2025-05-05',
+      closeDate: '2025-05-06',
+      status: 'Upcoming',
+    },
+  ];
+
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
+
         <div className="flex flex-col md:flex-row w-full gap-6">
           {/* Left: Main Content */}
-          <div className="w-full md:w-[70%]">
-            {/* Show Details Card (left) */}
-            <div className="flex flex-col md:flex-row gap-6 mb-6">
-              {/* Show Details Card (left) */}
-              <div className="w-full md:w-1/2">
-                <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6">
-                  <div className="font-extrabold text-2xl mb-6 text-blue-800 tracking-tight">Show Details</div>
-                  <div className="space-y-4">
-                    {showsTable.map((show) => (
-                      <Card
-                        key={show.id}
-                        className="flex items-center justify-between p-4 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
-                      >
-                        <div>
-                          <span className={`font-bold ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>
-                            {show.name}
-                          </span>
-                          <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 mt-1">
-                            <MapPin className="w-4 h-4 text-blue-500" />
-                            <span>Location:</span>
-                            <span className="ml-1 text-gray-600">{show.location}</span>
-                          </div>
-                        </div>
-                        <div className="text-sm font-semibold text-green-600 flex items-center self-center">
-                          {dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}
-                        </div>
-                      </Card>
-                    ))}
-                  </div>
-                </Card>
+          <div className="w-full md:w-[65%] flex flex-col gap-4">
+            {/* Top row: Stat Cards (left) and Pie Chart (right) */}
+            <div className="flex flex-col md:flex-row gap-4 w-full items-stretch">
+              {/* Stat Cards (left, reduced width) */}
+              <div className="w-full md:w-5/12 flex flex-col gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 h-full">
+                  {stats.map((stat) => (
+                    <Card
+                      key={stat.label}
+                      className={`flex items-center min-h-[96px] gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full h-full`}
+                    >
+                      <div className={`flex items-center justify-center w-14 h-12 rounded-full ${
+                        stat.label === "Upcoming Shows" ? "bg-blue-100" :
+                        stat.label === "Closed Shows" ? "bg-gray-100" :
+                        stat.label === "Ongoing Shows" ? "bg-green-100" :
+                        stat.label === "Total Exhibitors" ? "bg-purple-100" :
+                        stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
+                      }`}>
+                        {React.cloneElement(stat.icon, {
+                          className: `${stat.icon.props.className || ''} w-6 h-6`
+                        })}
+                      </div>
+                      <div className="w-px h-10 bg-gray-200 mx-2" />
+                      <div className="flex flex-col items-start justify-center h-full text-left">
+                        <div className={`text-2xl font-extrabold self-center ${
+                          stat.label === "Upcoming Shows" ? "text-blue-600" :
+                          stat.label === "Closed Shows" ? "text-gray-600" :
+                          stat.label === "Ongoing Shows" ? "text-green-600" :
+                          stat.label === "Total Exhibitors" ? "text-purple-600" :
+                          stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                        }`}>{stat.value}</div>
+                        <div className={`text-sm font-semibold mt-0.5 ${
+                          stat.label === "Upcoming Shows" ? "text-blue-600" :
+                          stat.label === "Closed Shows" ? "text-gray-600" :
+                          stat.label === "Ongoing Shows" ? "text-green-600" :
+                          stat.label === "Total Exhibitors" ? "text-purple-600" :
+                          stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                        }`}>{stat.label}</div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
-              {/* Pie Chart for Ongoing Shows Orders (right) */}
-              <div className="w-full md:w-1/2 flex items-stretch">
-                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full h-full relative">
+              {/* Pie Chart for Ongoing Shows Orders (right, increased width) */}
+              <div className="w-full md:w-7/12 flex flex-col h-full" ref={pieCardRef}>
+                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full h-full min-h-[380px] relative">
                   <div className="font-extrabold text-2xl mb-2 text-blue-800 tracking-tight">Ongoing Shows - Orders Distribution</div>
                   <div className="flex flex-1 items-center justify-center min-h-[380px]">
                     <PieChart width={380} height={380}>
@@ -868,7 +1126,11 @@ const stats = [
                           }}
                         />
                         {/* Label for each arc */}
-                        <LabelList dataKey="value" position="inside" style={{ fontWeight: 'bold', fill: '#222' }} />
+                        <LabelList
+                          dataKey="value"
+                          position="outside"
+                          style={{ fontWeight: 700, fontSize: 18, fill: '#222' }}
+                        />
                         {ongoingShowOrders.map((entry, idx) => (
                           <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
                         ))}
@@ -892,13 +1154,13 @@ const stats = [
               </div>
             </div>
             {/* Shows & Exhibitors Chart */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
               <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden">
                 <div className="flex items-center justify-between px-8 pt-8 pb-4">
                   <div>
                     <div className="text-2xl font-extrabold text-blue-800 tracking-tight">Shows & Exhibitors</div>
                     <div className="text-base font-medium text-blue-400">Modern visualization with day, month, or year view</div>
-        </div>
+                  </div>
                   {/* Vertical legend at top right */}
                   <div className="flex flex-col items-end gap-2">
                     <span className="flex items-center gap-2">
@@ -909,8 +1171,8 @@ const stats = [
                       <span className="w-4 h-1 rounded bg-green-600 inline-block" />
                       <span className="text-green-600">Exhibitors</span>
                     </span>
-          </div>
-        </div>
+                  </div>
+                </div>
                 <div className="px-8 pb-6">
                   <div className="bg-gray-50 rounded-xl shadow-inner p-6">
                     <ResponsiveContainer width="100%" height={250}>
@@ -936,11 +1198,7 @@ const stats = [
                           tickMargin={8}
                           minTickGap={32}
                           tick={{ fontSize: 14, fontWeight: 600, fill: '#222' }}
-                          tickFormatter={(value: string) => {
-                            const monthMap: Record<string, string> = { Jan: "January", Feb: "February", Mar: "March", Apr: "April", May: "May", Jun: "June" };
-                            if (chartView === 'month') return monthMap[value] || value;
-                            return value;
-                          }}
+                          tickFormatter={(value: string) => value}
                         />
                         <YAxis
                           allowDecimals={false}
@@ -988,7 +1246,7 @@ const stats = [
                         />
                       </AreaChart>
                     </ResponsiveContainer>
-      </div>
+                  </div>
                   {/* Quick range buttons below chart */}
                   <div className="flex gap-2 bg-white rounded-full p-1 justify-center mt-6">
                     {[
@@ -1007,126 +1265,58 @@ const stats = [
                       >
                         {btn.label}
                       </button>
-                ))}
-              </div>
-            </div>
-              </Card>
+                    ))}
+                  </div>
                 </div>
-                          </div>
-          {/* Right: Stat Cards and Show Tasks */}
-          <div className="w-full md:w-[30%] mt-8 md:mt-0 flex flex-col gap-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* First two stat cards */}
-              {stats.slice(0, 2).map((stat) => (
-                <Card
-                  key={stat.label}
-                  className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
-                >
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
-                    stat.label === "Closed Shows" ? "bg-gray-100" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
-                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
-                  }`}>
-                    {React.cloneElement(stat.icon, {
-                      className: `${stat.icon.props.className || ''} w-6 h-6`
-                    })}
+              </Card>
+              {/* Upcoming Show Order Card */}
+              <Card ref={upcomingOrderRef} className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden flex flex-col h-full">
+                <div className="px-8 pt-8 pb-6 flex flex-col flex-1 items-center justify-start h-full">
+                  <div className="text-2xl font-extrabold text-blue-800 tracking-tight mb-8">Upcoming Show Order</div>
+                  <div className="flex-1 w-full flex items-center justify-center">
+                    <div className="text-lg font-semibold text-gray-400">Under Development</div>
                   </div>
-                  <div className="w-px h-10 bg-gray-200 mx-2" />
-                  <div className="flex flex-col justify-center">
-                    <div className={`text-3xl font-extrabold ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.value}</div>
-                    <div className={`text-base font-semibold mt-1 ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.label}</div>
-                  </div>
-                </Card>
-              ))}
-              {/* Ongoing Shows card, full width */}
-              {stats.filter(stat => stat.label === "Ongoing Shows").map((stat) => (
-                <Card
-                  key={stat.label}
-                  className="flex items-center justify-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full md:col-span-2"
-                >
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
-                    stat.label === "Closed Shows" ? "bg-gray-100" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
-                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
-                  }`}>
-                    {React.cloneElement(stat.icon, {
-                      className: `${stat.icon.props.className || ''} w-6 h-6`
-                    })}
-              </div>
-                  <div className="w-px h-10 bg-gray-200 mx-2" />
-                  <div className="flex flex-col justify-center">
-                    <div className={`text-3xl font-extrabold ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.value}</div>
-                    <div className={`text-base font-semibold mt-1 ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.label}</div>
-                  </div>
-                </Card>
-              ))}
-              {/* Remaining stat cards */}
-              {stats.slice(3).map((stat) => (
-                <Card
-                  key={stat.label}
-                  className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
-                >
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
-                    stat.label === "Closed Shows" ? "bg-gray-100" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
-                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
-                  }`}>
-                    {React.cloneElement(stat.icon, {
-                      className: `${stat.icon.props.className || ''} w-6 h-6`
-                    })}
-              </div>
-                  <div className="w-px h-10 bg-gray-200 mx-2" />
-                  <div className="flex flex-col justify-center">
-                    <div className={`text-3xl font-extrabold ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.value}</div>
-                    <div className={`text-base font-semibold mt-1 ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.label}</div>
-                  </div>
-                </Card>
-                ))}
+                </div>
+              </Card>
             </div>
-            {/* Show Tasks Card (moved here, vertical layout) */}
-            <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden mt-6">
+          </div>
+          {/* Right: Show Details and Show Tasks */}
+          <div className="w-full md:w-[35%] flex flex-col gap-4">
+            {/* Show Details Card (top) */}
+            <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6" ref={showDetailsRef}>
+              <div className="font-extrabold text-lg mb-4 text-blue-800 tracking-tight">Show Details</div>
+              <div className="space-y-4">
+                {staticShowDetails.map((show) => (
+                  <Card
+                    key={show.id}
+                    className="flex items-center justify-between p-3 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
+                  >
+                    <div>
+                      <span className={`font-bold text-base ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>{show.name}</span>
+                      <div className="flex items-center gap-2 text-xs font-medium text-gray-400 mt-0.5">
+                        <MapPin className="w-3 h-3 text-blue-500" />
+                        <span>Location:</span>
+                        <span className="ml-1 text-gray-600">{show.location}</span>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end">
+                      <div className="text-xs">
+                        <span className="text-gray-400 font-medium">Open:</span>{" "}
+                        <span className="text-black font-semibold">{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</span>
+                      </div>
+                      {dayjs(show.closeDate).isValid() && (
+                        <div className="text-xs mt-0.5">
+                          <span className="text-gray-400 font-medium">Closes:</span>{" "}
+                          <span className="text-black font-semibold">{dayjs(show.closeDate).format('MM-DD-YYYY')}</span>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </Card>
+            {/* Show Tasks Card (below Show Details) */}
+            <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden" ref={showTasksRef}>
               <div className="flex items-center gap-2 mb-4 px-4 md:px-8 pt-8 pb-4">
                 <ListChecks className="w-5 h-5 text-blue-600" />
                 <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
@@ -1145,7 +1335,7 @@ const stats = [
                       <button
                         onClick={() => setTodoPage(todoPage - 1)}
                         disabled={todoPage === 0}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
                         aria-label="Previous"
                       >
                         <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1162,20 +1352,17 @@ const stats = [
                                 {task.boothZone && <>Zone: {task.boothZone} | </>}
                                 {task.customerName && <>Customer: {task.customerName}</>}
                               </span>
+                              <span className="text-sm text-blue-700 font-semibold mt-3 border-t border-blue-100 pt-2 whitespace-nowrap">
+                                <span className="font-bold">Accepted by:</span> Jhon
+                              </span>
                             </div>
-                            <Button
-                              className="ml-4 h-9 px-5 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-sm transition-all duration-150"
-                              onClick={() => handleAccept(task)}
-                            >
-                              Accept
-                            </Button>
                           </Card>
                         ))}
                       </div>
                       <button
                         onClick={() => setTodoPage(todoPage + 1)}
                         disabled={todoPage === todoPages - 1}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
                         aria-label="Next"
                       >
                         <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1201,7 +1388,7 @@ const stats = [
                       <button
                         onClick={() => setInProgressPage(inProgressPage - 1)}
                         disabled={inProgressPage === 0}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
                         aria-label="Previous"
                       >
                         <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1212,15 +1399,15 @@ const stats = [
                             key={task.id}
                             className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-yellow-400 min-w-0"
                           >
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 flex flex-col justify-center">
                               <span className="block text-gray-900 font-bold text-base">{task.task}</span>
                               <span className="block text-gray-500 text-xs font-medium mt-1">
                                 {task.boothZone && <>Zone: {task.boothZone} | </>}
                                 {task.customerName && <>Customer: {task.customerName}</>}
                               </span>
-                              {task.acceptedBy && (
-                                <span className="block text-xs text-gray-400 mt-1">Accepted by: {task.acceptedBy}</span>
-                              )}
+                              <span className="text-sm text-yellow-700 font-semibold mt-3 border-t border-yellow-100 pt-2 whitespace-nowrap">
+                                <span className="font-bold">Accepted by:</span> {task.acceptedBy}
+                              </span>
                             </div>
                             <Button
                               className="ml-4 h-9 px-5 rounded-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold shadow-sm transition-all duration-150"
@@ -1234,7 +1421,7 @@ const stats = [
                       <button
                         onClick={() => setInProgressPage(inProgressPage + 1)}
                         disabled={inProgressPage === inProgressPages - 1}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
                         aria-label="Next"
                       >
                         <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1260,7 +1447,7 @@ const stats = [
                       <button
                         onClick={() => setCompletedPage(completedPage - 1)}
                         disabled={completedPage === 0}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
                         aria-label="Previous"
                       >
                         <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1268,15 +1455,20 @@ const stats = [
                       <div className="flex flex-col gap-4">
                         {completedTasksToShow.map((task) => (
                           <Card key={task.id} className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-green-500 min-w-0">
-                            <div className="flex-1 flex items-center min-w-0">
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                              <div>
-                                <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                                <span className="block text-gray-500 text-xs font-medium mt-1">
-                                  {task.boothZone && <>Zone: {task.boothZone} | </>}
-                                  {task.customerName && <>Customer: {task.customerName}</>}
-                                </span>
+                            <div className="flex-1 flex flex-col min-w-0">
+                              <div className="flex items-center">
+                                <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                                <div>
+                                  <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                                  <span className="block text-gray-500 text-xs font-medium mt-1">
+                                    {task.boothZone && <>Zone: {task.boothZone} | </>}
+                                    {task.customerName && <>Customer: {task.customerName}</>}
+                                  </span>
+                                </div>
                               </div>
+                              <span className="block text-sm text-green-700 font-semibold mt-2 border-t border-green-100 pt-2">
+                                <span className="font-bold">Accepted by:</span> {task.acceptedBy}
+                              </span>
                             </div>
                             <span className="text-xs font-semibold text-gray-400">Due: {task.due}</span>
                           </Card>
@@ -1285,7 +1477,7 @@ const stats = [
                       <button
                         onClick={() => setCompletedPage(completedPage + 1)}
                         disabled={completedPage === completedPages - 1}
-                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
                         aria-label="Next"
                       >
                         <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -1313,8 +1505,9 @@ const stats = [
           >
             Undo
           </button>
-    </div>
+        </div>
       )}
+
     </MainLayout>
   );
 }

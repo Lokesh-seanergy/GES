@@ -824,6 +824,50 @@ const stats = [
     return () => window.removeEventListener('resize', syncHeight);
   }, []);
 
+  // Static Show Details Data
+  const staticShowDetails = [
+    {
+      id: '1',
+      name: 'Developer Conference',
+      location: 'San Francisco, CA',
+      date: '2025-05-01',
+      closeDate: '2025-05-02',
+      status: 'Ongoing',
+    },
+    {
+      id: '2',
+      name: 'Annual Tech Summit',
+      location: 'Las Vegas, NV',
+      date: '2025-05-01',
+      closeDate: '2025-05-02',
+      status: 'Ongoing',
+    },
+    {
+      id: '3',
+      name: 'Healthcare Expo',
+      location: 'Boston, MA',
+      date: '2025-05-01',
+      closeDate: '2025-05-02',
+      status: 'Ongoing',
+    },
+    {
+      id: '4',
+      name: 'Workshop 2025 - Denver',
+      location: 'Denver, CO',
+      date: '2025-05-05',
+      closeDate: '2025-05-06',
+      status: 'Upcoming',
+    },
+    {
+      id: '5',
+      name: 'Training Session 2025 - Seattle',
+      location: 'Seattle, WA',
+      date: '2025-05-05',
+      closeDate: '2025-05-06',
+      status: 'Upcoming',
+    },
+  ];
+
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
@@ -1066,7 +1110,14 @@ const stats = [
                 </div>
               </Card>
               {/* Upcoming Show Order Card */}
-             
+              <Card ref={upcomingOrderRef} className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden flex flex-col h-full">
+                <div className="px-8 pt-8 pb-6 flex flex-col flex-1 items-center justify-start h-full">
+                  <div className="text-2xl font-extrabold text-blue-800 tracking-tight mb-8">Upcoming Show Order</div>
+                  <div className="flex-1 w-full flex items-center justify-center">
+                    <div className="text-lg font-semibold text-gray-400">Under Development</div>
+                  </div>
+                </div>
+              </Card>
             </div>
           </div>
           {/* Right: Show Details and Show Tasks */}
@@ -1075,7 +1126,7 @@ const stats = [
             <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6" ref={showDetailsRef}>
               <div className="font-extrabold text-lg mb-4 text-blue-800 tracking-tight">Show Details</div>
               <div className="space-y-4">
-                {showsTable.map((show) => (
+                {staticShowDetails.map((show) => (
                   <Card
                     key={show.id}
                     className="flex items-center justify-between p-3 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
@@ -1093,10 +1144,10 @@ const stats = [
                         <span className="text-gray-400 font-medium">Open:</span>{" "}
                         <span className="text-black font-semibold">{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</span>
                       </div>
-                      {dayjs(show.date).isValid() && (
+                      {dayjs(show.closeDate).isValid() && (
                         <div className="text-xs mt-0.5">
                           <span className="text-gray-400 font-medium">Closes:</span>{" "}
-                          <span className="text-black font-semibold">{dayjs(show.date).add(1, 'day').format('MM-DD-YYYY')}</span>
+                          <span className="text-black font-semibold">{dayjs(show.closeDate).format('MM-DD-YYYY')}</span>
                         </div>
                       )}
                     </div>
@@ -1142,7 +1193,7 @@ const stats = [
                                 {task.customerName && <>Customer: {task.customerName}</>}
                               </span>
                               <span className="text-sm text-blue-700 font-semibold mt-3 border-t border-blue-100 pt-2 whitespace-nowrap">
-                                <span className="font-bold">Accepted by:</span> jhon
+                                <span className="font-bold">Accepted by:</span> Jhon
                               </span>
                             </div>
                           </Card>

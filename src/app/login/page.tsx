@@ -59,7 +59,7 @@ export default function LoginPage() {
             {/* Logo Section */}
             <div className="flex flex-col items-center space-y-4 md:w-1/2">
               <Image
-                src="/GES/ges_logo.png"
+                src="/GES/swb.png"
                 alt="GES Logo"
                 width={320}
                 height={320}

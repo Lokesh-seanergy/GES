@@ -257,7 +257,7 @@ function DateRangePicker({
 
   return (
     <div className="space-y-2" ref={dropdownRef}>
-      <Label className="text-sm text-gray-500 font-semibold">Date Range</Label>
+      <Label className="text-sm font-semibold text-gray-900">Date Range</Label>
       <div className="relative">
         <Button
           type="button"
@@ -1142,7 +1142,7 @@ export default function ShowsPage() {
                   >
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Show ID</Label>
+                        <Label className="text-sm font-semibold text-gray-900">Show ID</Label>
                         <Input
                           value={filters.showId}
                           onChange={(e) =>
@@ -1153,7 +1153,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Show Name</Label>
+                        <Label className="text-sm font-semibold text-gray-900">Show Name</Label>
                         <Input
                           value={filters.showName}
                           onChange={(e) =>
@@ -1164,7 +1164,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Occurrence ID</Label>
+                        <Label className="text-sm font-semibold text-gray-900">Occurrence ID</Label>
                         <Input
                           value={filters.occrId}
                           onChange={(e) =>
@@ -1175,7 +1175,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Occurrence Type</Label>
+                        <Label className="text-sm font-semibold text-gray-900">Occurrence Type</Label>
                         <Select
                           value={filters.occrType}
                           onValueChange={(value) =>
@@ -1195,7 +1195,7 @@ export default function ShowsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Market Type</Label>
+                        <Label className="text-sm font-semibold text-gray-900">Market Type</Label>
                         <Select
                           value={filters.marketType}
                           onValueChange={(value) =>
@@ -1215,7 +1215,7 @@ export default function ShowsPage() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Project #</Label>
+                        <Label className="text-sm font-semibold text-gray-900">Project#</Label>
                         <Input
                           value={filters.projectNumber}
                           onChange={(e) =>
@@ -1226,7 +1226,7 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Show Location</Label>
+                        <Label className="text-sm font-semibold text-gray-900">Show Location</Label>
                         <Input
                           value={filters.cityOrg}
                           onChange={(e) =>
@@ -1502,7 +1502,7 @@ export default function ShowsPage() {
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>Open Date</Label>
+                              <Label className="text-sm font-semibold">Open</Label>
                               <Input
                                 type="text"
                                 placeholder="MM-dd-yyyy"
@@ -1519,9 +1519,7 @@ export default function ShowsPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label className="text-sm text-gray-500">
-                                Close
-                              </Label>
+                              <Label className="text-sm font-semibold">Close</Label>
                               <Input
                                 type="text"
                                 placeholder="MM-dd-yyyy"

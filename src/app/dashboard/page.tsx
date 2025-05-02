@@ -3,7 +3,6 @@
 import React from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
-import { mockShows, mockProjectData, mockOrders } from "@/lib/mockData";
 import {
   Table,
   TableBody,
@@ -14,22 +13,31 @@ import {
 } from "@/components/ui/table";
 import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
-import { useState, useRef, useEffect } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useRef, useEffect, useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
 import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell, ClipboardCheck, ListChecks, ClipboardList, Clock, Loader } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, Legend,
   PieChart, Pie, Cell, Label, LabelList
+
 } from "recharts";
 import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
 import { Label as RechartsLabel } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNotifications } from "@/components/NotificationContext";
+
 import { useAuthStore } from '@/store/authStore';
 import { useSidebar } from "@/components/mainlayout/SidebarContext";
+
+import * as React from "react"
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select"
+
 
 // Define a type for dashboard tasks
 interface DashboardTask {
@@ -47,6 +55,147 @@ interface DashboardPageProps {
   sidebarExpanded?: boolean;
 }
 
+// Example day-wise data
+const dayData = [
+  { date: "2024-04-01", shows: 2, exhibitors: 10 },
+  { date: "2024-04-02", shows: 1, exhibitors: 8 },
+  { date: "2024-05-01", shows: 3, exhibitors: 15 },
+  { date: "2024-05-02", shows: 2, exhibitors: 12 },
+  { date: "2024-06-01", shows: 4, exhibitors: 20 },
+  { date: "2024-06-02", shows: 2, exhibitors: 10 },
+  // ... add more daily data as needed
+];
+
+function aggregateByMonth(data: { date: string; shows: number; exhibitors: number }[]): { month: string; shows: number; exhibitors: number }[] {
+  const result: Record<string, { month: string; shows: number; exhibitors: number }> = {};
+  data.forEach((item) => {
+    const month = item.date.slice(0, 7); // "YYYY-MM"
+    if (!result[month]) result[month] = { month, shows: 0, exhibitors: 0 };
+    result[month].shows += item.shows;
+    result[month].exhibitors += item.exhibitors;
+  });
+  return Object.values(result);
+}
+
+function aggregateByYear(data: { date: string; shows: number; exhibitors: number }[]): { year: string; shows: number; exhibitors: number }[] {
+  const result: Record<string, { year: string; shows: number; exhibitors: number }> = {};
+  data.forEach((item) => {
+    const year = item.date.slice(0, 4); // "YYYY"
+    if (!result[year]) result[year] = { year, shows: 0, exhibitors: 0 };
+    result[year].shows += item.shows;
+    result[year].exhibitors += item.exhibitors;
+  });
+  return Object.values(result);
+}
+
+export function ShowsExhibitorsChart() {
+  const [granularity, setGranularity] = useState("day");
+
+  // Helper to get all dates between min and max in MM/DD/YYYY
+  function getContinuousDates(data: { date: string }[]) {
+    if (!data.length) return [];
+    const sorted = [...data].sort((a, b) => dayjs(a.date).diff(dayjs(b.date)));
+    const start = dayjs(sorted[0].date);
+    const end = dayjs(sorted[sorted.length - 1].date);
+    const days = [];
+    let d = start;
+    while (d.isBefore(end) || d.isSame(end, 'day')) {
+      days.push(d.format('YYYY-MM-DD'));
+      d = d.add(1, 'day');
+    }
+    return days;
+  }
+
+  const chartData = useMemo(() => {
+    if (granularity === "day") {
+      // Fill in missing days with 0s
+      const allDays = getContinuousDates(dayData);
+      const map = Object.fromEntries(dayData.map(d => [d.date, d]));
+      return allDays.map(date => ({
+        ...map[date],
+        label: dayjs(date).format('MM/DD/YYYY'),
+        date,
+        shows: map[date]?.shows || 0,
+        exhibitors: map[date]?.exhibitors || 0,
+      }));
+    } else if (granularity === "month") {
+      return aggregateByMonth(dayData).map(d => ({ ...d, label: dayjs(d.month + '-01').format('MM/YYYY') }));
+    } else if (granularity === "year") {
+      return aggregateByYear(dayData).map(d => ({ ...d, label: d.year }));
+    }
+    return [];
+  }, [granularity]);
+
+  return (
+    <Card className="p-6 rounded-2xl shadow-xl bg-white border border-indigo-100">
+      <CardHeader className="pb-2">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <CardTitle className="text-2xl font-bold text-indigo-700">Shows & Exhibitors</CardTitle>
+            <CardDescription className="text-indigo-500">Modern visualization with day, month, or year view</CardDescription>
+          </div>
+          {/* Granularity Selector */}
+          <div className="flex gap-2 bg-indigo-100 rounded-lg p-1 w-fit">
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'day' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('day')}
+            >Day</button>
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'month' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('month')}
+            >Month</button>
+            <button
+              className={`px-4 py-1 rounded-md font-semibold transition text-indigo-700 ${granularity === 'year' ? 'bg-white shadow' : 'hover:bg-indigo-200'}`}
+              onClick={() => setGranularity('year')}
+            >Year</button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <ResponsiveContainer width="100%" height={280}>
+          <AreaChart data={chartData} margin={{ top: 16, right: 24, left: 0, bottom: 0 }}>
+            <defs>
+              <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+              </linearGradient>
+              <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#22c55e" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} strokeDasharray="3 3" />
+            <XAxis dataKey="label" tick={{ fontWeight: 'bold', fill: '#6366f1', fontSize: 14 }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontWeight: 'bold', fill: '#22c55e', fontSize: 14 }} axisLine={false} tickLine={false} />
+            <Tooltip contentStyle={{ borderRadius: 12, boxShadow: '0 2px 12px #0001', border: 'none' }} />
+            <Legend iconType="circle" wrapperStyle={{ paddingTop: 8 }} />
+            <Area
+              type="monotone"
+              dataKey="shows"
+              stroke="#6366f1"
+              fill="url(#showsGradient)"
+              name="Shows"
+              dot={{ r: 3, fill: '#6366f1' }}
+              strokeWidth={3}
+              activeDot={{ r: 6, fill: '#6366f1', stroke: '#fff', strokeWidth: 2 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="exhibitors"
+              stroke="#22c55e"
+              fill="url(#exhibitorsGradient)"
+              name="Exhibitors"
+              dot={{ r: 3, fill: '#22c55e' }}
+              strokeWidth={3}
+              activeDot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </CardContent>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
   const { expanded: sidebarExpanded } = useSidebar();
   // This will automatically redirect to login if not authenticated
@@ -55,62 +204,71 @@ export default function DashboardPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(5);
 
-  // Use mockShows for dashboard tables
-  const paginatedShows = mockShows.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  // TODO: Replace with real data source
+  // const paginatedShows = mockShows.slice(
+  //   (currentPage - 1) * itemsPerPage,
+  //   currentPage * itemsPerPage
+  // );
 
-  // Assign statuses: first 3 as Ongoing, next 7 as Complete, rest as Upcoming
-  const demoOngoingShows = mockShows.map((show, idx) => {
-    if (idx < 3) return { ...show, occrType: "Ongoing" };
-    if (idx < 10) return { ...show, occrType: "Complete" };
-    return { ...show, occrType: "Upcoming" };
-  });
+  // TODO: Replace with real data source
+  // const demoOngoingShows = mockShows.map((show, idx) => {
+  //   if (idx < 3) return { ...show, occrType: "Ongoing" };
+  //   if (idx < 10) return { ...show, occrType: "Complete" };
+  //   return { ...show, occrType: "Upcoming" };
+  // });
+
+  // TODO: Replace with real data source
+  // const showIdx = i % mockShows.length;
+  // const show = mockShows[showIdx];
+
+  // TODO: Replace with real data source
+  // const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
+  // const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
 
   // Generate additional mock orders with future dates for demo
   const futureOrderBaseDate = dayjs().add(1, 'day');
   const additionalOrders = Array.from({ length: 20 }).map((_, i) => {
-    const showIdx = i % mockShows.length;
-    const show = mockShows[showIdx];
+    // TODO: Replace with real data source
+    // const showIdx = i % mockShows.length;
+    // const show = mockShows[showIdx];
     return {
       orderId: `FUTURE-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-FUTURE`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 10000 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 1000,
       orderType: "New",
-      customerPO: `PO-FUTURE-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-FUTURE-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: futureOrderBaseDate.add(i, 'day').format('YYYY-MM-DD'),
-      boothInfo: `Booth #${i + 100}`,
-      billingAddress: `123 Future St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 11000 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Future Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 10000,
-          newPrice: 10000,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 10000,
-          userItemDescription: "Demo booth for future show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: futureOrderBaseDate.add(i, 'day').format('YYYY-MM-DD'),
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-FUTURE-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
@@ -118,93 +276,96 @@ export default function DashboardPage() {
   });
 
   // Add exhibitors for January and February shows
-  const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
-  const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
+  // TODO: Replace with real data source
+  // const janShows = mockShows.filter(s => s.yrmo.endsWith('-01'));
+  // const febShows = mockShows.filter(s => s.yrmo.endsWith('-02'));
   const janOrders = Array.from({ length: 5 }).map((_, i) => {
-    const show = janShows[i % janShows.length];
+    // TODO: Replace with real data source
+    // const show = janShows[i % janShows.length];
     return {
       orderId: `JAN-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-JAN`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 9000 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 900,
       orderType: "New",
-      customerPO: `PO-JAN-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-JAN-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: `2024-01-${(i + 5).toString().padStart(2, '0')}`,
-      boothInfo: `Booth #J${i + 1}`,
-      billingAddress: `123 Jan St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 9900 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Jan Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 9000,
-          newPrice: 9000,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 9000,
-          userItemDescription: "Demo booth for Jan show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: `2024-01-${(i + 5).toString().padStart(2, '0')}`,
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-JAN-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
     };
   });
   const febOrders = Array.from({ length: 3 }).map((_, i) => {
-    const show = febShows[i % febShows.length];
+    // TODO: Replace with real data source
+    // const show = febShows[i % febShows.length];
     return {
       orderId: `FEB-ORD-${i + 1}`,
-      showId: show.showId,
-      occurrenceId: `${show.showId}-FEB`,
+      showId: 'SHW001',
+      occurrenceId: 'SHW001-LIVE',
       subTotal: 9500 + i * 100,
       salesChannel: i % 2 === 0 ? "Direct" : "Partner",
       terms: "Net 30",
       tax: 950,
       orderType: "New",
-      customerPO: `PO-FEB-${i + 1}`,
+      customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: show.projectNumber || `P2024-FEB-${i + 1}`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: `2024-02-0${i + 2}`,
-      boothInfo: `Booth #F${i + 1}`,
-      billingAddress: `123 Feb St, City ${i + 1}, USA`,
+      boothInfo: `Booth #L1${i + 1}`,
+      billingAddress: `123 Live St, City 1, USA`,
       total: 10450 + i * 100,
       items: [
         {
           serialNo: 1,
-          orderedItem: "Feb Booth Package",
+          orderedItem: "Live Booth Package",
           itemDescription: "Demo Booth",
           quantity: 1,
           cancellationFee: 0,
           quantityCancelled: 0,
           uom: "EA",
-          kitPrice: 9500,
-          newPrice: 9500,
+          kitPrice: 12000,
+          newPrice: 12000,
           discount: 0,
-          extendedPrice: 9500,
-          userItemDescription: "Demo booth for Feb show",
+          extendedPrice: 12000,
+          userItemDescription: "Demo booth for live show",
           dff: "N/A",
           orderReceivedDate: `2024-02-0${i + 2}`,
           status: "Confirmed",
           itemType: "Booth",
           ato: false,
           lineType: "Standard",
-          documentNumber: `DOC-FEB-${i + 1}`,
+          documentNumber: `DOC-LIVE-SHW001-${i + 1}`,
           industryInformation: "Demo Industry",
         },
       ],
@@ -225,7 +386,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW001-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW001`,
+      project: 'P2024-LIVE-SHW001',
       orderDate: dayjs().add(i + 1, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L1${i + 1}`,
       billingAddress: `123 Live St, City 1, USA`,
@@ -267,7 +428,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW002-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW002`,
+      project: 'P2024-LIVE-SHW002',
       orderDate: dayjs().add(i + 2, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L2${i + 1}`,
       billingAddress: `123 Live St, City 2, USA`,
@@ -309,7 +470,7 @@ export default function DashboardPage() {
       customerPO: `PO-LIVE-SHW003-${i + 1}`,
       cancelCharge: 0,
       source: "Web",
-      project: `P2024-LIVE-SHW003`,
+      project: 'P2024-LIVE-SHW003',
       orderDate: dayjs().add(i + 3, 'day').format('YYYY-MM-DD'),
       boothInfo: `Booth #L3${i + 1}`,
       billingAddress: `123 Live St, City 3, USA`,
@@ -341,18 +502,18 @@ export default function DashboardPage() {
     })),
   ];
 
-  const allOrders = [...mockOrders, ...additionalOrders, ...janOrders, ...febOrders, ...moreOrders];
+  const allOrders = [...janOrders, ...febOrders, ...moreOrders];
 
   // Calculate monthly breakdowns for each status
   const months = ["01", "02", "03", "04", "05", "06"];
   const monthLabels = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
   const monthlyStatusCounts = months.map((m) => {
-    const showsInMonth = demoOngoingShows.filter(s => s.yrmo.endsWith(`-${m}`));
+    const showsInMonth = allOrders.filter(o => o.orderDate.includes(`-${m}-`));
     return {
       month: m,
-      upcoming: showsInMonth.filter(s => s.occrType === "Upcoming").length,
-      ongoing: showsInMonth.filter(s => s.occrType === "Ongoing").length,
-      complete: showsInMonth.filter(s => s.occrType === "Complete").length,
+      upcoming: showsInMonth.filter(o => o.orderDate.includes("-01-")).length,
+      ongoing: showsInMonth.filter(o => o.orderDate.includes("-02-")).length,
+      complete: showsInMonth.filter(o => o.orderDate.includes("-03-")).length,
       total: showsInMonth.length,
     };
   });
@@ -385,17 +546,15 @@ export default function DashboardPage() {
   };
 
   // Table of all closed shows
-  const closedShowsTable = demoOngoingShows.filter(s => s.occrType === "Complete").map(show => ({
-    id: show.showId,
-    name: show.showName,
-    date: show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo,
-    location: show.cityOrg,
+  const closedShowsTable = allOrders.filter(o => o.orderDate.includes("-01-")).map(order => ({
+    id: order.showId,
+    name: order.showId,
+    date: order.orderDate,
+    location: order.billingAddress,
   }));
 
   // Only consider ongoing shows for these stats
-  const ongoingShowIds = demoOngoingShows
-    .filter(s => s.occrType === "Ongoing")
-    .map(s => s.showId);
+  const ongoingShowIds = allOrders.map(o => o.showId);
 
   const ongoingOrders = allOrders.filter(o => ongoingShowIds.includes(o.showId));
 
@@ -404,9 +563,9 @@ export default function DashboardPage() {
 
   // Active Locations (unique cityOrg in ongoing shows)
   const ongoingLocations = new Set(
-    demoOngoingShows
-      .filter(s => s.occrType === "Ongoing")
-      .map(s => s.cityOrg)
+    allOrders
+      .filter(o => o.orderDate.includes("-01-"))
+      .map(o => o.billingAddress)
   ).size;
 
   // Total Revenue (sum of ongoing orders)
@@ -414,7 +573,7 @@ export default function DashboardPage() {
 
   // Fix closed shows count: count all shows with yrmo before today as closed
   const today = dayjs();
-  const closedShows = demoOngoingShows.filter(s => dayjs(s.yrmo + '-01').isBefore(today, 'day'));
+  const closedShows = allOrders.filter(o => dayjs(o.orderDate).isBefore(today, 'day'));
   const closedCount = closedShows.length;
 
   // Update stats to use hardcoded closed shows count
@@ -464,20 +623,20 @@ const stats = [
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const bellRef = useRef(null);
 
-  // Table data from demoOngoingShows (first 5 for example)
+  // Table data from allOrders (first 5 for example)
   const currentYear = dayjs().year();
-  const showsTable = demoOngoingShows.slice(0, 5).map(show => {
-    let dateStr = show.yrmo && show.yrmo.length === 7 ? `${show.yrmo}-01` : show.yrmo;
+  const showsTable = allOrders.slice(0, 5).map(order => {
+    let dateStr = order.orderDate;
     // Replace the year with the current year if dateStr is in YYYY-MM-DD format
     if (dateStr && dateStr.length === 10) {
       dateStr = `${currentYear}${dateStr.slice(4)}`;
     }
     return {
-      id: show.showId,
-      name: show.showName,
+      id: order.showId,
+      name: order.showId,
       date: dateStr,
-      location: show.cityOrg,
-      status: ["Exhibition", "Workshop"].includes(show.occrType) ? "Upcoming" : (show.occrType || "Upcoming")
+      location: order.billingAddress,
+      status: ["Exhibition", "Workshop"].includes(order.showId) ? "Upcoming" : (order.showId || "Upcoming")
     };
   });
   // Bar chart for top 3 shows with most upcoming orders
@@ -492,15 +651,15 @@ const stats = [
 
   // Create a mapping from showId to the 3-letter shortcut and to the full show name
   const showShortcuts = Object.fromEntries(
-    mockShows.map(show => [
+    allOrders.map(show => [
       show.showId,
-      show.showName ? show.showName.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() : show.showId
+      show.showId ? show.showId.replace(/[^a-zA-Z]/g, '').slice(0, 3).toUpperCase() : show.showId
     ])
   );
   const showNames = Object.fromEntries(
-    mockShows.map(show => [
+    allOrders.map(show => [
       showShortcuts[show.showId] || show.showId,
-      show.showName || show.showId
+      show.showId || show.showId
     ])
   );
 
@@ -871,6 +1030,7 @@ const stats = [
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
+
         <div className="flex flex-col md:flex-row w-full gap-6">
           {/* Left: Main Content */}
           <div className="w-full md:w-[65%] flex flex-col gap-4">
@@ -1347,6 +1507,7 @@ const stats = [
           </button>
         </div>
       )}
+
     </MainLayout>
   );
 }

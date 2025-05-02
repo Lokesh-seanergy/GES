@@ -1,11 +1,10 @@
 "use client";
 "use client";
-
-import { useState } from "react";
-import MainLayout from "../../src/components/mainlayout/MainLayout";
-import { orders } from "../../src/data/orders"; // Import from shared data folder
-import OrderList from "../../src/components/orders/OrderList";
-import OrderDetail from "../../src/components/orders/OrderDetail";
+import { JSXElementConstructor, ReactElement, ReactNode, ReactPortal, useState } from "react";
+import MainLayout from "../components/mainlayout/MainLayout";
+import { orders } from "../data/orders"; // Import from shared data folder
+import OrderList from "../components/orders/OrderList";
+import OrderDetail from "../components/orders/OrderDetail";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -13,13 +12,12 @@ export default function OrdersPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-
   // Add showId to each order for compatibility with OrderList
-  const ordersWithShowId = orders.map(order => ({ ...order, showId: order.project }));
+  const ordersWithShowId = orders.map((order: { project: any; }) => ({ ...order, showId: order.project }));
 
-  // Filtered based on search input
-  const filteredOrders = ordersWithShowId.filter((order) =>
-    order.orderId.includes(search) ||
+  // Filter based on case-insensitive search input
+  const filteredOrders = ordersWithShowId.filter((order: { orderId: string; project: string | string[]; customerPo: string | string[]; }) =>
+    order.orderId.toLowerCase().includes(search.toLowerCase()) ||
     order.project.includes(search) ||
     order.customerPo.includes(search)
   );
@@ -27,8 +25,8 @@ export default function OrdersPage() {
   // Reorder: move selected order to top
   const reorderedOrders = selectedOrderId
     ? [
-        ...filteredOrders.filter((order) => order.orderId === selectedOrderId),
-        ...filteredOrders.filter((order) => order.orderId !== selectedOrderId),
+        ...filteredOrders.filter((order: { orderId: string }) => order.orderId === selectedOrderId),
+        ...filteredOrders.filter((order: { orderId: string }) => order.orderId !== selectedOrderId),
       ]
     : filteredOrders;
 
@@ -39,7 +37,7 @@ export default function OrdersPage() {
   );
 
 
-  const selectedOrder = filteredOrders.find((order) => order.orderId === selectedOrderId);
+  const selectedOrder = filteredOrders.find((order: { orderId: string | null; }) => order.orderId === selectedOrderId);
 
   return (
     <MainLayout>
@@ -81,7 +79,7 @@ export default function OrdersPage() {
       ) : (
         // ✅ Full Line View
         <div className="flex flex-col divide-y bg-white rounded-md shadow overflow-hidden">
-          {paginatedOrders.map((order) => (
+          {paginatedOrders.map((order: { orderId: string | number | bigint | boolean | ((prevState: string | null) => string | null) | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; showId: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; customerPo: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; orderDate: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; }) => (
             <div
               key={order.orderId}
               onClick={() => setSelectedOrderId(order.orderId)}

@@ -504,85 +504,59 @@ export default function OrdersPage() {
           {/* Main Tab Content */}
           {activeTab === "Main" && (
             <div className="flex flex-col items-center w-full">
-              <div className="w-full max-w-4xl bg-white rounded-xl shadow-sm p-8 mb-8 border border-gray-100">
+              <div className="w-full max-w-6xl bg-white rounded-xl shadow-sm p-8 mb-8 border border-gray-100">
                 <div className="text-2xl font-bold mb-6 text-blue-900">Order Details</div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 auto-rows-min">
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Order#</label>
                     <Input value={editData.main.orderId} onChange={e => handleFieldChange('main', 'orderId', e.target.value)} />
-                      </div>
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Customer</label>
                     <Input value={editData.main.customer} onChange={e => handleFieldChange('main', 'customer', e.target.value)} />
-                          </div>
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Sales Channel</label>
                     <Input value={editData.main.salesChannel} onChange={e => handleFieldChange('main', 'salesChannel', e.target.value)} />
-                        </div>
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Terms</label>
                     <Input value={editData.main.terms} onChange={e => handleFieldChange('main', 'terms', e.target.value)} />
-                          </div>
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Source</label>
                     <Input value={editData.main.source} onChange={e => handleFieldChange('main', 'source', e.target.value)} />
-                        </div>
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Customer PO</label>
                     <Input value={editData.main.customerPO} onChange={e => handleFieldChange('main', 'customerPO', e.target.value)} />
-                          </div>
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Order Date</label>
                     <Input value={editData.main.orderDate} onChange={e => handleFieldChange('main', 'orderDate', e.target.value)} />
-                        </div>
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Project</label>
                     <Input value={editData.main.project} onChange={e => handleFieldChange('main', 'project', e.target.value)} />
-                          </div>
-                  {/* Pricing fields row 1 */}
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Sub Total</label>
-                    <Input
-                      value={formatCurrency(currencyFields.subtotal)}
-                      onChange={e => handleCurrencyChange('subtotal', e.target.value)}
-                      className="text-right"
-                      inputMode="decimal"
-                      pattern="^\\d*$"
-                    />
-                        </div>
+                    <Input value={currencyFields.subtotal} onChange={e => handleCurrencyChange('subtotal', e.target.value)} className="text-right" inputMode="decimal" pattern="^\\d*$" />
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Tax</label>
-                    <Input
-                      value={formatCurrency(currencyFields.tax)}
-                      onChange={e => handleCurrencyChange('tax', e.target.value)}
-                      className="text-right"
-                      inputMode="decimal"
-                      pattern="^\\d*$"
-                    />
-                          </div>
-                  {/* Pricing fields row 2 */}
+                    <Input value={currencyFields.tax} onChange={e => handleCurrencyChange('tax', e.target.value)} className="text-right" inputMode="decimal" pattern="^\\d*$" />
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Cancel Charge</label>
-                    <Input
-                      value={formatCurrency(currencyFields.cancelCharge)}
-                      onChange={e => handleCurrencyChange('cancelCharge', e.target.value)}
-                      className="text-right"
-                      inputMode="decimal"
-                      pattern="^\\d*$"
-                    />
-                        </div>
+                    <Input value={currencyFields.cancelCharge} onChange={e => handleCurrencyChange('cancelCharge', e.target.value)} className="text-right" inputMode="decimal" pattern="^\\d*$" />
+                  </div>
                   <div className="flex flex-col gap-1 min-w-[180px] max-w-xs">
                     <label className="block text-gray-600 text-sm">Total</label>
-                    <Input
-                      value={formatCurrency(currencyFields.total)}
-                      onChange={e => handleCurrencyChange('total', e.target.value)}
-                      className="text-right"
-                      inputMode="decimal"
-                      pattern="^\\d*$"
-                    />
-                          </div>
-                        </div>
-                      </div>
+                    <Input value={currencyFields.total} onChange={e => handleCurrencyChange('total', e.target.value)} className="text-right" inputMode="decimal" pattern="^\\d*$" />
+                  </div>
+                </div>
+              </div>
 
               {/* Table Layout and Styling */}
               <div className="w-full max-w-6xl bg-white rounded-xl shadow-sm p-8 mb-8 border border-gray-100">

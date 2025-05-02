@@ -45,6 +45,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { mockShows, mockProjectData, mockFacilityData, mockShowDetails, ShowKeyDate, ShowMeasurements, ShowOptions, ShowComments } from "@/lib/mockData";
+//import { mockShows, mockProjects, mockFacilities } from '@/lib/mock_data_generator';
 import {
   Dialog,
   DialogContent,
@@ -289,7 +290,11 @@ function DateRangePicker({
                         {startDateParts.month || 'MM'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-16 p-0"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="grid grid-cols-1">
                         {months.map(month => (
                           <Button
@@ -317,7 +322,11 @@ function DateRangePicker({
                         {startDateParts.day || 'DD'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-16 p-0"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="grid grid-cols-1">
                         {days.map(day => (
                           <Button
@@ -345,7 +354,11 @@ function DateRangePicker({
                         {startDateParts.year || 'YYYY'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-24 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-24 p-0"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="grid grid-cols-1">
                         {years.map(year => (
                           <Button
@@ -378,7 +391,11 @@ function DateRangePicker({
                         {endDateParts.month || 'MM'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-16 p-0"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="grid grid-cols-1">
                         {months.map(month => (
                           <Button
@@ -406,7 +423,11 @@ function DateRangePicker({
                         {endDateParts.day || 'DD'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-16 p-0"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="grid grid-cols-1">
                         {days.map(day => (
                           <Button
@@ -434,7 +455,11 @@ function DateRangePicker({
                         {endDateParts.year || 'YYYY'}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-24 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                    <PopoverContent
+                      className="w-24 p-0"
+                      onOpenAutoFocus={(e) => e.preventDefault()}
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <div className="grid grid-cols-1">
                         {years.map(year => (
                           <Button
@@ -486,7 +511,6 @@ export default function ShowsPage() {
       endDate: ""
     }
   });
-  const [activeFilters, setActiveFilters] = useState<Partial<FilterState>>({});
 
   // Sort state
   const [sortField, setSortField] = useState<SortField>("showId");
@@ -602,60 +626,60 @@ export default function ShowsPage() {
 
         // Active filters
         if (
-          activeFilters.showId &&
-          !show.showId.toLowerCase().includes(activeFilters.showId.toLowerCase())
+          filters.showId &&
+          !show.showId.toLowerCase().includes(filters.showId.toLowerCase())
         ) {
           return false;
         }
         if (
-          activeFilters.showName &&
+          filters.showName &&
           !show.showName
             .toLowerCase()
-            .includes(activeFilters.showName.toLowerCase())
+            .includes(filters.showName.toLowerCase())
         ) {
           return false;
         }
         if (
-          activeFilters.occrId &&
+          filters.occrId &&
           !show.occrId
             .toLowerCase()
-            .includes(activeFilters.occrId.toLowerCase())
+            .includes(filters.occrId.toLowerCase())
         ) {
           return false;
         }
         if (
-          activeFilters.occrType &&
-          show.occrType !== activeFilters.occrType
+          filters.occrType &&
+          show.occrType !== filters.occrType
         ) {
           return false;
         }
         if (
-          activeFilters.marketType &&
-          show.marketType !== activeFilters.marketType
+          filters.marketType &&
+          show.marketType !== filters.marketType
         ) {
           return false;
         }
         if (
-          activeFilters.projectNumber &&
+          filters.projectNumber &&
           !show.projectNumber
             .toLowerCase()
-            .includes(activeFilters.projectNumber.toLowerCase())
+            .includes(filters.projectNumber.toLowerCase())
         ) {
           return false;
         }
         if (
-          activeFilters.cityOrg &&
+          filters.cityOrg &&
           !show.cityOrg
             .toLowerCase()
-            .includes(activeFilters.cityOrg.toLowerCase())
+            .includes(filters.cityOrg.toLowerCase())
         ) {
           return false;
         }
-        if (activeFilters.dateRange) {
-          if (activeFilters.dateRange.startDate && show.openDate < activeFilters.dateRange.startDate) {
+        if (filters.dateRange) {
+          if (filters.dateRange.startDate && show.openDate < filters.dateRange.startDate) {
             return false;
           }
-          if (activeFilters.dateRange.endDate && show.closeDate > activeFilters.dateRange.endDate) {
+          if (filters.dateRange.endDate && show.closeDate > filters.dateRange.endDate) {
             return false;
           }
         }
@@ -670,7 +694,7 @@ export default function ShowsPage() {
           ? aValue.localeCompare(bValue)
           : bValue.localeCompare(aValue);
       });
-  }, [debouncedSearch, sortField, sortDirection, shows, activeFilters]);
+  }, [debouncedSearch, sortField, sortDirection, shows, filters]);
 
   // Sort handlers
   const handleSort = (field: SortField) => {
@@ -834,36 +858,52 @@ export default function ShowsPage() {
     }
   };
 
-  const resetFilters = () => {
-    setFilters({
-      showId: "",
-      showName: "",
-      occrId: "",
-      occrType: "",
-      marketType: "",
-      projectNumber: "",
-      cityOrg: "",
-      dateRange: {
-        startDate: "",
-        endDate: ""
-      }
-    });
-    setActiveFilters({});
+  // Remove a single filter (field) from filters
+  const removeFilter = (field: keyof FilterState) => {
+    setFilters((prev) => ({
+      ...prev,
+      [field]: field === 'dateRange'
+        ? { startDate: '', endDate: '' }
+        : '',
+    }));
   };
 
+  // Reset all filters
+  const resetFilters = () => {
+    setFilters({
+      showId: '',
+      showName: '',
+      occrId: '',
+      occrType: '',
+      marketType: '',
+      projectNumber: '',
+      cityOrg: '',
+      dateRange: { startDate: '', endDate: '' },
+    });
+  };
+
+  // Apply all filters (copy filters to activeFilters)
   const applyFilters = () => {
-    setActiveFilters(filters);
     setShowFilters(false);
   };
 
-  const removeFilter = (field: keyof FilterState) => {
-    setActiveFilters((prev) => {
-      const newFilters = { ...prev };
-      delete newFilters[field];
-      return newFilters;
-    });
-    setFilters((prev) => ({ ...prev, [field]: "" }));
-  };
+  // When clicking outside, just close the filter panel (badges update in real time)
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button')?.textContent?.includes('Filters')) {
+        return;
+      }
+      if (filtersRef.current && !filtersRef.current.contains(target)) {
+        filtersRef.current.querySelectorAll('input, select').forEach((el) => (el as HTMLElement).blur());
+        setTimeout(() => {
+          setShowFilters(false);
+        }, 0);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const [showProjectFacilities, setShowProjectFacilities] = useState(false);
 
@@ -1009,23 +1049,6 @@ export default function ShowsPage() {
   };
 
   const filtersRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      // Ignore clicks on the Filters button itself
-      if (target.closest('button')?.textContent?.includes('Filters')) {
-        return;
-      }
-      // Close filters if click is outside the container
-      if (filtersRef.current && !filtersRef.current.contains(target)) {
-        setShowFilters(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   return (
     <MainLayout breadcrumbs={breadcrumbs}>
@@ -1260,9 +1283,9 @@ export default function ShowsPage() {
                   </motion.div>
 
                   {/* Active Filter Tags */}
-                  {Object.entries(activeFilters)
-                    .filter(([_, value]) => {
-                      if (typeof value === 'object' && 'startDate' in value) {
+                  {Object.entries(filters)
+                    .filter(([key, value]) => {
+                      if (key === 'dateRange' && typeof value === 'object' && value !== null) {
                         return value.startDate || value.endDate;
                       }
                       return value && typeof value === 'string' && value.trim() !== '';
@@ -1276,9 +1299,8 @@ export default function ShowsPage() {
                         >
                           {key}: {displayValue}
                           <button
-                            onClick={() =>
-                              removeFilter(key as keyof FilterState)
-                            }
+                            type="button"
+                            onClick={() => removeFilter(key as keyof FilterState)}
                             className="ml-2"
                           >
                             <X className="h-3 w-3" />

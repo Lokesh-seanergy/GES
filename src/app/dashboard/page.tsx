@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import MainLayout from "@/components/mainlayout/MainLayout";
 import { useAuthProtection } from "@/hooks/useAuthProtection";
 import { mockShows, mockProjectData, mockOrders } from "@/lib/mockData";
@@ -19,11 +20,12 @@ import { Button } from "@/components/ui/button";
 import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell, ClipboardCheck, ListChecks, ClipboardList, Clock, Loader } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
-  BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, Legend
+  BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, Legend,
+  PieChart, Pie, Cell, Label, LabelList
 } from "recharts";
 import dayjs from "dayjs";
 import type { TooltipProps } from 'recharts';
-import { Label } from "@/components/ui/label";
+import { Label as RechartsLabel } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useNotifications } from "@/components/NotificationContext";
 import { useAuthStore } from '@/store/authStore';
@@ -425,22 +427,10 @@ const stats = [
       setShowTasks(prev => ({
         ...prev,
         todo: [
-          {
-            id: 1,
-            task: "Review Floor Plan",
-            boothZone: "A1",
-            customerName: "Acme Corp",
-            status: "pending",
-            timestamp: new Date().toISOString(),
-          },
-          {
-            id: 2,
-            task: "Update Booth Layout",
-            boothZone: "B2",
-            customerName: "Globex Corporation",
-            status: "pending",
-            timestamp: new Date().toISOString(),
-          },
+          { id: 1, task: "Review Floor Plan", boothZone: "A1", customerName: "Acme Corp", status: "pending", timestamp: new Date().toISOString() },
+          { id: 2, task: "Update Booth Layout", boothZone: "B2", customerName: "Globex Corporation", status: "pending", timestamp: new Date().toISOString() },
+          { id: 7, task: "Confirm Catering", boothZone: "C3", customerName: "Wayne Enterprises", status: "pending", timestamp: new Date().toISOString() },
+          { id: 8, task: "Check AV Setup", boothZone: "D5", customerName: "Stark Industries", status: "pending", timestamp: new Date().toISOString() },
         ],
       }));
     }
@@ -450,7 +440,12 @@ const stats = [
     inProgress: DashboardTask[];
     completed: DashboardTask[];
   }>({
-    todo: [],
+    todo: [
+      { id: 1, task: "Review Floor Plan", boothZone: "A1", customerName: "Acme Corp", status: "pending", timestamp: new Date().toISOString() },
+      { id: 2, task: "Update Booth Layout", boothZone: "B2", customerName: "Globex Corporation", status: "pending", timestamp: new Date().toISOString() },
+      { id: 7, task: "Confirm Catering", boothZone: "C3", customerName: "Wayne Enterprises", status: "pending", timestamp: new Date().toISOString() },
+      { id: 8, task: "Check AV Setup", boothZone: "D5", customerName: "Stark Industries", status: "pending", timestamp: new Date().toISOString() },
+    ],
     inProgress: [
       { id: 3, task: "Exhibitor Setup", due: "Jan 7", boothZone: "D4", customerName: "Umbrella Corp", status: "inProgress" },
       { id: 4, task: "Marketing Materials", due: "Jan 12", boothZone: "E5", customerName: "Hooli", status: "inProgress" },
@@ -750,12 +745,152 @@ const stats = [
       ]
     }));
   };
+
+  // Use a new set of colors not used elsewhere in the dashboard
+  const pieColors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#845EC2", "#FFC75F", "#F9F871", "#0081CF"];
+
+  // Pie chart data for ongoing shows
+  const ongoingShowOrders = demoOngoingShows
+    .filter(s => s.occrType === "Ongoing")
+    .map(show => ({
+      name: show.showName,
+      value: allOrders.filter(o => o.showId === show.showId).length,
+      showId: show.showId
+    }))
+    .filter(d => d.value > 0);
+
+  // Add state for pagination for all three sections
+  const [todoPage, setTodoPage] = useState(0);
+  const [inProgressPage, setInProgressPage] = useState(0);
+  const [completedPage, setCompletedPage] = useState(0);
+  const tasksPerPage = 2;
+
+  const todoPages = Math.ceil(showTasks.todo.length / tasksPerPage);
+  const inProgressPages = Math.ceil(showTasks.inProgress.length / tasksPerPage);
+  const completedPages = Math.ceil(showTasks.completed.length / tasksPerPage);
+
+  const todoTasksToShow = showTasks.todo.slice(
+    todoPage * tasksPerPage,
+    todoPage * tasksPerPage + tasksPerPage
+  );
+  const inProgressTasksToShow = showTasks.inProgress.slice(
+    inProgressPage * tasksPerPage,
+    inProgressPage * tasksPerPage + tasksPerPage
+  );
+  const completedTasksToShow = showTasks.completed.slice(
+    completedPage * tasksPerPage,
+    completedPage * tasksPerPage + tasksPerPage
+  );
+
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
-        <div className="flex w-full gap-6">
+        <div className="flex flex-col md:flex-row w-full gap-6">
           {/* Left: Main Content */}
-          <div className="w-[70%]">
+          <div className="w-full md:w-[70%]">
+            {/* Show Details Card (left) */}
+            <div className="flex flex-col md:flex-row gap-6 mb-6">
+              {/* Show Details Card (left) */}
+              <div className="w-full md:w-1/2">
+                <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6">
+                  <div className="font-extrabold text-2xl mb-6 text-blue-800 tracking-tight">Show Details</div>
+                  <div className="space-y-4">
+                    {showsTable.map((show) => (
+                      <Card
+                        key={show.id}
+                        className="flex items-center justify-between p-4 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
+                      >
+                        <div>
+                          <span className={`font-bold ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>
+                            {show.name}
+                          </span>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-gray-400 mt-1">
+                            <MapPin className="w-4 h-4 text-blue-500" />
+                            <span>Location:</span>
+                            <span className="ml-1 text-gray-600">{show.location}</span>
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold text-green-600 flex items-center self-center">
+                          {dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+              {/* Pie Chart for Ongoing Shows Orders (right) */}
+              <div className="w-full md:w-1/2 flex items-stretch">
+                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full h-full relative">
+                  <div className="font-extrabold text-2xl mb-2 text-blue-800 tracking-tight">Ongoing Shows - Orders Distribution</div>
+                  <div className="flex flex-1 items-center justify-center min-h-[380px]">
+                    <PieChart width={380} height={380}>
+                      <Pie
+                        data={ongoingShowOrders}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={120}
+                        outerRadius={160}
+                        labelLine={false}
+                      >
+                        {/* Center label for total */}
+                        <Label
+                          position="center"
+                          content={({ viewBox }) => {
+                            const total = ongoingShowOrders.reduce((acc, curr) => acc + curr.value, 0);
+                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                              return (
+                                <text
+                                  x={viewBox.cx}
+                                  y={viewBox.cy}
+                                  textAnchor="middle"
+                                  dominantBaseline="middle"
+                                >
+                                  <tspan
+                                    x={viewBox.cx}
+                                    y={viewBox.cy}
+                                    className="fill-foreground text-2xl font-bold"
+                                  >
+                                    {total}
+                                  </tspan>
+                                  <tspan
+                                    x={viewBox.cx}
+                                    y={(viewBox.cy || 0) + 20}
+                                    className="fill-muted-foreground text-xs"
+                                  >
+                                    Orders
+                                  </tspan>
+                                </text>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        {/* Label for each arc */}
+                        <LabelList dataKey="value" position="inside" style={{ fontWeight: 'bold', fill: '#222' }} />
+                        {ongoingShowOrders.map((entry, idx) => (
+                          <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [`${value} orders`, name]} />
+                    </PieChart>
+                  </div>
+                  {/* Legend at bottom, centered, like Shows & Exhibitors */}
+                  <div className="flex flex-row justify-center items-center gap-4 mt-4 flex-wrap">
+                    {ongoingShowOrders.map((entry, idx) => (
+                      <span key={entry.showId} className="flex items-center gap-2 text-xs">
+                        <span
+                          className="inline-block w-6 h-2 rounded bg-gray-200"
+                          style={{ backgroundColor: pieColors[idx % pieColors.length] }}
+                        ></span>
+                        <span className="font-medium text-gray-700">{entry.name}</span>
+                      </span>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            </div>
             {/* Shows & Exhibitors Chart */}
             <div className="flex flex-col gap-6">
               <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden">
@@ -763,7 +898,7 @@ const stats = [
                   <div>
                     <div className="text-2xl font-extrabold text-blue-800 tracking-tight">Shows & Exhibitors</div>
                     <div className="text-base font-medium text-blue-400">Modern visualization with day, month, or year view</div>
-                  </div>
+        </div>
                   {/* Vertical legend at top right */}
                   <div className="flex flex-col items-end gap-2">
                     <span className="flex items-center gap-2">
@@ -774,8 +909,8 @@ const stats = [
                       <span className="w-4 h-1 rounded bg-green-600 inline-block" />
                       <span className="text-green-600">Exhibitors</span>
                     </span>
-                  </div>
-                </div>
+          </div>
+        </div>
                 <div className="px-8 pb-6">
                   <div className="bg-gray-50 rounded-xl shadow-inner p-6">
                     <ResponsiveContainer width="100%" height={250}>
@@ -853,7 +988,7 @@ const stats = [
                         />
                       </AreaChart>
                     </ResponsiveContainer>
-                  </div>
+      </div>
                   {/* Quick range buttons below chart */}
                   <div className="flex gap-2 bg-white rounded-full p-1 justify-center mt-6">
                     {[
@@ -872,103 +1007,14 @@ const stats = [
                       >
                         {btn.label}
                       </button>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-              {/* Show Tasks Section */}
-              <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden">
-                <div className="flex items-center gap-2 mb-4 px-8 pt-8 pb-4">
-                  <ListChecks className="w-6 h-6 text-blue-600" />
-                  <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-8 pb-6">
-                  {/* To Do */}
-                  <Card className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
-                    <h3 className="flex items-center gap-2 font-bold text-base text-blue-600 mb-2">
-                      <ClipboardList className="w-5 h-5 text-blue-600" /> To Do ({showTasks.todo.length})
-                    </h3>
-                    <ul className="space-y-2">
-                      {showTasks.todo.map((task: DashboardTask) => (
-                        <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-blue-500 mb-2">
-                          <div className="flex-1">
-                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                            <span className="block text-gray-500 text-sm font-medium mt-1">
-                              {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Exhibitor: {task.customerName}</>}
-                            </span>
-                          </div>
-                          <Button
-                            className="flex items-center gap-2 px-6 py-2 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white font-semibold shadow-sm hover:from-blue-600 hover:to-blue-700 hover:scale-105 active:scale-95 transition-all duration-150"
-                            onClick={() => handleAccept(task)}
-                          >
-                            <CheckCircle className="w-5 h-5" />
-                            Accept
-                          </Button>
-                        </Card>
-                      ))}
-                    </ul>
-                  </Card>
-                  {/* In Progress */}
-                  <Card className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
-                    <h3 className="flex items-center gap-2 font-bold text-base text-yellow-600 mb-2">
-                      <Activity className="w-5 h-5 text-yellow-600" /> In Progress ({showTasks.inProgress.length})
-                    </h3>
-                    <ul className="space-y-2">
-                      {showTasks.inProgress.map((task: DashboardTask) => (
-                        <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-yellow-400 mb-2">
-                          <div className="flex-1">
-                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                            <span className="block text-gray-500 text-sm font-medium mt-1">
-                              {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Exhibitor: {task.customerName}</>}
-                            </span>
-                            {task.acceptedBy && (
-                              <span className="block text-xs text-gray-400 mt-1">Accepted by: {task.acceptedBy}</span>
-                            )}
-                          </div>
-                          <Button
-                            className="flex items-center gap-2 px-6 py-2 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-white font-semibold shadow-sm hover:from-yellow-500 hover:to-yellow-600 hover:scale-105 active:scale-95 transition-all duration-150"
-                            onClick={() => handleMarkCompleted(task)}
-                          >
-                            <CheckCircle className="w-5 h-5 text-white" />
-                            Mark as Completed
-                          </Button>
-                        </Card>
-                      ))}
-                    </ul>
-                  </Card>
-                  {/* Completed */}
-                  <Card className="bg-white rounded-lg shadow p-4 flex flex-col h-full">
-                    <h3 className="flex items-center gap-2 font-bold text-base text-green-600 mb-2">
-                      <CheckCircle className="w-5 h-5 text-green-600" /> Completed ({showTasks.completed.slice(0, 5).length})
-                    </h3>
-                    <ul className="space-y-2">
-                      {showTasks.completed
-                        .slice(0, 5)
-                        .map((task: DashboardTask) => (
-                          <Card className="relative bg-white rounded-xl shadow-md p-4 flex flex-col md:flex-row justify-between items-center border-l-4 border-green-500 mb-2">
-                            <div className="flex-1 flex items-center">
-                              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                              <div>
-                                <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                                <span className="block text-gray-500 text-sm font-medium mt-1">
-                                  {task.boothZone && <>Zone: {task.boothZone} | </>}
-                                  {task.customerName && <>Exhibitor: {task.customerName}</>}
-                                </span>
-                              </div>
-                            </div>
-                            <span className="text-xs text-gray-400">Due: {task.due}</span>
-                          </Card>
-                        ))}
-                    </ul>
-                  </Card>
-                </div>
-              </Card>
+                ))}
+              </div>
             </div>
-          </div>
-          {/* Right: Stat Cards */}
-          <div className="w-[30%]">
+              </Card>
+                </div>
+                          </div>
+          {/* Right: Stat Cards and Show Tasks */}
+          <div className="w-full md:w-[30%] mt-8 md:mt-0 flex flex-col gap-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* First two stat cards */}
               {stats.slice(0, 2).map((stat) => (
@@ -977,13 +1023,15 @@ const stats = [
                   className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
                 >
                   <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100 text-blue-600" :
-                    stat.label === "Closed Shows" ? "bg-gray-100 text-gray-600" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100 text-green-600" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100 text-purple-600" :
-                    stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
+                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
+                    stat.label === "Closed Shows" ? "bg-gray-100" :
+                    stat.label === "Ongoing Shows" ? "bg-green-100" :
+                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
+                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
                   }`}>
-                    {stat.icon}
+                    {React.cloneElement(stat.icon, {
+                      className: `${stat.icon.props.className || ''} w-6 h-6`
+                    })}
                   </div>
                   <div className="w-px h-10 bg-gray-200 mx-2" />
                   <div className="flex flex-col justify-center">
@@ -1011,14 +1059,16 @@ const stats = [
                   className="flex items-center justify-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full md:col-span-2"
                 >
                   <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100 text-blue-600" :
-                    stat.label === "Closed Shows" ? "bg-gray-100 text-gray-600" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100 text-green-600" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100 text-purple-600" :
-                    stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
+                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
+                    stat.label === "Closed Shows" ? "bg-gray-100" :
+                    stat.label === "Ongoing Shows" ? "bg-green-100" :
+                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
+                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
                   }`}>
-                    {stat.icon}
-                  </div>
+                    {React.cloneElement(stat.icon, {
+                      className: `${stat.icon.props.className || ''} w-6 h-6`
+                    })}
+              </div>
                   <div className="w-px h-10 bg-gray-200 mx-2" />
                   <div className="flex flex-col justify-center">
                     <div className={`text-3xl font-extrabold ${
@@ -1045,14 +1095,16 @@ const stats = [
                   className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
                 >
                   <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100 text-blue-600" :
-                    stat.label === "Closed Shows" ? "bg-gray-100 text-gray-600" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100 text-green-600" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100 text-purple-600" :
-                    stat.label === "Active Locations" ? "bg-pink-100 text-pink-600" : "bg-gray-100 text-gray-600"
+                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
+                    stat.label === "Closed Shows" ? "bg-gray-100" :
+                    stat.label === "Ongoing Shows" ? "bg-green-100" :
+                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
+                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
                   }`}>
-                    {stat.icon}
-                  </div>
+                    {React.cloneElement(stat.icon, {
+                      className: `${stat.icon.props.className || ''} w-6 h-6`
+                    })}
+              </div>
                   <div className="w-px h-10 bg-gray-200 mx-2" />
                   <div className="flex flex-col justify-center">
                     <div className={`text-3xl font-extrabold ${
@@ -1071,34 +1123,183 @@ const stats = [
                     }`}>{stat.label}</div>
                   </div>
                 </Card>
-              ))}
+                ))}
             </div>
-            {/* Show Details Card */}
-            <div className="mt-6">
-              <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-8 pt-8 pb-6">
-                <div className="font-extrabold text-2xl mb-6 text-blue-800 tracking-tight">Show Details</div>
-                <div className="space-y-4">
-                  {showsTable.map((show) => (
-                    <Card
-                      key={show.id}
-                      className="flex items-center justify-between p-4 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
-                    >
-                      <div>
-                        <span className={`font-bold ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>
-                          {show.name}
-                        </span>
-                        <div className="flex items-center gap-1 text-xs font-semibold text-gray-400 mt-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>Location:</span>
-                          <span className="ml-1">{show.location}</span>
-                        </div>
+            {/* Show Tasks Card (moved here, vertical layout) */}
+            <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden mt-6">
+              <div className="flex items-center gap-2 mb-4 px-4 md:px-8 pt-8 pb-4">
+                <ListChecks className="w-5 h-5 text-blue-600" />
+                <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
+              </div>
+              <div className="flex flex-col gap-6 px-4 md:px-8 pb-6 min-w-0">
+                {/* To Do */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2">
+                    <ClipboardList className="w-5 h-5 text-blue-600" />
+                    <span className="font-bold text-blue-600 text-base">To Do</span>
+                    <span className="ml-2 text-xs font-semibold text-blue-400">({showTasks.todo.length})</span>
+                  </div>
+                  <div className="h-1 w-12 bg-blue-100 rounded mb-3" />
+                  <div className="relative">
+                    <div className="flex flex-row items-center justify-center gap-2">
+                      <button
+                        onClick={() => setTodoPage(todoPage - 1)}
+                        disabled={todoPage === 0}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        aria-label="Previous"
+                      >
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <div className="flex flex-col gap-4">
+                        {todoTasksToShow.map((task) => (
+                          <Card
+                            key={task.id}
+                            className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-blue-500 min-w-0"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                              <span className="block text-gray-500 text-xs font-medium mt-1">
+                                {task.boothZone && <>Zone: {task.boothZone} | </>}
+                                {task.customerName && <>Customer: {task.customerName}</>}
+                              </span>
+                            </div>
+                            <Button
+                              className="ml-4 h-9 px-5 rounded-full bg-blue-500 hover:bg-blue-600 text-white font-semibold shadow-sm transition-all duration-150"
+                              onClick={() => handleAccept(task)}
+                            >
+                              Accept
+                            </Button>
+                          </Card>
+                        ))}
                       </div>
-                      <div className={`text-sm font-semibold ${show.status === "Ongoing" ? "text-green-600" : "text-gray-500"}`}>{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</div>
-                    </Card>
-                  ))}
+                      <button
+                        onClick={() => setTodoPage(todoPage + 1)}
+                        disabled={todoPage === todoPages - 1}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        aria-label="Next"
+                      >
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </div>
+                    {todoPages > 1 && (
+                      <div className="flex justify-center mt-2">
+                        <span className="text-sm font-semibold text-gray-600">{todoPage + 1} / {todoPages}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </Card>
-            </div>
+                {/* In Progress */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2 mt-6">
+                    <Activity className="w-5 h-5 text-yellow-500" />
+                    <span className="font-bold text-yellow-600 text-base">In Progress</span>
+                    <span className="ml-2 text-xs font-semibold text-yellow-400">({showTasks.inProgress.length})</span>
+                  </div>
+                  <div className="h-1 w-12 bg-yellow-100 rounded mb-3" />
+                  <div className="relative">
+                    <div className="flex flex-row items-center justify-center gap-2">
+                      <button
+                        onClick={() => setInProgressPage(inProgressPage - 1)}
+                        disabled={inProgressPage === 0}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        aria-label="Previous"
+                      >
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <div className="flex flex-col gap-4">
+                        {inProgressTasksToShow.map((task) => (
+                          <Card
+                            key={task.id}
+                            className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-yellow-400 min-w-0"
+                          >
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                              <span className="block text-gray-500 text-xs font-medium mt-1">
+                                {task.boothZone && <>Zone: {task.boothZone} | </>}
+                                {task.customerName && <>Customer: {task.customerName}</>}
+                              </span>
+                              {task.acceptedBy && (
+                                <span className="block text-xs text-gray-400 mt-1">Accepted by: {task.acceptedBy}</span>
+                              )}
+                            </div>
+                            <Button
+                              className="ml-4 h-9 px-5 rounded-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold shadow-sm transition-all duration-150"
+                              onClick={() => handleMarkCompleted(task)}
+                            >
+                              Mark as Completed
+                            </Button>
+                          </Card>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setInProgressPage(inProgressPage + 1)}
+                        disabled={inProgressPage === inProgressPages - 1}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        aria-label="Next"
+                      >
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </div>
+                    {inProgressPages > 1 && (
+                      <div className="flex justify-center mt-2">
+                        <span className="text-sm font-semibold text-gray-600">{inProgressPage + 1} / {inProgressPages}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {/* Completed */}
+                <div>
+                  <div className="flex items-center gap-2 mb-2 mt-6">
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                    <span className="font-bold text-green-600 text-base">Completed</span>
+                    <span className="ml-2 text-xs font-semibold text-green-400">({showTasks.completed.length})</span>
+                  </div>
+                  <div className="h-1 w-12 bg-green-100 rounded mb-3" />
+                  <div className="relative">
+                    <div className="flex flex-row items-center justify-center gap-2">
+                      <button
+                        onClick={() => setCompletedPage(completedPage - 1)}
+                        disabled={completedPage === 0}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        aria-label="Previous"
+                      >
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                      <div className="flex flex-col gap-4">
+                        {completedTasksToShow.map((task) => (
+                          <Card key={task.id} className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-green-500 min-w-0">
+                            <div className="flex-1 flex items-center min-w-0">
+                              <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
+                              <div>
+                                <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                                <span className="block text-gray-500 text-xs font-medium mt-1">
+                                  {task.boothZone && <>Zone: {task.boothZone} | </>}
+                                  {task.customerName && <>Customer: {task.customerName}</>}
+                                </span>
+                              </div>
+                            </div>
+                            <span className="text-xs font-semibold text-gray-400">Due: {task.due}</span>
+                          </Card>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setCompletedPage(completedPage + 1)}
+                        disabled={completedPage === completedPages - 1}
+                        className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-200 disabled:opacity-50"
+                        aria-label="Next"
+                      >
+                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                      </button>
+                    </div>
+                    {completedPages > 1 && (
+                      <div className="flex justify-center mt-2">
+                        <span className="text-sm font-semibold text-gray-600">{completedPage + 1} / {completedPages}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </div>
@@ -1112,7 +1313,7 @@ const stats = [
           >
             Undo
           </button>
-        </div>
+    </div>
       )}
     </MainLayout>
   );

@@ -33,11 +33,28 @@ import { useNotifications } from "@/components/NotificationContext";
 import { useAuthStore } from '@/store/authStore';
 import { useSidebar } from "@/components/mainlayout/SidebarContext";
 
-import * as React from "react"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 
+// Define mock data for ongoing shows
+const demoOngoingShows = [
+  { showId: 'SHW001', showName: 'Tech Conference 2024', yrmo: '2024-01', occrType: 'Ongoing' },
+  { showId: 'SHW002', showName: 'Business Expo 2024', yrmo: '2024-02', occrType: 'Ongoing' },
+  { showId: 'SHW003', showName: 'Industry Summit 2024', yrmo: '2024-03', occrType: 'Ongoing' },
+  { showId: 'SHW004', showName: 'Innovation Forum 2024', yrmo: '2024-04', occrType: 'Ongoing' },
+  { showId: 'SHW005', showName: 'Global Conference 2024', yrmo: '2024-05', occrType: 'Ongoing' },
+  { showId: 'SHW006', showName: 'Tech Conference 2023', yrmo: '2023-01', occrType: 'Complete' },
+  { showId: 'SHW007', showName: 'Business Expo 2023', yrmo: '2023-02', occrType: 'Complete' },
+  { showId: 'SHW008', showName: 'Industry Summit 2023', yrmo: '2023-03', occrType: 'Complete' },
+  { showId: 'SHW009', showName: 'Innovation Forum 2023', yrmo: '2023-04', occrType: 'Complete' },
+  { showId: 'SHW010', showName: 'Global Conference 2023', yrmo: '2023-05', occrType: 'Complete' },
+  { showId: 'SHW011', showName: 'Tech Conference 2022', yrmo: '2022-01', occrType: 'Complete' },
+  { showId: 'SHW012', showName: 'Business Expo 2022', yrmo: '2022-02', occrType: 'Complete' },
+  { showId: 'SHW013', showName: 'Industry Summit 2022', yrmo: '2022-03', occrType: 'Complete' },
+  { showId: 'SHW014', showName: 'Innovation Forum 2022', yrmo: '2022-04', occrType: 'Complete' },
+  { showId: 'SHW015', showName: 'Global Conference 2022', yrmo: '2022-05', occrType: 'Complete' },
+];
 
 // Define a type for dashboard tasks
 interface DashboardTask {
@@ -1027,22 +1044,23 @@ const stats = [
     },
   ];
 
+  const [activeTab, setActiveTab] = useState('todo');
+
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
-
-        <div className="flex flex-col md:flex-row w-full gap-6">
+        <div className="flex flex-col md:flex-row w-full gap-6 min-h-[600px]">
           {/* Left: Main Content */}
-          <div className="w-full md:w-[65%] flex flex-col gap-4">
+          <div className="w-full md:w-[65%] flex flex-col gap-4 h-full">
             {/* Top row: Stat Cards (left) and Pie Chart (right) */}
-            <div className="flex flex-col md:flex-row gap-4 w-full items-stretch">
+            <div className="flex flex-col md:flex-row gap-4 w-full">
               {/* Stat Cards (left, reduced width) */}
               <div className="w-full md:w-5/12 flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-4 h-full">
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
                   {stats.map((stat) => (
                     <Card
                       key={stat.label}
-                      className={`flex items-center min-h-[96px] gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full h-full`}
+                      className={`flex items-center min-h-[96px] gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full`}
                     >
                       <div className={`flex items-center justify-center w-14 h-12 rounded-full ${
                         stat.label === "Upcoming Shows" ? "bg-blue-100" :
@@ -1077,8 +1095,8 @@ const stats = [
                 </div>
               </div>
               {/* Pie Chart for Ongoing Shows Orders (right, increased width) */}
-              <div className="w-full md:w-7/12 flex flex-col h-full" ref={pieCardRef}>
-                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full h-full min-h-[380px] relative">
+              <div className="w-full md:w-7/12 flex flex-col" ref={pieCardRef}>
+                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full min-h-[380px] relative">
                   <div className="font-extrabold text-2xl mb-2 text-blue-800 tracking-tight">Ongoing Shows - Orders Distribution</div>
                   <div className="flex flex-1 items-center justify-center min-h-[380px]">
                     <PieChart width={380} height={380}>
@@ -1269,19 +1287,10 @@ const stats = [
                   </div>
                 </div>
               </Card>
-              {/* Upcoming Show Order Card */}
-              <Card ref={upcomingOrderRef} className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden flex flex-col h-full">
-                <div className="px-8 pt-8 pb-6 flex flex-col flex-1 items-center justify-start h-full">
-                  <div className="text-2xl font-extrabold text-blue-800 tracking-tight mb-8">Upcoming Show Order</div>
-                  <div className="flex-1 w-full flex items-center justify-center">
-                    <div className="text-lg font-semibold text-gray-400">Under Development</div>
-                  </div>
-                </div>
-              </Card>
             </div>
           </div>
-          {/* Right: Show Details and Show Tasks */}
-          <div className="w-full md:w-[35%] flex flex-col gap-4">
+          {/* Right: Show Details and Show Tasks - Keep this section exactly as is */}
+          <div className="w-full md:w-[35%] flex flex-col gap-4 h-full">
             {/* Show Details Card (top) */}
             <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6" ref={showDetailsRef}>
               <div className="font-extrabold text-lg mb-4 text-blue-800 tracking-tight">Show Details</div>
@@ -1321,174 +1330,115 @@ const stats = [
                 <ListChecks className="w-5 h-5 text-blue-600" />
                 <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
               </div>
-              <div className="flex flex-col gap-6 px-4 md:px-8 pb-6 min-w-0">
-                {/* To Do */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2">
-                    <ClipboardList className="w-5 h-5 text-blue-600" />
-                    <span className="font-bold text-blue-600 text-base">To Do</span>
-                    <span className="ml-2 text-xs font-semibold text-blue-400">({showTasks.todo.length})</span>
-                  </div>
-                  <div className="h-1 w-12 bg-blue-100 rounded mb-3" />
-                  <div className="relative">
-                    <div className="flex flex-row items-center justify-center gap-2">
-                      <button
-                        onClick={() => setTodoPage(todoPage - 1)}
-                        disabled={todoPage === 0}
-                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
-                        aria-label="Previous"
-                      >
-                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
-                      <div className="flex flex-col gap-4">
-                        {todoTasksToShow.map((task) => (
-                          <Card
-                            key={task.id}
-                            className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-blue-500 min-w-0"
-                          >
-                            <div className="flex-1 min-w-0">
-                              <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                              <span className="block text-gray-500 text-xs font-medium mt-1">
-                                {task.boothZone && <>Zone: {task.boothZone} | </>}
-                                {task.customerName && <>Customer: {task.customerName}</>}
-                              </span>
-                              <span className="text-sm text-blue-700 font-semibold mt-3 border-t border-blue-100 pt-2 whitespace-nowrap">
-                                <span className="font-bold">Accepted by:</span> Jhon
-                              </span>
-                            </div>
-                          </Card>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setTodoPage(todoPage + 1)}
-                        disabled={todoPage === todoPages - 1}
-                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
-                        aria-label="Next"
-                      >
-                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#2563eb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
-                    </div>
-                    {todoPages > 1 && (
-                      <div className="flex justify-center mt-2">
-                        <span className="text-sm font-semibold text-gray-600">{todoPage + 1} / {todoPages}</span>
-                      </div>
-                    )}
-                  </div>
+              <div className="px-4 md:px-8 pb-6">
+                {/* Tabs */}
+                <div className="flex gap-2 mb-6 border-b border-gray-200">
+                  {[
+                    { id: 'todo', label: 'To Do', count: showTasks.todo.length, icon: <ClipboardList className="w-4 h-4 text-blue-600" />, color: 'blue' },
+                    { id: 'inProgress', label: 'In Progress', count: showTasks.inProgress.length, icon: <Activity className="w-4 h-4 text-yellow-500" />, color: 'yellow' },
+                    { id: 'completed', label: 'Completed', count: showTasks.completed.length, icon: <CheckCircle className="w-4 h-4 text-green-600" />, color: 'green' }
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      onClick={() => setActiveTab(tab.id)}
+                      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                        activeTab === tab.id
+                          ? `border-${tab.color}-600 text-${tab.color}-600`
+                          : `border-transparent text-${tab.color}-600 hover:text-${tab.color}-700 hover:border-${tab.color}-300`
+                      }`}
+                    >
+                      {tab.icon}
+                      <span className={`text-${tab.color}-600`}>{tab.label} {tab.count}</span>
+                    </button>
+                  ))}
                 </div>
-                {/* In Progress */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2 mt-6">
-                    <Activity className="w-5 h-5 text-yellow-500" />
-                    <span className="font-bold text-yellow-600 text-base">In Progress</span>
-                    <span className="ml-2 text-xs font-semibold text-yellow-400">({showTasks.inProgress.length})</span>
-                  </div>
-                  <div className="h-1 w-12 bg-yellow-100 rounded mb-3" />
-                  <div className="relative">
-                    <div className="flex flex-row items-center justify-center gap-2">
-                      <button
-                        onClick={() => setInProgressPage(inProgressPage - 1)}
-                        disabled={inProgressPage === 0}
-                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
-                        aria-label="Previous"
-                      >
-                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
-                      <div className="flex flex-col gap-4">
-                        {inProgressTasksToShow.map((task) => (
-                          <Card
-                            key={task.id}
-                            className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-yellow-400 min-w-0"
-                          >
-                            <div className="flex-1 min-w-0 flex flex-col justify-center">
-                              <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                              <span className="block text-gray-500 text-xs font-medium mt-1">
-                                {task.boothZone && <>Zone: {task.boothZone} | </>}
-                                {task.customerName && <>Customer: {task.customerName}</>}
-                              </span>
-                              <span className="text-sm text-yellow-700 font-semibold mt-3 border-t border-yellow-100 pt-2 whitespace-nowrap">
-                                <span className="font-bold">Accepted by:</span> {task.acceptedBy}
-                              </span>
-                            </div>
+
+                {/* Tab Content */}
+                <div className="space-y-4">
+                  {activeTab === 'todo' && (
+                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                      {showTasks.todo.map((task) => (
+                        <Card
+                          key={task.id}
+                          className="relative bg-white rounded-xl shadow-md p-4 flex flex-col gap-2 border-l-4 border-blue-500"
+                        >
+                          <div className="flex-1">
+                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                            <span className="block text-gray-500 text-xs font-medium mt-1">
+                              {task.boothZone && <>Zone: {task.boothZone} | </>}
+                              {task.customerName && <>Customer: {task.customerName}</>}
+                            </span>
+                          </div>
+                          <div className="flex justify-end">
                             <Button
-                              className="ml-4 h-9 px-5 rounded-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold shadow-sm transition-all duration-150"
+                              className="h-9 px-5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all duration-150"
+                              onClick={() => handleAccept(task)}
+                            >
+                              Accept
+                            </Button>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+
+                  {activeTab === 'inProgress' && (
+                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                      {showTasks.inProgress.map((task) => (
+                        <Card
+                          key={task.id}
+                          className="relative bg-white rounded-xl shadow-md p-4 flex flex-col gap-2 border-l-4 border-yellow-400"
+                        >
+                          <div className="flex-1">
+                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
+                            <span className="block text-gray-500 text-xs font-medium mt-1">
+                              {task.boothZone && <>Zone: {task.boothZone} | </>}
+                              {task.customerName && <>Customer: {task.customerName}</>}
+                            </span>
+                            <span className="text-sm text-yellow-700 font-semibold mt-2">
+                              <span className="font-bold">Accepted by:</span> {task.acceptedBy}
+                            </span>
+                          </div>
+                          <div className="flex justify-end">
+                            <Button
+                              className="h-9 px-5 rounded-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold shadow-sm transition-all duration-150"
                               onClick={() => handleMarkCompleted(task)}
                             >
                               Mark as Completed
                             </Button>
-                          </Card>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setInProgressPage(inProgressPage + 1)}
-                        disabled={inProgressPage === inProgressPages - 1}
-                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
-                        aria-label="Next"
-                      >
-                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
-                    {inProgressPages > 1 && (
-                      <div className="flex justify-center mt-2">
-                        <span className="text-sm font-semibold text-gray-600">{inProgressPage + 1} / {inProgressPages}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Completed */}
-                <div>
-                  <div className="flex items-center gap-2 mb-2 mt-6">
-                    <CheckCircle className="w-5 h-5 text-green-600" />
-                    <span className="font-bold text-green-600 text-base">Completed</span>
-                    <span className="ml-2 text-xs font-semibold text-green-400">({showTasks.completed.length})</span>
-                  </div>
-                  <div className="h-1 w-12 bg-green-100 rounded mb-3" />
-                  <div className="relative">
-                    <div className="flex flex-row items-center justify-center gap-2">
-                      <button
-                        onClick={() => setCompletedPage(completedPage - 1)}
-                        disabled={completedPage === 0}
-                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
-                        aria-label="Previous"
-                      >
-                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M13 15l-5-5 5-5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
-                      <div className="flex flex-col gap-4">
-                        {completedTasksToShow.map((task) => (
-                          <Card key={task.id} className="relative bg-white rounded-xl shadow-md p-4 flex flex-row justify-between items-center border-l-4 border-green-500 min-w-0">
-                            <div className="flex-1 flex flex-col min-w-0">
-                              <div className="flex items-center">
-                                <CheckCircle className="w-4 h-4 mr-2 text-green-500" />
-                                <div>
-                                  <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                                  <span className="block text-gray-500 text-xs font-medium mt-1">
-                                    {task.boothZone && <>Zone: {task.boothZone} | </>}
-                                    {task.customerName && <>Customer: {task.customerName}</>}
-                                  </span>
-                                </div>
-                              </div>
-                              <span className="block text-sm text-green-700 font-semibold mt-2 border-t border-green-100 pt-2">
-                                <span className="font-bold">Accepted by:</span> {task.acceptedBy}
-                              </span>
+                  )}
+
+                  {activeTab === 'completed' && (
+                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
+                      {showTasks.completed.map((task) => (
+                        <Card
+                          key={task.id}
+                          className="relative bg-white rounded-xl shadow-md p-4 flex flex-col gap-2 border-l-4 border-green-500"
+                        >
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="w-4 h-4 text-green-500" />
+                              <span className="block text-gray-900 font-bold text-base">{task.task}</span>
                             </div>
+                            <span className="block text-gray-500 text-xs font-medium mt-1">
+                              {task.boothZone && <>Zone: {task.boothZone} | </>}
+                              {task.customerName && <>Customer: {task.customerName}</>}
+                            </span>
+                            <span className="text-sm text-green-700 font-semibold mt-2">
+                              <span className="font-bold">Accepted by:</span> {task.acceptedBy}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center mt-2">
                             <span className="text-xs font-semibold text-gray-400">Due: {task.due}</span>
-                          </Card>
-                        ))}
-                      </div>
-                      <button
-                        onClick={() => setCompletedPage(completedPage + 1)}
-                        disabled={completedPage === completedPages - 1}
-                        className="w-8 h-8 flex items-center justify-center rounded-full disabled:opacity-50"
-                        aria-label="Next"
-                      >
-                        <svg width="20" height="20" fill="none" viewBox="0 0 20 20"><path d="M7 5l5 5-5 5" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                      </button>
+                          </div>
+                        </Card>
+                      ))}
                     </div>
-                    {completedPages > 1 && (
-                      <div className="flex justify-center mt-2">
-                        <span className="text-sm font-semibold text-gray-600">{completedPage + 1} / {completedPages}</span>
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </Card>
@@ -1507,7 +1457,6 @@ const stats = [
           </button>
         </div>
       )}
-
     </MainLayout>
   );
 }

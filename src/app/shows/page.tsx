@@ -1027,6 +1027,24 @@ export default function ShowsPage() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Utility function to map city to timezone
+  const getTimezoneFromCity = (cityOrg: string) => {
+    if (!cityOrg) return '';
+    const city = cityOrg.toLowerCase();
+    if (city.includes('san francisco')) return 'America/Los_Angeles (PST)';
+    if (city.includes('los angeles')) return 'America/Los_Angeles (PST)';
+    if (city.includes('seattle')) return 'America/Los_Angeles (PST)';
+    if (city.includes('las vegas')) return 'America/Los_Angeles (PST)';
+    if (city.includes('denver')) return 'America/Denver (MST)';
+    if (city.includes('chicago')) return 'America/Chicago (CST)';
+    if (city.includes('dallas')) return 'America/Chicago (CST)';
+    if (city.includes('miami')) return 'America/New_York (EST)';
+    if (city.includes('orlando')) return 'America/New_York (EST)';
+    if (city.includes('boston')) return 'America/New_York (EST)';
+    if (city.includes('new york')) return 'America/New_York (EST)';
+    return '';
+  };
+
   return (
     <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
@@ -1868,15 +1886,10 @@ export default function ShowsPage() {
                                     </Label>
                                     <Input
                                       type="text"
-                                      placeholder="MM-dd-yyyy"
+                                      placeholder="MM-DD-YYYY"
                                       className="h-9 px-3 w-full md:w-3/4"
-                                      value={dayjs().format('MM-dd-yyyy')}
-                                      onChange={(e) => {
-                                        const date = dayjs(e.target.value, 'MM-dd-yyyy');
-                                        if (date.isValid()) {
-                                          // Handle date change
-                                        }
-                                      }}
+                                      value={selectedShow.openDate ? dayjs(selectedShow.openDate).format('MM-DD-YYYY') : ''}
+                                      readOnly
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -1885,15 +1898,10 @@ export default function ShowsPage() {
                                     </Label>
                                     <Input
                                       type="text"
-                                      placeholder="MM-dd-yyyy"
+                                      placeholder="MM-DD-YYYY"
                                       className="h-9 px-3 w-full md:w-3/4"
-                                      value={dayjs().add(1, 'day').format('MM-dd-yyyy')}
-                                      onChange={(e) => {
-                                        const date = dayjs(e.target.value, 'MM-dd-yyyy');
-                                        if (date.isValid()) {
-                                          // Handle date change
-                                        }
-                                      }}
+                                      value={selectedShow.closeDate ? dayjs(selectedShow.closeDate).format('MM-DD-YYYY') : ''}
+                                      readOnly
                                     />
                                   </div>
                                   <div className="space-y-2">
@@ -1904,6 +1912,8 @@ export default function ShowsPage() {
                                       <Input
                                         placeholder="Enter timezone"
                                         className="h-9 px-3 w-full md:w-3/4"
+                                        value={getTimezoneFromCity(selectedShow.cityOrg)}
+                                        readOnly
                                       />
                                       <Button
                                         variant="success"
@@ -2023,7 +2033,7 @@ export default function ShowsPage() {
                                               <TableCell className="py-2 text-sm text-center">{date.projectNumber}</TableCell>
                                               <TableCell className="py-2 text-sm text-center">{date.facilityId}</TableCell>
                                               <TableCell className="py-2 text-sm text-center">
-                                                {new Date(date.dateTime).toLocaleString()}
+                                                {dayjs(date.dateTime).format('MM-DD-YYYY, h:mm:ss a')}
                                               </TableCell>
                                               <TableCell className="py-2 text-sm text-center">{date.notes}</TableCell>
                                             </TableRow>

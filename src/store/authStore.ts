@@ -82,14 +82,14 @@ export const useAuthStore = create<AuthStore>((set) => ({
       sessionStorage.clear();
       
       // Redirect to login page
-      window.location.replace('/ges-workbench/login');
+      window.location.replace('/GES/login');
     } catch (error) {
       console.error('Error during logout:', error);
       // If there's an error, still try to clean up as much as possible
       Cookies.remove('auth-token', { path: '/' });
       Cookies.remove('user-profile', { path: '/' });
       set({ isAuthenticated: false, token: null, userProfile: null });
-    window.location.replace('/ges-workbench/login');
+    window.location.replace('/GES/login');
     }
   },
   checkAuth: () => {

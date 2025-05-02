@@ -30,7 +30,7 @@ export default function LoginPage() {
       setIsLoading(true);
       setError("");
       // Normally you would do real sign-in logic here
-      login("mock-email-user", { displayName: "Email User", email, photoURL: null });
+      login("mock-email-user", { displayName: "jhon", email, photoURL: null });
       router.push("/ges-workbench/dashboard");
     } catch (error: any) {
       setError(error.message || "Failed to sign in");

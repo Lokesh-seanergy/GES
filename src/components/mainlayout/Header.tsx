@@ -170,14 +170,14 @@ export default function Header() {
                   <User className="text-gray-500" size={16} />
                 </div>
               ) : (
-              <Image
+                <Image
                   src={photoURL}
-                alt="User profile"
-                fill
-                className="object-cover"
+                  alt="User profile"
+                  fill
+                  className="object-cover w-full h-full rounded-full"
                   onError={handleImageError}
                   unoptimized={photoURL.startsWith('https://')}
-              />
+                />
               )}
             </div>
             <div className="text-sm">
@@ -201,7 +201,7 @@ export default function Header() {
                       alt="User profile"
                       width={48}
                       height={48}
-                      className="object-cover"
+                      className="object-cover w-full h-full rounded-full"
                       onError={handleImageError}
                       unoptimized={photoURL.startsWith('https://')}
                     />
@@ -217,7 +217,7 @@ export default function Header() {
               <div className="flex flex-col py-2">
                 <button
                   onClick={handleLogout}
-                  className="flex items-center gap-2 px-5 py-2 text-sm text-red-600 hover:bg-red-50 transition font-semibold"
+                  className="flex items-center gap-2 px-5 py-2 text-sm text-red-600 hover:bg-transparent transition font-semibold"
                 >
                   <LogOut size={16} /> Logout
                 </button>

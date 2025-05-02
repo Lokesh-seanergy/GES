@@ -3,7 +3,7 @@ import { withAuth } from "next-auth/middleware";
 
 export default withAuth({
   pages: {
-    signIn: "/ges-workbench/login", // your custom login page
+    signIn: "/GES/login", // your custom login page
   },
 });
 

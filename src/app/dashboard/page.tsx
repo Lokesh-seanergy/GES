@@ -787,10 +787,9 @@ const stats = [
       <div className="space-y-8">
         <div className="flex flex-col md:flex-row w-full gap-6">
           {/* Left: Main Content */}
-          <div className="w-full md:w-[70%]">
+          <div className="w-full md:w-[70%] flex flex-col gap-4">
             {/* Show Details Card (left) */}
-            <div className="flex flex-col md:flex-row gap-6 mb-6">
-              {/* Show Details Card (left) */}
+            <div className="flex flex-col md:flex-row gap-4">
               <div className="w-full md:w-1/2">
                 <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6">
                   <div className="font-extrabold text-2xl mb-6 text-blue-800 tracking-tight">Show Details</div>
@@ -810,8 +809,15 @@ const stats = [
                             <span className="ml-1 text-gray-600">{show.location}</span>
                           </div>
                         </div>
-                        <div className="text-sm font-semibold text-green-600 flex items-center self-center">
-                          {dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}
+                        <div className="flex flex-col items-end">
+                          <div className="text-xs text-gray-500">
+                            <span className="font-bold">Open:</span> <span className="font-normal">{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</span>
+                          </div>
+                          {dayjs(show.date).isValid() && (
+                            <div className="text-xs text-gray-500 mt-0.5">
+                              <span className="font-bold">Closes:</span> <span className="font-normal">{dayjs(show.date).add(1, 'day').format('MM-DD-YYYY')}</span>
+                            </div>
+                          )}
                         </div>
                       </Card>
                     ))}
@@ -892,7 +898,7 @@ const stats = [
               </div>
             </div>
             {/* Shows & Exhibitors Chart */}
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-4">
               <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden">
                 <div className="flex items-center justify-between px-8 pt-8 pb-4">
                   <div>
@@ -1014,36 +1020,35 @@ const stats = [
                 </div>
                           </div>
           {/* Right: Stat Cards and Show Tasks */}
-          <div className="w-full md:w-[30%] mt-8 md:mt-0 flex flex-col gap-6">
+          <div className="w-full md:w-[30%] flex flex-col gap-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* First two stat cards */}
-              {stats.slice(0, 2).map((stat) => (
+              {stats.map((stat) => (
                 <Card
                   key={stat.label}
-                  className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
+                  className={`flex items-center min-h-[96px] gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full ${stat.label === "Ongoing Shows" ? "md:col-span-2" : ""}`}
                 >
                   <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
+                    stat.label === "Upcoming Shows" ? "bg-orange-200" :
                     stat.label === "Closed Shows" ? "bg-gray-100" :
                     stat.label === "Ongoing Shows" ? "bg-green-100" :
                     stat.label === "Total Exhibitors" ? "bg-purple-100" :
                     stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
                   }`}>
                     {React.cloneElement(stat.icon, {
-                      className: `${stat.icon.props.className || ''} w-6 h-6`
+                      className: `${stat.icon.props.className || ''} w-6 h-6 ${stat.label === "Upcoming Shows" ? "text-orange-600" : ""}`
                     })}
                   </div>
                   <div className="w-px h-10 bg-gray-200 mx-2" />
-                  <div className="flex flex-col justify-center">
+                  <div className="flex flex-col items-center justify-center h-full">
                     <div className={`text-3xl font-extrabold ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                      stat.label === "Upcoming Shows" ? "text-orange-700" :
                       stat.label === "Closed Shows" ? "text-gray-600" :
                       stat.label === "Ongoing Shows" ? "text-green-600" :
                       stat.label === "Total Exhibitors" ? "text-purple-600" :
                       stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
                     }`}>{stat.value}</div>
-                    <div className={`text-base font-semibold mt-1 ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
+                    <div className={`text-base font-semibold mt-0.5 ${
+                      stat.label === "Upcoming Shows" ? "text-orange-700" :
                       stat.label === "Closed Shows" ? "text-gray-600" :
                       stat.label === "Ongoing Shows" ? "text-green-600" :
                       stat.label === "Total Exhibitors" ? "text-purple-600" :
@@ -1052,81 +1057,9 @@ const stats = [
                   </div>
                 </Card>
               ))}
-              {/* Ongoing Shows card, full width */}
-              {stats.filter(stat => stat.label === "Ongoing Shows").map((stat) => (
-                <Card
-                  key={stat.label}
-                  className="flex items-center justify-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full md:col-span-2"
-                >
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
-                    stat.label === "Closed Shows" ? "bg-gray-100" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
-                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
-                  }`}>
-                    {React.cloneElement(stat.icon, {
-                      className: `${stat.icon.props.className || ''} w-6 h-6`
-                    })}
-              </div>
-                  <div className="w-px h-10 bg-gray-200 mx-2" />
-                  <div className="flex flex-col justify-center">
-                    <div className={`text-3xl font-extrabold ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.value}</div>
-                    <div className={`text-base font-semibold mt-1 ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.label}</div>
-                  </div>
-                </Card>
-              ))}
-              {/* Remaining stat cards */}
-              {stats.slice(3).map((stat) => (
-                <Card
-                  key={stat.label}
-                  className="flex items-center gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full"
-                >
-                  <div className={`flex items-center justify-center w-12 h-12 rounded-full ${
-                    stat.label === "Upcoming Shows" ? "bg-blue-100" :
-                    stat.label === "Closed Shows" ? "bg-gray-100" :
-                    stat.label === "Ongoing Shows" ? "bg-green-100" :
-                    stat.label === "Total Exhibitors" ? "bg-purple-100" :
-                    stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
-                  }`}>
-                    {React.cloneElement(stat.icon, {
-                      className: `${stat.icon.props.className || ''} w-6 h-6`
-                    })}
-              </div>
-                  <div className="w-px h-10 bg-gray-200 mx-2" />
-                  <div className="flex flex-col justify-center">
-                    <div className={`text-3xl font-extrabold ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.value}</div>
-                    <div className={`text-base font-semibold mt-1 ${
-                      stat.label === "Upcoming Shows" ? "text-blue-600" :
-                      stat.label === "Closed Shows" ? "text-gray-600" :
-                      stat.label === "Ongoing Shows" ? "text-green-600" :
-                      stat.label === "Total Exhibitors" ? "text-purple-600" :
-                      stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                    }`}>{stat.label}</div>
-                  </div>
-                </Card>
-                ))}
             </div>
             {/* Show Tasks Card (moved here, vertical layout) */}
-            <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden mt-6">
+            <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden">
               <div className="flex items-center gap-2 mb-4 px-4 md:px-8 pt-8 pb-4">
                 <ListChecks className="w-5 h-5 text-blue-600" />
                 <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>

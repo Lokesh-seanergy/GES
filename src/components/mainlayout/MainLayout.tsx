@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Sidemenu from "./Sidemenu";
 import Header from "./Header";
 import type { BreadcrumbItem } from "./Breadcrumb";
@@ -16,12 +16,12 @@ export default function MainLayout({
   children,
   breadcrumbs = [],
 }: MainLayoutProps) {
+  // Track sidebar expanded state
+  const [expanded, setExpanded] = useState(false);
   return (
-    <div className="flex flex-col md:flex-row h-screen overflow-hidden">
+    <div className="flex flex-row h-screen overflow-hidden">
       {/* Side Menu */}
-      <div className="hidden md:block">
-        <Sidemenu />
-      </div>
+      <Sidemenu expanded={expanded} setExpanded={setExpanded} />
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <Header />

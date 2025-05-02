@@ -25,15 +25,15 @@ export const PRIVATE_ROUTES = new Set([
 ]);
 
 // Helper to add base path to routes
-export const withBasePath = (path: string) => `/ges-workbench${path}`;
+export const withBasePath = (path: string) => `/GES${path}`;
 
 export const isPublicRoute = (path: string): boolean => {
-  const normalizedPath = path.replace('/ges-workbench', '');
+  const normalizedPath = path.replace('/GES', '');
   return Array.from(PUBLIC_ROUTES).some(route => normalizedPath === route);
 };
 
 export const isPrivateRoute = (path: string): boolean => {
-  const normalizedPath = path.replace('/ges-workbench', '');
+  const normalizedPath = path.replace('/GES', '');
   return Array.from(PRIVATE_ROUTES).some(route => normalizedPath.startsWith(route));
 };
 

@@ -60,7 +60,7 @@ export default function Header() {
   const email = userProfile?.email || 'jesse@example.com';
   const photoURL = !imageError && userProfile?.photoURL 
     ? userProfile.photoURL 
-    : '/ges-workbench/profile.png';
+    : '/GES/profile.png';
   const role = 'Admin'; // This could come from a role management system
 
   const handleImageError = () => {

@@ -9,7 +9,7 @@ interface PageSizeSelectorProps {
 export function PageSizeSelector({ pageSize, setPageSize, className }: PageSizeSelectorProps) {
   return (
     <div className={`flex items-center gap-2 whitespace-nowrap ${className || ''}`}>
-      <span className="text-sm text-muted-foreground whitespace-nowrap">Items per page:</span>
+      <span className="text-sm font-semibold text-muted-foreground whitespace-nowrap">Items per page:</span>
       <Select value={String(pageSize)} onValueChange={(value) => setPageSize(Number(value))}>
         <SelectTrigger className="w-[80px]">
           <SelectValue />

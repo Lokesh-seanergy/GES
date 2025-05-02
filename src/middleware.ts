@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server'
 
 // Define protected routes
 const protectedRoutes = [
-  '/ges-workbench/dashboard',
+  '/GES/dashboard',
   '/dashboard',
   '/shows',
   '/exhibits',
@@ -14,7 +14,7 @@ const protectedRoutes = [
 
 // Define public routes
 const publicRoutes = [
-  '/ges-workbench/login',
+  '/GES/login',
   '/login',
 ];
 
@@ -23,23 +23,23 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('auth-token')?.value;
   
   // Handle root paths
-  if (pathname === '/' || pathname === '/ges-workbench' || pathname === '/ges-workbench/') {
+  if (pathname === '/' || pathname === '/GES' || pathname === '/GES/') {
     if (!token) {
-      return NextResponse.redirect(new URL('/ges-workbench/login', request.url));
+      return NextResponse.redirect(new URL('/GES/login', request.url));
     }
-    return NextResponse.redirect(new URL('/ges-workbench/dashboard', request.url));
+    return NextResponse.redirect(new URL('/GES/dashboard', request.url));
   }
 
   // Check if the path is protected
   if (protectedRoutes.some(route => pathname.startsWith(route))) {
     if (!token) {
-      return NextResponse.redirect(new URL('/ges-workbench/login', request.url));
+      return NextResponse.redirect(new URL('/GES/login', request.url));
     }
   }
 
   // Check if the path is public (like login) and user is already authenticated
   if (publicRoutes.some(route => pathname.startsWith(route)) && token) {
-    return NextResponse.redirect(new URL('/ges-workbench/dashboard', request.url));
+    return NextResponse.redirect(new URL('/GES/dashboard', request.url));
   }
 
   // For all other routes, proceed normally

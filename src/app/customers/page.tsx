@@ -25,7 +25,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import React from "react";
@@ -1138,17 +1138,8 @@ function CustomersContent() {
                         )}
                         <div className="mt-6 pt-4 border-t flex gap-2">
                           <Button
-                            variant="default"
                             onClick={() => {
-                              if (customerForDetailView) {
-                                const params = new URLSearchParams({
-                                  projectNumber: customerForDetailView.projectNumber || '',
-                                  firstName: customerForDetailView.firstName || '',
-                                  lastName: customerForDetailView.lastName || '',
-                                  boothNumber: customerForDetailView.boothNumber || '',
-                                });
-                                router.push(`/orders?${params.toString()}`);
-                              }
+                              router.push("/orders");
                             }}
                           >
                             Order
@@ -1169,7 +1160,7 @@ function CustomersContent() {
             {selectedCustomerForEdit && (
               <Dialog
                 open={isDialogOpen}
-                onOpenChange={(open) => {
+                onOpenChange={(open: boolean) => {
                   setIsDialogOpen(open);
                   if (!open) setSelectedCustomerForEdit(null);
                 }}
@@ -1509,7 +1500,6 @@ function CustomersContent() {
                   <DialogFooter className="flex justify-between border-t pt-4 mt-4">
                     <Button
                       type="button"
-                      variant="destructive"
                       onClick={handleDelete}
                     >
                       Delete Customer
@@ -1517,7 +1507,7 @@ function CustomersContent() {
                     <div className="space-x-2">
                       <Button
                         type="button"
-                        variant="outline"
+                     
                         onClick={() => setIsDialogOpen(false)}
                       >
                         Cancel

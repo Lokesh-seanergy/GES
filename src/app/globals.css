@@ -69,13 +69,19 @@
   }
 }
  
+/* Universal cross-browser font smoothing and robust font stack */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 @layer base {
   * {
     @apply border-border;
-    font-family: "Roboto", sans-serif;
+    font-family: "Roboto", Arial, "Helvetica Neue", Helvetica, sans-serif;
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Roboto", sans-serif;
+    font-family: "Roboto", Arial, "Helvetica Neue", Helvetica, sans-serif;
   }
 } 

@@ -57,6 +57,9 @@ import { CustomPagination } from "@/components/ui/pagination";
 import { PageSizeSelector } from "@/components/ui/page-size-selector";
 import dayjs from "dayjs";
 import { ScrollToTop } from "@/components/ui/scroll-to-top";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
+import { Calendar as CalendarIcon } from "lucide-react";
 
 interface ShowData {
   showId: string;
@@ -67,8 +70,10 @@ interface ShowData {
   projectNumber: string;
   cityOrg: string;
   yrmo: string;
-  project?: string; // Making project optional for backward compatibility
-  name?: string; // Making name optional for backward compatibility
+  openDate: string;
+  closeDate: string;
+  project?: string;
+  name?: string;
 }
 
 interface ProjectData {
@@ -98,8 +103,10 @@ interface FilterState {
   marketType: string;
   projectNumber: string;
   cityOrg: string;
-  yrmoStart: string;
-  yrmoEnd: string;
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
 }
 
 const OCCR_TYPES = [
@@ -122,7 +129,7 @@ const MARKET_TYPES = [
   "Education",
 ];
 
-type SortField = 'showId' | 'showName' | 'occrId' | 'occrType' | 'marketType' | 'projectNumber' | 'cityOrg' | 'yrmo';
+type SortField = 'showId' | 'showName' | 'occrId' | 'occrType' | 'marketType' | 'projectNumber' | 'cityOrg' | 'openDate' | 'closeDate';
 type SortDirection = "asc" | "desc";
 
 // Basic store for search
@@ -155,6 +162,306 @@ interface PaginationState {
   totalItems: number;
 }
 
+const parseDate = (dateStr: string) => {
+  if (!dateStr) return { month: '', day: '', year: '' };
+  const [year, month, day] = dateStr.split('-');
+  return { year, month, day };
+};
+
+const formatDisplayDate = (date: string) => {
+  if (!date) return '';
+  const parts = parseDate(date);
+  if (!parts.month || !parts.day || !parts.year) return '';
+  return `${parts.month}/${parts.day}/${parts.year}`;
+};
+
+const formatFilterValue = (key: keyof FilterState, value: string | { startDate: string; endDate: string }) => {
+  if (typeof value === 'object' && 'startDate' in value) {
+    return `${value.startDate} - ${value.endDate}`;
+  }
+  return value;
+};
+
+function DateRangePicker({
+  value,
+  onChange,
+  placeholder
+}: {
+  value: { startDate: string; endDate: string };
+  onChange: (dates: { startDate: string; endDate: string }) => void;
+  placeholder: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const month = (i + 1).toString().padStart(2, '0');
+    return { value: month, label: month };
+  });
+
+  const days = Array.from({ length: 31 }, (_, i) => {
+    const day = (i + 1).toString().padStart(2, '0');
+    return { value: day, label: day };
+  });
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 10 }, (_, i) => {
+    const year = (currentYear + i).toString();
+    return { value: year, label: year };
+  });
+
+  const formatDate = (month: string, day: string, year: string) => {
+    if (!month || !day || !year) return '';
+    return `${year}-${month}-${day}`;
+  };
+
+  const displayValue = value.startDate || value.endDate ? 
+    `${formatDisplayDate(value.startDate)} - ${formatDisplayDate(value.endDate)}` : 
+    placeholder;
+
+  const startDateParts = parseDate(value.startDate);
+  const endDateParts = parseDate(value.endDate);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen]);
+
+  const handleButtonClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsOpen(!isOpen);
+  };
+
+  const handleValueChange = (type: 'start' | 'end', field: 'month' | 'day' | 'year') => (newValue: string) => {
+    const parts = type === 'start' ? startDateParts : endDateParts;
+    const month = field === 'month' ? newValue : (parts.month || '01');
+    const day = field === 'day' ? newValue : (parts.day || '01');
+    const year = field === 'year' ? newValue : (parts.year || currentYear.toString());
+    
+    const newDate = formatDate(month, day, year);
+    
+    onChange({
+      startDate: type === 'start' ? newDate : value.startDate,
+      endDate: type === 'end' ? newDate : value.endDate
+    });
+  };
+
+  return (
+    <div className="space-y-2" ref={dropdownRef}>
+      <Label className="text-sm text-gray-500 font-semibold">Date Range</Label>
+      <div className="relative">
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-start text-left font-normal h-9"
+          onClick={handleButtonClick}
+        >
+          {displayValue}
+        </Button>
+        
+        {isOpen && (
+          <div 
+            className="absolute z-[9999] mt-1 w-full bg-white border rounded-md shadow-lg p-4"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-500">From</Label>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-16"
+                      >
+                        {startDateParts.month || 'MM'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="grid grid-cols-1">
+                        {months.map(month => (
+                          <Button
+                            key={month.value}
+                            variant="ghost"
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleValueChange('start', 'month')(month.value);
+                            }}
+                          >
+                            {month.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-16"
+                      >
+                        {startDateParts.day || 'DD'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="grid grid-cols-1">
+                        {days.map(day => (
+                          <Button
+                            key={day.value}
+                            variant="ghost"
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleValueChange('start', 'day')(day.value);
+                            }}
+                          >
+                            {day.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-24"
+                      >
+                        {startDateParts.year || 'YYYY'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-24 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="grid grid-cols-1">
+                        {years.map(year => (
+                          <Button
+                            key={year.value}
+                            variant="ghost"
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleValueChange('start', 'year')(year.value);
+                            }}
+                          >
+                            {year.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label className="text-xs text-gray-500">To</Label>
+                <div className="flex gap-2">
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-16"
+                      >
+                        {endDateParts.month || 'MM'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="grid grid-cols-1">
+                        {months.map(month => (
+                          <Button
+                            key={month.value}
+                            variant="ghost"
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleValueChange('end', 'month')(month.value);
+                            }}
+                          >
+                            {month.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-16"
+                      >
+                        {endDateParts.day || 'DD'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-16 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="grid grid-cols-1">
+                        {days.map(day => (
+                          <Button
+                            key={day.value}
+                            variant="ghost"
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleValueChange('end', 'day')(day.value);
+                            }}
+                          >
+                            {day.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                  
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="h-8 w-24"
+                      >
+                        {endDateParts.year || 'YYYY'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-24 p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                      <div className="grid grid-cols-1">
+                        {years.map(year => (
+                          <Button
+                            key={year.value}
+                            variant="ghost"
+                            className="h-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleValueChange('end', 'year')(year.value);
+                            }}
+                          >
+                            {year.label}
+                          </Button>
+                        ))}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // Main component
 export default function ShowsPage() {
   const router = useRouter();
@@ -174,8 +481,10 @@ export default function ShowsPage() {
     marketType: "",
     projectNumber: "",
     cityOrg: "",
-    yrmoStart: "",
-    yrmoEnd: "",
+    dateRange: {
+      startDate: "",
+      endDate: ""
+    }
   });
   const [activeFilters, setActiveFilters] = useState<Partial<FilterState>>({});
 
@@ -206,7 +515,9 @@ export default function ShowsPage() {
     marketType: show.marketType,
     projectNumber: show.projectNumber,
     cityOrg: show.cityOrg,
-    yrmo: show.yrmo
+    yrmo: show.yrmo,
+    openDate: show.openDate || '2025-01-01',
+    closeDate: show.closeDate || '2025-01-02'
   })));
   const [selectedShow, setSelectedShow] = useState<ShowData | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -220,7 +531,11 @@ export default function ShowsPage() {
     marketType: '',
     projectNumber: '',
     cityOrg: '',
-    yrmo: ''
+    yrmo: '',
+    openDate: '',
+    closeDate: '',
+    project: '',
+    name: ''
   });
 
   const [newOccr, setNewOccr] = useState({
@@ -271,7 +586,8 @@ export default function ShowsPage() {
             show.marketType,
             show.projectNumber,
             show.cityOrg,
-            show.yrmo,
+            show.openDate,
+            show.closeDate,
           ].map((field) => field.toLowerCase());
 
           const searchTerms = debouncedSearch.toLowerCase().split(" ");
@@ -335,11 +651,13 @@ export default function ShowsPage() {
         ) {
           return false;
         }
-        if (activeFilters.yrmoStart && show.yrmo < activeFilters.yrmoStart) {
-          return false;
-        }
-        if (activeFilters.yrmoEnd && show.yrmo > activeFilters.yrmoEnd) {
-          return false;
+        if (activeFilters.dateRange) {
+          if (activeFilters.dateRange.startDate && show.openDate < activeFilters.dateRange.startDate) {
+            return false;
+          }
+          if (activeFilters.dateRange.endDate && show.closeDate > activeFilters.dateRange.endDate) {
+            return false;
+          }
         }
 
         return true;
@@ -410,6 +728,10 @@ export default function ShowsPage() {
       projectNumber: "",
       cityOrg: "",
       yrmo: "",
+      openDate: '',
+      closeDate: '',
+      project: '',
+      name: ''
     });
     // Close the dialog
     setShowDialog(false);
@@ -490,8 +812,10 @@ export default function ShowsPage() {
     const parts = formattedValue.split(" : ");
     setFilters((prev) => ({
       ...prev,
-      yrmoStart: parts[0] || "",
-      yrmoEnd: parts[1] || "",
+      dateRange: {
+        startDate: parts[0] || "",
+        endDate: parts[1] || "",
+      },
     }));
   };
 
@@ -503,7 +827,7 @@ export default function ShowsPage() {
 
   // Filter handlers
   const handleFilterChange = (field: keyof FilterState, value: string) => {
-    if (field === "yrmoStart") {
+    if (field === "dateRange") {
       handleYrmoInput(value);
     } else {
       setFilters((prev) => ({ ...prev, [field]: value }));
@@ -519,8 +843,10 @@ export default function ShowsPage() {
       marketType: "",
       projectNumber: "",
       cityOrg: "",
-      yrmoStart: "",
-      yrmoEnd: "",
+      dateRange: {
+        startDate: "",
+        endDate: ""
+      }
     });
     setActiveFilters({});
   };
@@ -682,6 +1008,25 @@ export default function ShowsPage() {
     setShowVendorInfo(true);
   };
 
+  const filtersRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // Ignore clicks on the Filters button itself
+      if (target.closest('button')?.textContent?.includes('Filters')) {
+        return;
+      }
+      // Close filters if click is outside the container
+      if (filtersRef.current && !filtersRef.current.contains(target)) {
+        setShowFilters(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
     <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
@@ -786,6 +1131,7 @@ export default function ShowsPage() {
 
                   {/* Filter Panel */}
                   <motion.div
+                    ref={filtersRef}
                     className={cn(
                       "bg-muted border rounded-md p-4",
                       "transition-all duration-300 ease-in-out absolute z-10 w-full",
@@ -818,18 +1164,18 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Occr ID</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occurrence ID</Label>
                         <Input
                           value={filters.occrId}
                           onChange={(e) =>
                             handleFilterChange("occrId", e.target.value)
                           }
-                          placeholder="Filter by Occr ID"
+                          placeholder="Filter by Occurrence ID"
                           className="h-9"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Occr Type</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Occurrence Type</Label>
                         <Select
                           value={filters.occrType}
                           onValueChange={(value) =>
@@ -837,7 +1183,7 @@ export default function ShowsPage() {
                           }
                         >
                           <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Select Occr Type" />
+                            <SelectValue placeholder="Select Occurrence Type" />
                           </SelectTrigger>
                           <SelectContent>
                             {OCCR_TYPES.map((type) => (
@@ -880,30 +1226,26 @@ export default function ShowsPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">City Org</Label>
+                        <Label className="text-sm text-gray-500 font-semibold">Show Location</Label>
                         <Input
                           value={filters.cityOrg}
                           onChange={(e) =>
                             handleFilterChange("cityOrg", e.target.value)
                           }
-                          placeholder="Filter by City Org"
+                          placeholder="Filter by Show Location"
                           className="h-9"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label className="text-sm text-gray-500 font-semibold">Year/Month Range</Label>
-                        <Input
-                          type="text"
-                          value={formatYrmoRange(
-                            filters.yrmoStart,
-                            filters.yrmoEnd
-                          )}
-                          onChange={(e) =>
-                            handleFilterChange("yrmoStart", e.target.value)
-                          }
-                          className="h-9"
-                          placeholder="YYYY-MM : YYYY-MM"
-                          maxLength={21}
+                        <DateRangePicker
+                          value={filters.dateRange}
+                          onChange={(dates) => {
+                            setFilters(prev => ({
+                              ...prev,
+                              dateRange: dates
+                            }));
+                          }}
+                          placeholder="Select date range"
                         />
                       </div>
                     </div>
@@ -918,29 +1260,32 @@ export default function ShowsPage() {
                   </motion.div>
 
                   {/* Active Filter Tags */}
-                  {Object.entries(activeFilters).length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-1">
-                      {Object.entries(activeFilters)
-                        .filter(([_, value]) => value && value.trim() !== "")
-                        .map(([key, value]) => (
-                          <Badge
-                            key={key}
-                            variant="secondary"
-                            className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 text-xs"
+                  {Object.entries(activeFilters)
+                    .filter(([_, value]) => {
+                      if (typeof value === 'object' && 'startDate' in value) {
+                        return value.startDate || value.endDate;
+                      }
+                      return value && typeof value === 'string' && value.trim() !== '';
+                    })
+                    .map(([key, value]) => {
+                      const displayValue = formatFilterValue(key as keyof FilterState, value as string | { startDate: string; endDate: string });
+                      return (
+                        <Badge
+                          key={key}
+                          className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-2 py-1 text-xs"
+                        >
+                          {key}: {displayValue}
+                          <button
+                            onClick={() =>
+                              removeFilter(key as keyof FilterState)
+                            }
+                            className="ml-2"
                           >
-                            {key}: {value}
-                            <button
-                              onClick={() =>
-                                removeFilter(key as keyof FilterState)
-                              }
-                              className="ml-1 hover:text-red-600"
-                            >
-                              ×
-                            </button>
-                          </Badge>
-                        ))}
-                    </div>
-                  )}
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      );
+                    })}
 
                   {/* New Show Form */}
                   <motion.div
@@ -1306,15 +1651,23 @@ export default function ShowsPage() {
                                   </TableHead>
                                   <TableHead
                                     className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
-                                    onClick={() => handleSort("yrmo")}
+                                    onClick={() => handleSort("openDate")}
                                   >
                                     <div className="flex items-center gap-2">
-                                      Year/Month {getSortIcon("yrmo")}
+                                      Open {getSortIcon("openDate")}
                                     </div>
                                   </TableHead>
-                                  <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3">
+                                  <TableHead
+                                    className="text-sm font-semibold text-gray-700 cursor-pointer px-4 py-3"
+                                    onClick={() => handleSort("closeDate")}
+                                  >
                                     <div className="flex items-center gap-2">
-                                      Actions
+                                      Close {getSortIcon("closeDate")}
+                                    </div>
+                                  </TableHead>
+                                  <TableHead className="text-sm font-semibold text-gray-700 px-4 py-3 text-center">
+                                    <div className="flex items-center justify-center">
+                                      Action
                                     </div>
                                   </TableHead>
                                 </>
@@ -1353,20 +1706,10 @@ export default function ShowsPage() {
                                     <TableCell className="py-2 px-4">{show.marketType}</TableCell>
                                     <TableCell className="py-2 px-4">{show.projectNumber}</TableCell>
                                     <TableCell className="py-2 px-4">{show.cityOrg}</TableCell>
-                                    <TableCell className="py-2 px-4">{show.yrmo}</TableCell>
+                                    <TableCell className="py-2 px-4">{dayjs(show.openDate).format('MM-DD-YYYY')}</TableCell>
+                                    <TableCell className="py-2 px-4">{dayjs(show.closeDate).format('MM-DD-YYYY')}</TableCell>
                                     <TableCell className="py-2 px-4">
-                                      <div className="flex items-center gap-2">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleShowSelect(show);
-                                          }}
-                                          className="h-7 w-7 p-0"
-                                        >
-                                          <Pencil className="h-3 w-3" />
-                                        </Button>
+                                      <div className="flex justify-center">
                                         <Button
                                           variant="ghost"
                                           size="sm"

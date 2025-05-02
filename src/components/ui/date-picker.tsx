@@ -15,9 +15,11 @@ import {
 interface DatePickerProps {
   date?: Date
   onSelect: (date: Date | undefined) => void
+  popoverClassName?: string
+  calendarClassName?: string
 }
 
-export function DatePicker({ date, onSelect }: DatePickerProps) {
+export function DatePicker({ date, onSelect, popoverClassName, calendarClassName }: DatePickerProps) {
   return (
     <Popover>
       <PopoverTrigger asChild>
@@ -32,12 +34,13 @@ export function DatePicker({ date, onSelect }: DatePickerProps) {
           {date ? format(date, "MM-dd-yyyy") : <span>Pick a date</span>}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent className={cn("w-auto p-0", popoverClassName)} align="start">
         <Calendar
           mode="single"
           selected={date}
           onSelect={(newDate) => onSelect(newDate || undefined)}
           initialFocus
+          className={calendarClassName}
         />
       </PopoverContent>
     </Popover>

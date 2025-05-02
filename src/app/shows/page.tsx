@@ -1332,15 +1332,15 @@ export default function ShowsPage() {
                           </div>
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>Occr ID</Label>
+                              <Label>Occurrence ID</Label>
                               <Input
                                 value={newShow.occrId}
                                 onChange={handleNewShowChange("occrId")}
-                                placeholder="Enter Occr ID"
+                                placeholder="Enter Occurrence ID"
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Occr Type</Label>
+                              <Label>Occurrence Type</Label>
                               <Select
                                 value={newShow.occrType}
                                 onValueChange={(value) =>
@@ -1348,7 +1348,7 @@ export default function ShowsPage() {
                                 }
                               >
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Select Occr Type" />
+                                  <SelectValue placeholder="Select Occurrence Type" />
                                 </SelectTrigger>
                                 <SelectContent>
                                   {OCCR_TYPES.map((type) => (
@@ -1390,21 +1390,31 @@ export default function ShowsPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>City Org</Label>
+                              <Label>Show Location</Label>
                               <Input
                                 value={newShow.cityOrg}
                                 onChange={handleNewShowChange("cityOrg")}
-                                placeholder="Enter City Org"
+                                placeholder="Enter Show Location"
                               />
                             </div>
                           </div>
-                          <div className="space-y-2">
-                            <Label>Year/Month</Label>
-                            <Input
-                              value={newShow.yrmo}
-                              onChange={handleNewShowChange("yrmo")}
-                              placeholder="YYYY-MM"
-                            />
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Open</Label>
+                              <Input
+                                value={newShow.openDate}
+                                onChange={handleNewShowChange("openDate")}
+                                placeholder="MM-DD-YYYY"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Close</Label>
+                              <Input
+                                value={newShow.closeDate}
+                                onChange={handleNewShowChange("closeDate")}
+                                placeholder="MM-DD-YYYY"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1458,16 +1468,16 @@ export default function ShowsPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Occr ID</Label>
+                              <Label>Occurrence ID</Label>
                               <Input
                                 value={newOccr.occrId}
                                 onChange={handleNewOccrChange("occrId")}
-                                placeholder="Enter Occr ID"
+                                placeholder="Enter Occurrence ID"
                               />
                             </div>
                           </div>
                           <div className="space-y-2">
-                            <Label>Occr Type</Label>
+                            <Label>Occurrence Type</Label>
                             <Select
                               value={newOccr.occrType}
                               onValueChange={(value) =>
@@ -1475,7 +1485,7 @@ export default function ShowsPage() {
                               }
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select Occr Type" />
+                                <SelectValue placeholder="Select Occurrence Type" />
                               </SelectTrigger>
                               <SelectContent>
                                 {OCCR_TYPES.map((type) => (
@@ -1505,35 +1515,18 @@ export default function ShowsPage() {
                               <Label className="text-sm font-semibold">Open</Label>
                               <Input
                                 type="text"
-                                placeholder="MM-dd-yyyy"
-                                value={dayjs().format('MM-dd-yyyy')}
-                                onChange={(e) => {
-                                  const date = dayjs(e.target.value, 'MM-dd-yyyy');
-                                  if (date.isValid()) {
-                                    setNewOccr((prev) => ({
-                                      ...prev,
-                                      open: e.target.value,
-                                    }));
-                                  }
-                                }}
+                                placeholder="MM-DD-YYYY"
+                                value={newOccr.open}
+                                onChange={handleNewOccrChange("open")}
                               />
                             </div>
                             <div className="space-y-2">
                               <Label className="text-sm font-semibold">Close</Label>
                               <Input
                                 type="text"
-                                placeholder="MM-dd-yyyy"
-                                className="h-9 px-3 w-full md:w-3/4"
-                                value={dayjs().add(1, 'day').format('MM-dd-yyyy')}
-                                onChange={(e) => {
-                                  const date = dayjs(e.target.value, 'MM-dd-yyyy');
-                                  if (date.isValid()) {
-                                    setNewOccr((prev) => ({
-                                      ...prev,
-                                      close: e.target.value,
-                                    }));
-                                  }
-                                }}
+                                placeholder="MM-DD-YYYY"
+                                value={newOccr.close}
+                                onChange={handleNewOccrChange("close")}
                               />
                             </div>
                           </div>
@@ -2671,6 +2664,28 @@ export default function ShowsPage() {
                 id="yrmo"
                 value={newShow.yrmo}
                 onChange={(e) => setNewShow({ ...newShow, yrmo: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="openDate" className="text-right">
+                Open Date
+              </Label>
+              <Input
+                id="openDate"
+                value={newShow.openDate}
+                onChange={(e) => setNewShow({ ...newShow, openDate: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="closeDate" className="text-right">
+                Close Date
+              </Label>
+              <Input
+                id="closeDate"
+                value={newShow.closeDate}
+                onChange={(e) => setNewShow({ ...newShow, closeDate: e.target.value })}
                 className="col-span-3"
               />
             </div>

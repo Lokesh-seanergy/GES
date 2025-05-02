@@ -7,6 +7,7 @@ import { SearchBar } from "../ui/SearchBar";
 import Image from "next/image";
 import { useAuthStore } from "@/store/authStore";
 import { useNotifications } from "../NotificationContext";
+import { usePathname } from "next/navigation";
 
 // Configure the Roboto font with specific weights
 const roboto = Roboto({
@@ -23,6 +24,7 @@ export default function Header() {
   const [showNotificationDropdown, setShowNotificationDropdown] = useState(false);
   const bellRef = useRef(null);
   const profileRef = useRef(null);
+  const pathname = usePathname();
 
   // Add effect to close dropdowns on outside click
   useEffect(() => {
@@ -94,7 +96,7 @@ export default function Header() {
 
       {/* Right: Search Bar, Notifications, Profile */}
       <div className="flex items-center gap-4">
-        <SearchBar className="w-64" />
+        {pathname === "/dashboard" && <SearchBar className="w-64" />}
         {/* Notifications */}
         <div className="relative" ref={bellRef}>
           <button

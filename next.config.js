@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // basePath: '/ges-workbench',
-  basePath: '/ges-workbench',
+  basePath: '/GES',
+  assetPrefix: '/GES',
   output: 'standalone',
   // Disable ESLint during builds
   eslint: {

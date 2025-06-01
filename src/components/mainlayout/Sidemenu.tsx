@@ -2,7 +2,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { useState } from "react";
 import {
   LayoutDashboard,
   Ticket,
@@ -94,9 +93,11 @@ export default function Sidemenu({ expanded, setExpanded }: SidemenuProps) {
     >
       {/* Logo section */}
       <div className={`relative bg-[#88c5cf] w-full h-16 p-0 m-0 flex items-center justify-center overflow-hidden transition-all duration-300`}> 
-        <img
+        <Image
           src={expanded ? "/GES/swb.png" : "/GES/geslogo.png"}
           alt="GES Logo"
+          width={expanded ? 224 : 40}
+          height={expanded ? 64 : 40}
           className={expanded ? "w-full h-full object-cover" : "h-10 w-10 rounded-full object-cover border-2 border-white shadow"}
           style={{ display: 'block', transition: 'all 0.3s' }}
         />

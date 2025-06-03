@@ -117,7 +117,7 @@ export default function LoginPage() {
                 className="w-full"
               >
                 <Image
-                  src="/GES/microsoft.png"
+                  src="/GES/Mlogo.png"
                   alt="Microsoft"
                   width={20}
                   height={20}

@@ -1142,7 +1142,7 @@ function CustomersContent() {
                               router.push("/orders");
                             }}
                           >
-                            Order
+                            Order Info
                           </Button>
                         </div>
                       </Card>

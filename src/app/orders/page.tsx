@@ -183,15 +183,6 @@ function OrdersContent() {
                         <h2 className="text-lg font-semibold">
                           Order Details
                         </h2>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setIsEditingOrder(true);
-                            setEditedOrder(selectedOrder ? { ...selectedOrder } : null);
-                          }}
-                        >
-                          Edit Order
-                        </Button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-4 mb-4">
@@ -263,157 +254,26 @@ function OrdersContent() {
                                     </TableRow>
                                   </TableHeader>
                                   <TableBody>
-                                    {isEditingOrder && editedOrder
-                                      ? editedOrder.items.map((item, idx) => (
-                                          <TableRow key={item.serialNo}>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.serialNo}</TableCell>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                              {item.isNew ? (
-                                                <input
-                                                  className="border rounded px-2 py-1 w-full"
-                                                  value={item.orderedItem}
-                                                  onChange={e => {
-                                                    const newItems = [...editedOrder.items];
-                                                    newItems[idx] = { ...item, orderedItem: e.target.value };
-                                                    setEditedOrder({ ...editedOrder, items: newItems });
-                                                  }}
-                                                />
-                                              ) : (
-                                                item.orderedItem
-                                              )}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                              {item.isNew ? (
-                                                <input
-                                                  type="number"
-                                                  className="border rounded px-2 py-1 w-16"
-                                                  value={item.quantity}
-                                                  onChange={e => {
-                                                    const newItems = [...editedOrder.items];
-                                                    newItems[idx] = { ...item, quantity: Number(e.target.value) };
-                                                    setEditedOrder({ ...editedOrder, items: newItems });
-                                                  }}
-                                                />
-                                              ) : (
-                                                item.quantity
-                                              )}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                              {item.isNew ? (
-                                                <input
-                                                  type="number"
-                                                  className="border rounded px-2 py-1 w-24"
-                                                  value={item.newPrice}
-                                                  onChange={e => {
-                                                    const newItems = [...editedOrder.items];
-                                                    newItems[idx] = { ...item, newPrice: Number(e.target.value) };
-                                                    setEditedOrder({ ...editedOrder, items: newItems });
-                                                  }}
-                                                />
-                                              ) : (
-                                                formatPrice(item.newPrice)
-                                              )}
-                                            </TableCell>
-                                          </TableRow>
-                                        ))
-                                      : selectedOrder.items.map((item) => (
-                                          <TableRow key={item.serialNo}>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.serialNo}</TableCell>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                              {item.orderedItem}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                              {item.quantity}
-                                            </TableCell>
-                                            <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                                              {formatPrice(item.newPrice)}
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
+                                    {selectedOrder.items.map((item) => (
+                                      <TableRow key={item.serialNo}>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{item.serialNo}</TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                          {item.orderedItem}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                          {item.quantity}
+                                        </TableCell>
+                                        <TableCell className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                                          {formatPrice(item.newPrice)}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
                                   </TableBody>
                                 </Table>
                               </div>
                             </div>
                           </div>
                         </div>
-                        {isEditingOrder && editedOrder && (() => {
-                          const originalTotal = selectedOrder.items.reduce((sum, item) => sum + (item.newPrice || 0), 0);
-                          const newTotal = editedOrder.items.reduce((sum, item) => sum + (item.newPrice || 0), 0);
-                          const diff = newTotal - originalTotal;
-                          return (
-                            <>
-                              {diff > 0 && (
-                                <div className="mt-2 text-green-700 font-semibold">
-                                  Additional amount to be paid: {formatPrice(diff)}
-                                </div>
-                              )}
-                              <div className="flex gap-2 mt-4 items-center">
-                                <Button
-                                  variant="secondary"
-                                  onClick={() => {
-                                    if (!editedOrder) return;
-                                    const maxSerial = editedOrder.items.reduce((max, item) => Math.max(max, item.serialNo), 0);
-                                    const newItem = {
-                                      serialNo: maxSerial + 1,
-                                      orderedItem: '',
-                                      itemDescription: '',
-                                      quantity: 1,
-                                      cancellationFee: 0,
-                                      quantityCancelled: 0,
-                                      uom: '',
-                                      kitPrice: 0,
-                                      newPrice: 0,
-                                      discount: 0,
-                                      extendedPrice: 0,
-                                      userItemDescription: '',
-                                      dff: '',
-                                      orderReceivedDate: '',
-                                      status: '',
-                                      itemType: '',
-                                      ato: false,
-                                      lineType: '',
-                                      documentNumber: '',
-                                      industryInformation: '',
-                                      isNew: true,
-                                    };
-                                    setEditedOrder({
-                                      orderId: editedOrder.orderId || '',
-                                      showId: editedOrder.showId || '',
-                                      occurrenceId: editedOrder.occurrenceId || '',
-                                      subTotal: editedOrder.subTotal || 0,
-                                      salesChannel: editedOrder.salesChannel || '',
-                                      terms: editedOrder.terms || '',
-                                      tax: editedOrder.tax || 0,
-                                      orderType: editedOrder.orderType || '',
-                                      customerPO: editedOrder.customerPO || '',
-                                      cancelCharge: editedOrder.cancelCharge || 0,
-                                      source: editedOrder.source || '',
-                                      project: editedOrder.project || '',
-                                      orderDate: editedOrder.orderDate || '',
-                                      boothInfo: editedOrder.boothInfo || '',
-                                      billingAddress: editedOrder.billingAddress || '',
-                                      total: editedOrder.total || 0,
-                                      items: [...editedOrder.items, newItem],
-                                    });
-                                  }}
-                                >
-                                  Add Item
-                                </Button>
-                                {diff > 0 && (
-                                  <Button
-                                    variant="default"
-                                    onClick={() => {
-                                      setShowPaymentDialog(true);
-                                    }}
-                                  >
-                                    Make Payment
-                                  </Button>
-                                )}
-                                <Button variant="outline" onClick={() => setIsEditingOrder(false)}>Cancel</Button>
-                              </div>
-                            </>
-                          );
-                        })()}
                       </div>
                     </Card>
                   ) : (

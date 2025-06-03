@@ -1045,6 +1045,21 @@ export default function ShowsPage() {
     return '';
   };
 
+  // Placeholders for demonstration
+  const serviceTypes = [
+    { label: ' ' },
+    { label: ' ' },
+    { label: ' ' },
+  ];
+  const suppliedFields = Array(6).fill(false);
+  const minRows = 6;
+  const serviceTypeRows = serviceTypes.length >= minRows
+    ? serviceTypes
+    : [...serviceTypes, ...Array(minRows - serviceTypes.length).fill(null)];
+  const suppliedRows = suppliedFields.length >= minRows
+    ? suppliedFields
+    : [...suppliedFields, ...Array(minRows - suppliedFields.length).fill(null)];
+
   return (
     <MainLayout breadcrumbs={breadcrumbs}>
       <div className="h-[calc(100vh-4rem)] overflow-y-auto overflow-x-hidden scroll-smooth">
@@ -2965,55 +2980,31 @@ export default function ShowsPage() {
                 <div className="grid grid-cols-[1fr,auto] gap-4">
                   <div className="space-y-2">
                     <Label className="text-sm text-gray-500">Service Type</Label>
-                    <div className="border rounded-md h-[200px] overflow-y-auto bg-white">
+                    <div className="border rounded-md max-h-48 overflow-y-auto bg-white">
                       <div className="grid grid-cols-1 divide-y">
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
-                        <div className="px-4 py-2 h-8"></div>
+                        {serviceTypeRows.map((item, idx) =>
+                          item ? (
+                            <div key={idx} className="px-4 py-2 h-8">{item.label}</div>
+                          ) : (
+                            <div key={idx} className="px-4 py-2 h-8"></div>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>
                   <div className="space-y-2">
                     <Label className="text-sm text-gray-500">Supplied</Label>
-                    <div className="border rounded-md h-[200px] overflow-y-auto bg-white w-[100px]">
+                    <div className="border rounded-md max-h-48 overflow-y-auto bg-white w-[100px]">
                       <div className="grid grid-cols-1 divide-y">
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
-                        <div className="px-2 py-2 h-8 flex items-center justify-center">
-                          <Checkbox className="h-4 w-4" />
-                        </div>
+                        {suppliedRows.map((item, idx) =>
+                          item !== null && item !== undefined ? (
+                            <div key={idx} className="px-2 py-2 h-8 flex items-center justify-center">
+                              <Checkbox className="h-4 w-4 pointer-events-none opacity-60" checked={item} />
+                            </div>
+                          ) : (
+                            <div key={idx} className="px-2 py-2 h-8 flex items-center justify-center"></div>
+                          )
+                        )}
                       </div>
                     </div>
                   </div>

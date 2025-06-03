@@ -17,7 +17,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
-import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell, ClipboardCheck, ListChecks, ClipboardList, Clock, Loader } from "lucide-react";
+import { Plus, Calendar, Activity, Users, MapPin, DollarSign, CheckCircle, LineChart, BarChart, Bell, ClipboardCheck, ListChecks, ClipboardList, Clock, Loader, CalendarX, CalendarCheck } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
   BarChart as RechartsBarChart, Bar, LineChart as RechartsLineChart, Line, Legend,
@@ -37,24 +37,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 
-// Define mock data for ongoing shows
-const demoOngoingShows = [
-  { showId: 'SHW001', showName: 'Tech Conference 2024', yrmo: '2024-01', occrType: 'Ongoing' },
-  { showId: 'SHW002', showName: 'Business Expo 2024', yrmo: '2024-02', occrType: 'Ongoing' },
-  { showId: 'SHW003', showName: 'Industry Summit 2024', yrmo: '2024-03', occrType: 'Ongoing' },
-  { showId: 'SHW004', showName: 'Innovation Forum 2024', yrmo: '2024-04', occrType: 'Ongoing' },
-  { showId: 'SHW005', showName: 'Global Conference 2024', yrmo: '2024-05', occrType: 'Ongoing' },
-  { showId: 'SHW006', showName: 'Tech Conference 2023', yrmo: '2023-01', occrType: 'Complete' },
-  { showId: 'SHW007', showName: 'Business Expo 2023', yrmo: '2023-02', occrType: 'Complete' },
-  { showId: 'SHW008', showName: 'Industry Summit 2023', yrmo: '2023-03', occrType: 'Complete' },
-  { showId: 'SHW009', showName: 'Innovation Forum 2023', yrmo: '2023-04', occrType: 'Complete' },
-  { showId: 'SHW010', showName: 'Global Conference 2023', yrmo: '2023-05', occrType: 'Complete' },
-  { showId: 'SHW011', showName: 'Tech Conference 2022', yrmo: '2022-01', occrType: 'Complete' },
-  { showId: 'SHW012', showName: 'Business Expo 2022', yrmo: '2022-02', occrType: 'Complete' },
-  { showId: 'SHW013', showName: 'Industry Summit 2022', yrmo: '2022-03', occrType: 'Complete' },
-  { showId: 'SHW014', showName: 'Innovation Forum 2022', yrmo: '2022-04', occrType: 'Complete' },
-  { showId: 'SHW015', showName: 'Global Conference 2022', yrmo: '2022-05', occrType: 'Complete' },
-];
+import { mockShows, mockOrders, mockCustomers } from '@/lib/mockData';
 
 // Define a type for dashboard tasks
 interface DashboardTask {
@@ -72,26 +55,85 @@ interface DashboardPageProps {
   sidebarExpanded?: boolean;
 }
 
-// Example day-wise data
-const dayData = [
-  { date: "2024-04-01", shows: 2, exhibitors: 10 },
-  { date: "2024-04-02", shows: 1, exhibitors: 8 },
-  { date: "2024-05-01", shows: 3, exhibitors: 15 },
-  { date: "2024-05-02", shows: 2, exhibitors: 12 },
-  { date: "2024-06-01", shows: 4, exhibitors: 20 },
-  { date: "2024-06-02", shows: 2, exhibitors: 10 },
-  // ... add more daily data as needed
-];
+// Replace demoOngoingShows with real ongoing shows from mockShows
+const demoOngoingShows = mockShows.filter(show => {
+  const today = new Date();
+  const open = new Date(show.openDate);
+  const close = new Date(show.closeDate);
+  return open <= today && close >= today;
+}).map(show => ({
+  showId: show.showId,
+  showName: show.showName,
+  yrmo: show.yrmo,
+  occrType: 'Ongoing',
+}));
+
+// Build dynamic dayData: for each day in the range, count ongoing shows and exhibitors
+function getDateRange(start: dayjs.Dayjs, end: dayjs.Dayjs) {
+  const days = [];
+  let d = start.clone();
+  while (d.isBefore(end) || d.isSame(end, 'day')) {
+    days.push(d.format('YYYY-MM-DD'));
+    d = d.add(1, 'day');
+  }
+  return days;
+}
+
+const allShowDates = mockShows.flatMap(show => [show.openDate, show.closeDate]);
+const minDate = dayjs(allShowDates.reduce((a, b) => a < b ? a : b));
+const maxDate = dayjs(allShowDates.reduce((a, b) => a > b ? a : b));
+const allDays = getDateRange(minDate, maxDate);
+
+const dayData = allDays.map(date => {
+  // Shows ongoing on this day
+  const showsOngoing = mockShows.filter(show => {
+    const open = dayjs(show.openDate);
+    const close = dayjs(show.closeDate);
+    const d = dayjs(date);
+    return (open.isBefore(d) || open.isSame(d, 'day')) && (close.isAfter(d) || close.isSame(d, 'day'));
+  });
+  // Exhibitors in those shows
+  const exhibitors = mockCustomers.filter(c => showsOngoing.some(show => show.showId === c.showId) && c.type.includes('Exhibitors')).length;
+  return {
+    date,
+    shows: showsOngoing.length,
+    exhibitors,
+  };
+});
 
 function aggregateByMonth(data: { date: string; shows: number; exhibitors: number }[]): { month: string; shows: number; exhibitors: number }[] {
-  const result: Record<string, { month: string; shows: number; exhibitors: number }> = {};
-  data.forEach((item) => {
-    const month = item.date.slice(0, 7); // "YYYY-MM"
-    if (!result[month]) result[month] = { month, shows: 0, exhibitors: 0 };
-    result[month].shows += item.shows;
-    result[month].exhibitors += item.exhibitors;
+  // Get all months in the range
+  const monthsSet = new Set<string>();
+  mockShows.forEach(show => {
+    const open = dayjs(show.openDate);
+    const close = dayjs(show.closeDate);
+    let d = open.startOf('month');
+    while (d.isBefore(close) || d.isSame(close, 'month')) {
+      monthsSet.add(d.format('YYYY-MM'));
+      d = d.add(1, 'month');
+    }
   });
-  return Object.values(result);
+  const months = Array.from(monthsSet).sort();
+  return months.map(month => {
+    // All shows ongoing at any point in this month
+    const showsOngoing = mockShows.filter(show => {
+      const open = dayjs(show.openDate);
+      const close = dayjs(show.closeDate);
+      const monthStart = dayjs(month + '-01');
+      const monthEnd = monthStart.endOf('month');
+      return (
+        (open.isBefore(monthEnd) || open.isSame(monthEnd, 'day')) &&
+        (close.isAfter(monthStart) || close.isSame(monthStart, 'day'))
+      );
+    });
+    // All exhibitors in those shows
+    const exhibitors = mockCustomers.filter(c => showsOngoing.some(show => show.showId === c.showId) && c.type.includes('Exhibitors')).length;
+    return {
+      month,
+      shows: showsOngoing.length,
+      exhibitors,
+    };
+  });
 }
 
 function aggregateByYear(data: { date: string; shows: number; exhibitors: number }[]): { year: string; shows: number; exhibitors: number }[] {
@@ -571,36 +613,68 @@ export default function DashboardPage() {
   }));
 
   // Only consider ongoing shows for these stats
-  const ongoingShowIds = allOrders.map(o => o.showId);
+  const today = dayjs();
+  const ongoingShowIds = mockShows
+    .filter(show => {
+      const open = dayjs(show.openDate);
+      const close = dayjs(show.closeDate);
+      return (open.isBefore(today) || open.isSame(today, 'day')) && (close.isAfter(today) || close.isSame(today, 'day'));
+    })
+    .map(show => show.showId);
+  const totalOngoingExhibitors = mockCustomers.filter(
+    c => ongoingShowIds.includes(c.showId) && c.type.includes('Exhibitors')
+  ).length;
 
-  const ongoingOrders = allOrders.filter(o => ongoingShowIds.includes(o.showId));
-
-  // Total Exhibitors (unique customerPOs in ongoing orders)
-  const totalOngoingExhibitors = new Set(ongoingOrders.map(o => o.customerPO)).size;
-
-  // Active Locations (unique cityOrg in ongoing shows)
-  const ongoingLocations = new Set(
-    allOrders
-      .filter(o => o.orderDate.includes("-01-"))
-      .map(o => o.billingAddress)
+  const upcomingShows = mockShows.filter(show => dayjs(show.openDate).isAfter(today));
+  const closedShows = mockShows.filter(show => dayjs(show.closeDate).isBefore(today));
+  const ongoingShows = mockShows.filter(show => {
+    const open = dayjs(show.openDate);
+    const close = dayjs(show.closeDate);
+    return (open.isBefore(today) || open.isSame(today, 'day')) && (close.isAfter(today) || close.isSame(today, 'day'));
+  });
+  const activeLocations = new Set(
+    ongoingShows.map(show => show.cityOrg)
   ).size;
 
   // Total Revenue (sum of ongoing orders)
-  const ongoingRevenue = ongoingOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+  const ongoingRevenue = allOrders.filter(o => ongoingShowIds.includes(o.showId)).reduce((sum, o) => sum + (o.total || 0), 0);
 
   // Fix closed shows count: count all shows with yrmo before today as closed
-  const today = dayjs();
-  const closedShows = allOrders.filter(o => dayjs(o.orderDate).isBefore(today, 'day'));
-  const closedCount = closedShows.length;
+  const closedShowsFromOrders = allOrders.filter(o => dayjs(o.orderDate).isBefore(today, 'day'));
+  const closedCount = closedShowsFromOrders.length;
 
-  // Update stats to use hardcoded closed shows count
-const stats = [
-    { label: "Upcoming Shows", value: upcomingCount, icon: <Calendar className="w-8 h-8 text-blue-500" /> },
-    { label: "Closed Shows", value: 47, icon: <CheckCircle className="w-8 h-8 text-gray-500" /> },
-    { label: "Ongoing Shows", value: ongoingCount, icon: <Activity className="w-8 h-8 text-green-500" /> },
-    { label: "Total Exhibitors", value: totalOngoingExhibitors, icon: <Users className="w-8 h-8 text-purple-500" /> },
-    { label: "Active Locations", value: ongoingLocations, icon: <MapPin className="w-8 h-8 text-pink-500" /> },
+  // Stat Cards: Calculate from real mock data
+  const totalExhibitors = mockCustomers.filter(c => c.type.includes('Exhibitors')).length;
+
+  const stats = [
+    { label: "Upcoming Shows", value: upcomingShows.length, icon: <Calendar className="h-5 w-5 text-primary" /> },
+    { label: "Closed Shows", value: closedShows.length, icon: <CalendarX className="h-5 w-5 text-primary" /> },
+    { label: "Ongoing Shows", value: ongoingShows.length, icon: <CalendarCheck className="h-5 w-5 text-primary" /> },
+    { label: "Total Exhibitors", value: totalOngoingExhibitors, icon: <Users className="h-5 w-5 text-primary" /> },
+    { label: "Active Locations", value: activeLocations, icon: <MapPin className="h-5 w-5 text-primary" /> },
   ];
+
+  // Show Details: Use real mockShows (first 5 upcoming/ongoing shows)
+  const showDetailsList = mockShows
+    .filter(show => {
+      const close = dayjs(show.closeDate);
+      // Show if it is ongoing or upcoming
+      return close.isAfter(today) || close.isSame(today, 'day');
+    })
+    .sort((a, b) => dayjs(a.openDate).valueOf() - dayjs(b.openDate).valueOf())
+    .map(show => {
+      const open = dayjs(show.openDate);
+      const close = dayjs(show.closeDate);
+      return {
+        id: show.showId,
+        name: show.showName,
+        location: show.cityOrg,
+        date: show.openDate,
+        closeDate: show.closeDate,
+        status: (open.isBefore(today) || open.isSame(today, 'day')) && (close.isAfter(today) || close.isSame(today, 'day')) ? 'Ongoing' : 'Upcoming',
+      };
+    });
+
   const { notifications, setNotifications } = useNotifications();
   const { userProfile } = useAuthStore();
   // On mount, add sample To Do tasks if none exist
@@ -944,15 +1018,15 @@ const stats = [
   // Use a new set of colors not used elsewhere in the dashboard
   const pieColors = ["#FF6B6B", "#FFD93D", "#6BCB77", "#4D96FF", "#845EC2", "#FFC75F", "#F9F871", "#0081CF"];
 
-  // Pie chart data for ongoing shows
-  const ongoingShowOrders = demoOngoingShows
-    .filter(s => s.occrType === "Ongoing")
-    .map(show => ({
-      name: show.showName,
-      value: allOrders.filter(o => o.showId === show.showId).length,
-      showId: show.showId
-    }))
-    .filter(d => d.value > 0);
+  // Pie chart data for ongoing shows (real data)
+  let ongoingShowOrders = ongoingShows.map(show => ({
+    name: show.showName,
+    value: mockOrders.filter(o => o.showId === show.showId).length,
+    showId: show.showId
+  }));
+  if (ongoingShowOrders.length === 0) {
+    ongoingShowOrders = [{ name: 'No Ongoing Shows', value: 0, showId: 'none' }];
+  }
 
   // Add state for pagination for all three sections
   const [todoPage, setTodoPage] = useState(0);
@@ -1000,51 +1074,52 @@ const stats = [
     return () => window.removeEventListener('resize', syncHeight);
   }, []);
 
-  // Static Show Details Data
-  const staticShowDetails = [
-    {
-      id: '1',
-      name: 'Developer Conference',
-      location: 'San Francisco, CA',
-      date: '2025-05-01',
-      closeDate: '2025-05-02',
-      status: 'Ongoing',
-    },
-    {
-      id: '2',
-      name: 'Annual Tech Summit',
-      location: 'Las Vegas, NV',
-      date: '2025-05-01',
-      closeDate: '2025-05-02',
-      status: 'Ongoing',
-    },
-    {
-      id: '3',
-      name: 'Healthcare Expo',
-      location: 'Boston, MA',
-      date: '2025-05-01',
-      closeDate: '2025-05-02',
-      status: 'Ongoing',
-    },
-    {
-      id: '4',
-      name: 'Workshop 2025 - Denver',
-      location: 'Denver, CO',
-      date: '2025-05-05',
-      closeDate: '2025-05-06',
-      status: 'Upcoming',
-    },
-    {
-      id: '5',
-      name: 'Training Session 2025 - Seattle',
-      location: 'Seattle, WA',
-      date: '2025-05-05',
-      closeDate: '2025-05-06',
-      status: 'Upcoming',
-    },
-  ];
-
   const [activeTab, setActiveTab] = useState('todo');
+
+  // Month-wise data for area chart
+  const monthData = aggregateByMonth(dayData);
+
+  // Helper to get all months between two dates (inclusive)
+  function getAllMonthsInRange(start: dayjs.Dayjs, end: dayjs.Dayjs) {
+    const months = [];
+    let d = start.startOf('month');
+    while (d.isBefore(end) || d.isSame(end, 'month')) {
+      months.push(d.format('YYYY-MM'));
+      d = d.add(1, 'month');
+    }
+    return months;
+  }
+
+  // Use filtered month data for the area chart, filling missing months with zeros
+  const filteredMonthData = (() => {
+    const today = dayjs();
+    let start;
+    switch (chartRange) {
+      case '1m':
+        start = today.subtract(1, 'month').startOf('month');
+        break;
+      case '3m':
+        start = today.subtract(3, 'month').startOf('month');
+        break;
+      case '6m':
+        start = today.subtract(6, 'month').startOf('month');
+        break;
+      case 'yr':
+        start = today.subtract(1, 'year').startOf('month');
+        break;
+      case 'ytd':
+        start = today.startOf('year');
+        break;
+      default:
+        start = today.startOf('year');
+    }
+    const end = today.endOf('month');
+    const allMonths = getAllMonthsInRange(start, end);
+    const monthMap = Object.fromEntries(monthData.map(m => [m.month, m]));
+    return allMonths.map(month =>
+      monthMap[month] || { month, shows: 0, exhibitors: 0 }
+    );
+  })();
 
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
@@ -1195,7 +1270,7 @@ const stats = [
                   <div className="bg-gray-50 rounded-xl shadow-inner p-6">
                     <ResponsiveContainer width="100%" height={250}>
                       <AreaChart
-                        data={chartDataMap[chartView]}
+                        data={filteredMonthData}
                         margin={{ top: 30, right: 30, left: 0, bottom: 30 }}
                       >
                         <defs>
@@ -1210,13 +1285,13 @@ const stats = [
                         </defs>
                         <CartesianGrid vertical={false} strokeDasharray="4 4" />
                         <XAxis
-                          dataKey="name"
+                          dataKey="month"
                           tickLine={false}
                           axisLine={false}
                           tickMargin={8}
                           minTickGap={32}
                           tick={{ fontSize: 14, fontWeight: 600, fill: '#222' }}
-                          tickFormatter={(value: string) => value}
+                          tickFormatter={(value: string) => dayjs(value + '-01').format('MM-YYYY')}
                         />
                         <YAxis
                           allowDecimals={false}
@@ -1229,13 +1304,13 @@ const stats = [
                             if (active && payload && payload.length) {
                               return (
                                 <div className="bg-white rounded-lg shadow p-3 text-xs">
-                                  <div className="font-bold text-base mb-1">{label}</div>
+                                  <div className="font-bold text-base mb-1">{dayjs(label + '-01').format('MMMM YYYY')}</div>
                                   {payload.map((entry, idx) => (
                                     <div key={idx} className="flex items-center gap-2">
-                                      <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                      <span className={entry.dataKey === 'shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
                                         {entry.name}:
                                       </span>
-                                      <span className={entry.dataKey === 'Shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                      <span className={entry.dataKey === 'shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
                                         {entry.value}
                                       </span>
                                     </div>
@@ -1247,7 +1322,7 @@ const stats = [
                           }}
                         />
                         <Area
-                          dataKey="Shows"
+                          dataKey="shows"
                           name="Shows"
                           type="monotone"
                           fill="url(#showsGradient)"
@@ -1255,7 +1330,7 @@ const stats = [
                           strokeWidth={2}
                         />
                         <Area
-                          dataKey="Exhibitors"
+                          dataKey="exhibitors"
                           name="Exhibitors"
                           type="monotone"
                           fill="url(#exhibitorsGradient)"
@@ -1292,10 +1367,10 @@ const stats = [
           {/* Right: Show Details and Show Tasks - Keep this section exactly as is */}
           <div className="w-full md:w-[35%] flex flex-col gap-4 h-full">
             {/* Show Details Card (top) */}
-            <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6" ref={showDetailsRef}>
+            <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 min-h-[545px]" ref={showDetailsRef}>
               <div className="font-extrabold text-lg mb-4 text-blue-800 tracking-tight">Show Details</div>
-              <div className="space-y-4">
-                {staticShowDetails.map((show) => (
+              <div className={`space-y-4 ${showDetailsList.length > 5 ? 'max-h-96 overflow-y-auto' : ''}`}>
+                {showDetailsList.map((show) => (
                   <Card
                     key={show.id}
                     className="flex items-center justify-between p-3 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"

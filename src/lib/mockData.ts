@@ -1,3 +1,5 @@
+import dayjs from 'dayjs';
+
 // Types for Shows Page
 export interface ShowData {
   showId: string;
@@ -77,6 +79,18 @@ const HOTEL_NAMES = [
   'sheraton', 'westin', 'omni', 'wyndham', 'radisson'
 ];
 
+const allShowNames = [
+  'WWDC', 'CES', 'Dreamforce', 'Interop', 'TechCrunch Disrupt', 'Gartner Symposium',
+  'AWS re:Invent', 'Google I/O', 'Microsoft Build', 'RSA Conference', 'SXSW',
+  'Mobile World Congress', 'IFA Berlin', 'Comic-Con', 'NAB Show', 'Auto Expo',
+  'Book Fair', 'Toy Fair', 'Fashion Week', 'Art Basel', 'Game Developers Conf.'
+];
+
+// Helper to get a random integer between min and max (inclusive)
+function getRandomInt(min: number, max: number) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 // Helper to get abbreviation from show name
 function getShowAbbreviation(showName: string): string {
   return showName
@@ -92,88 +106,72 @@ function getYearMonth(yrmo: string): string {
   return yrmo.replace('-', '');
 }
 
-// Function to generate random show data
-const generateShowData = (index: number): ShowData => {
-  const year = 2025;
-  const month = Math.floor(Math.random() * 12) + 1;
-  const formattedMonth = month.toString().padStart(2, '0');
-  const showId = `SHW${(index + 1).toString().padStart(3, '0')}`;
-  const occrType = OCCR_TYPES[Math.floor(Math.random() * OCCR_TYPES.length)];
-  const marketType = MARKET_TYPES[Math.floor(Math.random() * MARKET_TYPES.length)];
-  const cityOrg = CITIES[Math.floor(Math.random() * CITIES.length)];
-  const yrmo = `${year}-${formattedMonth}`;
-  
-  // Generate open and close dates
-  const openDate = `${year}-${formattedMonth}-01`;
-  const closeDate = `${year}-${formattedMonth}-02`;
-  
-  return {
-    showId,
-    showName: `${occrType} ${year} - ${cityOrg.split(',')[0]}`,
-    occrId: `${showId}-${cityOrg.split(',')[1].trim()}`,
-    occrType,
-    marketType,
-    projectNumber: `${getShowAbbreviation(occrType)}${getYearMonth(yrmo)}`,
-    cityOrg,
-    yrmo,
-    openDate,
-    closeDate
-  };
-};
+// Helper to get a date string in YYYY-MM-DD format
+function getDateString(year: number, month: number, day: number): string {
+  const m = String(month).padStart(2, '0');
+  const d = String(day).padStart(2, '0');
+  return `${year}-${m}-${d}`;
+}
 
-// Predefined shows with specific data
-const predefinedShows: ShowData[] = [
-  {
-    showId: 'SHW001',
-    showName: 'Developer Conference',
-    occrId: 'SHW001-CA',
-    occrType: 'Developer Conference',
-    marketType: 'Software Development',
-    projectNumber: `${getShowAbbreviation('Developer Conference')}${getYearMonth('2025-04')}`,
-    cityOrg: 'San Francisco, CA',
-    yrmo: '2025-04',
-    openDate: '2025-04-01',
-    closeDate: '2025-04-02'
-  },
-  {
-    showId: 'SHW002',
-    showName: 'Annual Tech Summit ',
-    occrId: 'SHW002-NV',
-    occrType: 'Annual Conference',
-    marketType: 'Technology',
-    projectNumber: `${getShowAbbreviation('Annual Tech Summit')}${getYearMonth('2025-05')}`,
-    cityOrg: 'Las Vegas, NV',
-    yrmo: '2025-05',
-    openDate: '2025-05-01',
-    closeDate: '2025-05-02'
-  },
-  {
-    showId: 'SHW003',
-    showName: 'Healthcare Expo ',
-    occrId: 'SHW003-MA',
-    occrType: 'Exhibition',
-    marketType: 'Healthcare',
-    projectNumber: `${getShowAbbreviation('Healthcare Expo')}${getYearMonth('2025-06')}`,
-    cityOrg: 'Boston, MA',
-    yrmo: '2025-06',
-    openDate: '2025-06-01',
-    closeDate: '2025-06-02'
+// Get current year and month
+const now = new Date();
+const currentYear = now.getFullYear();
+const currentMonth = now.getMonth() + 1; // JS months are 0-based
+
+// Helper to get today's date and 5 days from today
+const todayStr = dayjs().format('YYYY-MM-DD');
+const fifthDayStr = dayjs().add(5, 'day').format('YYYY-MM-DD');
+
+// Generate shows from June 2024 to June 2026 (25 months)
+const START_YEAR = 2024;
+const START_MONTH = 6; // June
+const END_YEAR = 2026;
+const END_MONTH = 6; // June
+const NUM_MONTHS = (END_YEAR - START_YEAR) * 12 + (END_MONTH - START_MONTH + 1);
+
+const generatedShows: ShowData[] = [];
+for (let m = 0; m < NUM_MONTHS; m++) {
+  // Calculate year and month for this iteration
+  let year = START_YEAR + Math.floor((START_MONTH - 1 + m) / 12);
+  let month = ((START_MONTH - 1 + m) % 12) + 1;
+  const yrmo = `${year}-${String(month).padStart(2, '0')}`;
+  const daysInMonth = dayjs(`${year}-${String(month).padStart(2, '0')}-01`).daysInMonth();
+  // Randomly choose number of shows for this month (12–18)
+  const numShows = getRandomInt(12, 18);
+  for (let i = 0; i < numShows; i++) {
+    const showIdx = generatedShows.length;
+    let showOpenDate: string;
+    let showCloseDate: string;
+    // Only the first 3 shows are ongoing for 3 days starting today
+    if (showIdx < 3) {
+      showOpenDate = dayjs().format('YYYY-MM-DD');
+      showCloseDate = dayjs().add(2, 'day').format('YYYY-MM-DD');
+    } else {
+      // Stagger shows within the month
+      const minDay = 1;
+      const maxDay = daysInMonth - 4;
+      const openDay = Math.min(minDay + i * 2, maxDay > minDay ? maxDay : minDay);
+      showOpenDate = getDateString(year, month, openDay);
+      const duration = getRandomInt(2, 4);
+      const closeDay = Math.min(openDay + duration, daysInMonth);
+      showCloseDate = getDateString(year, month, closeDay);
+    }
+    const showName = allShowNames[(i + m) % allShowNames.length] + (m === 0 && i < 3 ? '' : ` ${yrmo}`);
+    generatedShows.push({
+      showId: `SHW${(showIdx + 1).toString().padStart(3, '0')}`,
+      showName,
+      occrId: `SHW${(showIdx + 1).toString().padStart(3, '0')}-ORG`,
+      occrType: 'Conference',
+      marketType: 'Technology',
+      projectNumber: `${getShowAbbreviation(showName)}${yrmo.replace('-', '')}`,
+      cityOrg: CITIES[i % CITIES.length],
+      yrmo,
+      openDate: showOpenDate,
+      closeDate: showCloseDate
+    });
   }
-];
-
-// Generate remaining shows
-export const mockShows: ShowData[] = [
-  ...predefinedShows,
-  ...Array.from({ length: 147 }, (_, index) => {
-    const show = generateShowData(index + predefinedShows.length);
-    const abbr = getShowAbbreviation(show.showName);
-    const yyyymm = getYearMonth(show.yrmo);
-    return {
-      ...show,
-      projectNumber: `${abbr}${yyyymm}`
-    };
-  })
-];
+}
+export const mockShows: ShowData[] = generatedShows;
 
 // Predefined project data
 const predefinedProjects: ProjectData[] = [
@@ -325,7 +323,7 @@ const generateBoothNumber = (showId: string, customerType: CustomerType[], index
 
 // Predefined customers for specific shows
 const generatePredefinedCustomers = (showId: string): CustomerData[] => {
-  const show = predefinedShows.find(s => s.showId === showId);
+  const show = mockShows.find(s => s.showId === showId);
   const projectNumber = show ? show.projectNumber : 'UNKNOWN';
   const predefinedCustomersMap: { [key: string]: CustomerData[] } = {
     'SHW001': [
@@ -748,74 +746,134 @@ const generatePredefinedCustomers = (showId: string): CustomerData[] => {
 };
 
 // Function to generate customer data for a show
-const generateCustomersForShow = (showId: string): CustomerData[] => {
-  // Check if we have predefined customers for this show
-  const predefinedCustomers = generatePredefinedCustomers(showId);
-  if (predefinedCustomers.length > 0) {
-    return predefinedCustomers;
-  }
-
-  // For other shows, generate random customers
-  const customerTypes: CustomerType[] = ['Exhibitors', 'ShowOrg', '3rd party'];
-  const riskLevels = ['Low Risk', 'Medium Risk', 'High Risk'];
-  const netTermOptions = ['15 NET', '30 NET', '45 NET', '60 NET'];
-  const boothSizes = ['200', '400', '600', '800', '1000'];
-  const zones = ['A', 'B', 'C', 'D'];
-  const boothTypes = ['Island', 'Inline', 'Corner', 'Peninsula'];
-  
-  const numCustomers = Math.floor(Math.random() * 11) + 10;
-  
-  return Array.from({ length: numCustomers }, (_, index) => {
-    const type = [customerTypes[Math.floor(Math.random() * customerTypes.length)]];
-    const boothNumber = generateBoothNumber(showId, type, index);
-    const facilityId = HOTEL_NAMES[index % HOTEL_NAMES.length];
-    return {
-      id: `${showId}-${index + 1}`,
-      showId,
-      customerId: Math.floor(Math.random() * 100000).toString(),
-      customerName: `Customer ${index + 1} for ${showId}`,
-      type,
-      isActive: Math.random() > 0.2,
-      email: `customer${index + 1}.${showId.toLowerCase()}@example.com`,
-      phone: `${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 900 + 100)}-${Math.floor(Math.random() * 9000 + 1000)}`,
-      address: {
-        street: `${Math.floor(Math.random() * 9999) + 1} Business Ave`,
-        city: CITIES[Math.floor(Math.random() * CITIES.length)].split(',')[0],
-        state: CITIES[Math.floor(Math.random() * CITIES.length)].split(',')[1].trim(),
-        zip: Math.floor(Math.random() * 90000 + 10000).toString(),
-        country: 'USA'
-      },
-      boothNumber,
-      boothSize: boothSizes[Math.floor(Math.random() * boothSizes.length)],
-      orders: Math.floor(Math.random() * 5),
-      booths: Math.floor(Math.random() * 3) + 1,
-      status: Math.random() > 0.2 ? 'Active' : 'Inactive',
-      facilityId,
-      facilityName: 'Convention Center',
-      projectNumber: `P${Math.floor(Math.random() * 1000) + 1}-${Math.floor(Math.random() * 1000) + 1}`,
-      boothLength: (Math.floor(Math.random() * 20) + 10).toString(),
-      boothWidth: (Math.floor(Math.random() * 10) + 5).toString(),
-      netTerms: netTermOptions[Math.floor(Math.random() * netTermOptions.length)],
-      riskDesc: riskLevels[Math.floor(Math.random() * riskLevels.length)],
-      zone: zones[Math.floor(Math.random() * zones.length)],
-      boothType: boothTypes[Math.floor(Math.random() * boothTypes.length)],
-      firstName: `FirstName${index + 1}`,
-      lastName: `LastName${index + 1}`,
-      contactType: Math.random() > 0.5 ? 'Primary' : 'Secondary',
-      contactRole: 'Manager',
-      sharedBooth: Math.random() > 0.7,
-      operationZone: `Zone ${Math.floor(Math.random() * 4) + 1}`,
-      serviceZone: `Zone ${Math.floor(Math.random() * 4) + 1}`,
-      targetZone: `Zone ${Math.floor(Math.random() * 4) + 1}`,
-      emptyZone: `Zone ${Math.floor(Math.random() * 4) + 1}`
-    };
-  });
+const generateCustomersForShow = (show: ShowData): CustomerData[] => {
+  const showOrg: CustomerData = {
+    id: `${show.showId}-ORG`,
+    showId: show.showId,
+    customerId: `${show.showId}-ORG`,
+    customerName: show.showName,
+    type: ['ShowOrg'],
+    isActive: true,
+    email: `organizer@${show.showName.replace(/\s+/g, '').toLowerCase()}.com`,
+    phone: '555-0000',
+    address: {
+      street: '1 Organizer Plaza',
+      city: show.cityOrg.split(',')[0],
+      state: show.cityOrg.split(',')[1]?.trim() || '',
+      zip: '10000',
+      country: 'USA'
+    },
+    boothNumber: 'ORG1',
+    boothSize: '1000',
+    orders: 0,
+    booths: 1,
+    status: 'Active',
+    facilityId: HOTEL_NAMES[0],
+    facilityName: `${show.cityOrg.split(',')[0]} Convention Center`,
+    projectNumber: show.projectNumber,
+    boothLength: '20',
+    boothWidth: '10',
+    netTerms: '30 NET',
+    riskDesc: 'Low Risk',
+    zone: 'A',
+    boothType: 'Island',
+    firstName: 'Organizer',
+    lastName: 'Team',
+    contactType: 'Primary',
+    contactRole: 'Event Director',
+    sharedBooth: false,
+    operationZone: 'Zone 1',
+    serviceZone: 'Zone 1',
+    targetZone: 'Zone 1',
+    emptyZone: 'Zone 1'
+  };
+  const numExhibitors = getRandomInt(5, 10);
+  const numThirdParty = getRandomInt(5, 10);
+  const exhibitors: CustomerData[] = Array.from({ length: numExhibitors }, (_, idx) => ({
+    id: `${show.showId}-EXH${idx + 1}`,
+    showId: show.showId,
+    customerId: `${show.showId}-EXH${idx + 1}`,
+    customerName: `Exhibitor ${idx + 1} for ${show.showName}`,
+    type: ['Exhibitors'],
+    isActive: true,
+    email: `exhibitor${idx + 1}@${show.showName.replace(/\s+/g, '').toLowerCase()}.com`,
+    phone: `555-1${idx.toString().padStart(3, '0')}`,
+    address: {
+      street: `${100 + idx} Expo Ave`,
+      city: show.cityOrg.split(',')[0],
+      state: show.cityOrg.split(',')[1]?.trim() || '',
+      zip: (10000 + idx).toString(),
+      country: 'USA'
+    },
+    boothNumber: `EX${idx + 1}`,
+    boothSize: '400',
+    orders: 0,
+    booths: 1,
+    status: 'Active',
+    facilityId: HOTEL_NAMES[1],
+    facilityName: `${show.cityOrg.split(',')[0]} Convention Center`,
+    projectNumber: show.projectNumber,
+    boothLength: '10',
+    boothWidth: '10',
+    netTerms: '30 NET',
+    riskDesc: 'Low Risk',
+    zone: 'B',
+    boothType: 'Inline',
+    firstName: `Exhibitor${idx + 1}`,
+    lastName: 'Smith',
+    contactType: 'Primary',
+    contactRole: 'Manager',
+    sharedBooth: false,
+    operationZone: 'Zone 2',
+    serviceZone: 'Zone 2',
+    targetZone: 'Zone 2',
+    emptyZone: 'Zone 2'
+  }));
+  const thirdParty: CustomerData[] = Array.from({ length: numThirdParty }, (_, idx) => ({
+    id: `${show.showId}-TP${idx + 1}`,
+    showId: show.showId,
+    customerId: `${show.showId}-TP${idx + 1}`,
+    customerName: `3rd Party ${idx + 1} for ${show.showName}`,
+    type: ['3rd party'],
+    isActive: true,
+    email: `thirdparty${idx + 1}@${show.showName.replace(/\s+/g, '').toLowerCase()}.com`,
+    phone: `555-2${idx.toString().padStart(3, '0')}`,
+    address: {
+      street: `${200 + idx} Partner Rd`,
+      city: show.cityOrg.split(',')[0],
+      state: show.cityOrg.split(',')[1]?.trim() || '',
+      zip: (20000 + idx).toString(),
+      country: 'USA'
+    },
+    boothNumber: `TP${idx + 1}`,
+    boothSize: '300',
+    orders: 0,
+    booths: 1,
+    status: 'Active',
+    facilityId: HOTEL_NAMES[2],
+    facilityName: `${show.cityOrg.split(',')[0]} Convention Center`,
+    projectNumber: show.projectNumber,
+    boothLength: '8',
+    boothWidth: '8',
+    netTerms: '30 NET',
+    riskDesc: 'Medium Risk',
+    zone: 'C',
+    boothType: 'Corner',
+    firstName: `ThirdParty${idx + 1}`,
+    lastName: 'Lee',
+    contactType: 'Primary',
+    contactRole: 'Coordinator',
+    sharedBooth: false,
+    operationZone: 'Zone 3',
+    serviceZone: 'Zone 3',
+    targetZone: 'Zone 3',
+    emptyZone: 'Zone 3'
+  }));
+  return [showOrg, ...exhibitors, ...thirdParty];
 };
 
 // Generate customers for all shows
-export const mockCustomers: CustomerData[] = mockShows.flatMap(show => 
-  generateCustomersForShow(show.showId)
-);
+export const mockCustomers: CustomerData[] = mockShows.flatMap(show => generateCustomersForShow(show));
 
 // Key Dates interface
 export interface ShowKeyDate {
@@ -958,72 +1016,76 @@ export interface OrderItem {
   industryInformation: string;
 }
 
-export const mockOrders: Order[] = Array.from({ length: 45 }, (_, i) => {
-  const showIds = ["SHW001", "SHW002", "SHW003"];
-  const showId = showIds[Math.floor(i / 15)];
-  const orderNum = (i + 1).toString().padStart(3, '0');
-  return {
-    orderId: `ORD-${orderNum}`,
-    showId,
-    occurrenceId: `${showId}-OCC${(i % 3) + 1}`,
-    subTotal: 10000 + (i % 5) * 1000,
-    salesChannel: ["Direct", "Partner", "Web"][(i % 3)],
-    terms: ["Net 30", "Net 45", "Prepaid"][(i % 3)],
-    tax: 1000 + (i % 4) * 250,
-    orderType: ["New", "Renewal"][(i % 2)],
-    customerPO: `PO-${10000 + i}`,
-    cancelCharge: 0,
-    source: ["Web", "Email", "Phone"][(i % 3)],
-    project: `P2025-${showId}-${(i % 10) + 1}`,
-    orderDate: `2025-04-${(i % 28 + 1).toString().padStart(2, '0')}`,
-    boothInfo: `Booth #${String.fromCharCode(65 + (i % 6))}${(i % 20) + 1}`,
-    billingAddress: `${100 + i} Main St, City, ST 1000${i % 10}`,
-    total: 11000 + (i % 5) * 1000,
-    items: [
-      {
-        serialNo: 1,
-        orderedItem: "Booth Package",
-        itemDescription: "Standard 10x10 Booth",
-        quantity: 1,
-        cancellationFee: 0,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 3000,
-        newPrice: 3000,
-        discount: 0,
-        extendedPrice: 3000,
-        userItemDescription: "Standard booth with basic setup",
-        dff: "N/A",
-        orderReceivedDate: `2025-04-${(i % 28 + 1).toString().padStart(2, '0')}`,
-        status: "Confirmed",
-        itemType: "Booth",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: `DOC-${orderNum}`,
-        industryInformation: "Technology",
-      },
-      {
-        serialNo: 2,
-        orderedItem: "LED Screen",
-        itemDescription: "55-inch LED Display",
-        quantity: 2,
-        cancellationFee: 500,
-        quantityCancelled: 0,
-        uom: "EA",
-        kitPrice: 2000,
-        newPrice: 2000,
-        discount: 0,
-        extendedPrice: 4000,
-        userItemDescription: "High-resolution display for presentations",
-        dff: "N/A",
-        orderReceivedDate: `2025-04-${(i % 28 + 1).toString().padStart(2, '0')}`,
-        status: "Confirmed",
-        itemType: "Equipment",
-        ato: false,
-        lineType: "Standard",
-        documentNumber: `DOC-${orderNum}-2`,
-        industryInformation: "Technology",
-      }
-    ]
-  };
-});
+// Generate 3-5 orders for each exhibitor/3rd party in each show
+export const mockOrders: Order[] = mockCustomers
+  .filter(c => c.type.includes('Exhibitors') || c.type.includes('3rd party'))
+  .flatMap((customer, custIdx) => {
+    const numOrders = getRandomInt(3, 5);
+    return Array.from({ length: numOrders }, (_, orderIdx) => {
+      const orderNum = `${customer.showId}-${customer.customerId}-${orderIdx + 1}`;
+      return {
+        orderId: `ORD-${orderNum}`,
+        showId: customer.showId,
+        occurrenceId: `${customer.showId}-OCC1`,
+        subTotal: 10000 + orderIdx * 1000 + custIdx * 500,
+        salesChannel: ["Direct", "Partner", "Web"][orderIdx % 3],
+        terms: ["Net 30", "Net 45", "Prepaid"][orderIdx % 3],
+        tax: 1000 + (orderIdx % 4) * 250,
+        orderType: ["New", "Renewal"][orderIdx % 2],
+        customerPO: `PO-${customer.customerId}-${orderIdx + 1}`,
+        cancelCharge: 0,
+        source: ["Web", "Email", "Phone"][orderIdx % 3],
+        project: customer.projectNumber,
+        orderDate: customer.showId.startsWith('SHW') ? dayjs().add(orderIdx, 'day').format('YYYY-MM-DD') : dayjs().format('YYYY-MM-DD'),
+        boothInfo: customer.boothNumber,
+        billingAddress: `${customer.address.street}, ${customer.address.city}, ${customer.address.state} ${customer.address.zip}`,
+        total: 11000 + orderIdx * 1000 + custIdx * 500,
+        items: [
+          {
+            serialNo: 1,
+            orderedItem: "Booth Package",
+            itemDescription: "Standard 10x10 Booth",
+            quantity: 1,
+            cancellationFee: 0,
+            quantityCancelled: 0,
+            uom: "EA",
+            kitPrice: 3000,
+            newPrice: 3000,
+            discount: 0,
+            extendedPrice: 3000,
+            userItemDescription: "Standard booth with basic setup",
+            dff: "N/A",
+            orderReceivedDate: dayjs().add(orderIdx, 'day').format('YYYY-MM-DD'),
+            status: "Confirmed",
+            itemType: "Booth",
+            ato: false,
+            lineType: "Standard",
+            documentNumber: `DOC-${orderNum}`,
+            industryInformation: "Technology",
+          },
+          {
+            serialNo: 2,
+            orderedItem: "LED Screen",
+            itemDescription: "55-inch LED Display",
+            quantity: 2,
+            cancellationFee: 500,
+            quantityCancelled: 0,
+            uom: "EA",
+            kitPrice: 2000,
+            newPrice: 2000,
+            discount: 0,
+            extendedPrice: 4000,
+            userItemDescription: "High-resolution display for presentations",
+            dff: "N/A",
+            orderReceivedDate: dayjs().add(orderIdx, 'day').format('YYYY-MM-DD'),
+            status: "Confirmed",
+            itemType: "Equipment",
+            ato: false,
+            lineType: "Standard",
+            documentNumber: `DOC-${orderNum}-2`,
+            industryInformation: "Technology",
+          }
+        ]
+      };
+    });
+  });

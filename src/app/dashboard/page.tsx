@@ -987,8 +987,8 @@ const stats = [
   useEffect(() => {
     function syncHeight() {
       if (pieCardRef.current && showDetailsRef.current) {
-        const pieHeight = pieCardRef.current.offsetHeight;
-        showDetailsRef.current.style.height = pieHeight + 'px';
+        const showDetailsHeight = showDetailsRef.current.offsetHeight;
+        pieCardRef.current.style.height = showDetailsHeight + 'px';
       }
       if (showTasksRef.current && upcomingOrderRef.current) {
         const showTasksHeight = showTasksRef.current.offsetHeight;
@@ -1096,7 +1096,7 @@ const stats = [
               </div>
               {/* Pie Chart for Ongoing Shows Orders (right, increased width) */}
               <div className="w-full md:w-7/12 flex flex-col" ref={pieCardRef}>
-                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full min-h-[380px] relative">
+                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full min-h-[545px] relative">
                   <div className="font-extrabold text-2xl mb-2 text-blue-800 tracking-tight">Ongoing Shows - Orders Distribution</div>
                   <div className="flex flex-1 items-center justify-center min-h-[380px]">
                     <PieChart width={380} height={380}>
@@ -1326,7 +1326,7 @@ const stats = [
             </Card>
             {/* Show Tasks Card (below Show Details) */}
             <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden" ref={showTasksRef}>
-              <div className="flex items-center gap-2 mb-4 px-4 md:px-8 pt-8 pb-4">
+              <div className="flex items-center gap-2 mb-4 px-4 md:px-8 pt-8 pb-4 min-h-[90px]">
                 <ListChecks className="w-5 h-5 text-blue-600" />
                 <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
               </div>

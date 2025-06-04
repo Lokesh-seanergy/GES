@@ -1124,396 +1124,274 @@ export default function DashboardPage() {
   return (
     <MainLayout breadcrumbs={[{ label: "Dashboard" }]}>
       <div className="space-y-8">
-        <div className="flex flex-col md:flex-row w-full gap-6 min-h-[600px]">
-          {/* Left: Main Content */}
-          <div className="w-full md:w-[65%] flex flex-col gap-4 h-full">
-            {/* Top row: Stat Cards (left) and Pie Chart (right) */}
-            <div className="flex flex-col md:flex-row gap-4 w-full">
-              {/* Stat Cards (left, reduced width) */}
-              <div className="w-full md:w-5/12 flex flex-col gap-4">
-                <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-                  {stats.map((stat) => (
-                    <Card
-                      key={stat.label}
-                      className={`flex items-center min-h-[96px] gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full`}
-                    >
-                      <div className={`flex items-center justify-center w-14 h-12 rounded-full ${
-                        stat.label === "Upcoming Shows" ? "bg-blue-100" :
-                        stat.label === "Closed Shows" ? "bg-gray-100" :
-                        stat.label === "Ongoing Shows" ? "bg-green-100" :
-                        stat.label === "Total Exhibitors" ? "bg-purple-100" :
-                        stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
-                      }`}>
-                        {React.cloneElement(stat.icon, {
-                          className: `${stat.icon.props.className || ''} w-6 h-6`
-                        })}
-                      </div>
-                      <div className="w-px h-10 bg-gray-200 mx-2" />
-                      <div className="flex flex-col items-start justify-center h-full text-left">
-                        <div className={`text-2xl font-extrabold self-center ${
-                          stat.label === "Upcoming Shows" ? "text-blue-600" :
-                          stat.label === "Closed Shows" ? "text-gray-600" :
-                          stat.label === "Ongoing Shows" ? "text-green-600" :
-                          stat.label === "Total Exhibitors" ? "text-purple-600" :
-                          stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                        }`}>{stat.value}</div>
-                        <div className={`text-sm font-semibold mt-0.5 ${
-                          stat.label === "Upcoming Shows" ? "text-blue-600" :
-                          stat.label === "Closed Shows" ? "text-gray-600" :
-                          stat.label === "Ongoing Shows" ? "text-green-600" :
-                          stat.label === "Total Exhibitors" ? "text-purple-600" :
-                          stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
-                        }`}>{stat.label}</div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-              {/* Pie Chart for Ongoing Shows Orders (right, increased width) */}
-              <div className="w-full md:w-7/12 flex flex-col" ref={pieCardRef}>
-                <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full min-h-[545px] relative">
-                  <div className="font-extrabold text-2xl mb-2 text-blue-800 tracking-tight">Ongoing Shows - Orders Distribution</div>
-                  <div className="flex flex-1 items-center justify-center min-h-[380px]">
-                    <PieChart width={380} height={380}>
-                      <Pie
-                        data={ongoingShowOrders}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={120}
-                        outerRadius={160}
-                        labelLine={false}
-                      >
-                        {/* Center label for total */}
-                        <Label
-                          position="center"
-                          content={({ viewBox }) => {
-                            const total = ongoingShowOrders.reduce((acc, curr) => acc + curr.value, 0);
-                            if (viewBox && "cx" in viewBox && "cy" in viewBox) {
-                              return (
-                                <text
-                                  x={viewBox.cx}
-                                  y={viewBox.cy}
-                                  textAnchor="middle"
-                                  dominantBaseline="middle"
-                                >
-                                  <tspan
-                                    x={viewBox.cx}
-                                    y={viewBox.cy}
-                                    className="fill-foreground text-2xl font-bold"
-                                  >
-                                    {total}
-                                  </tspan>
-                                  <tspan
-                                    x={viewBox.cx}
-                                    y={(viewBox.cy || 0) + 20}
-                                    className="fill-muted-foreground text-xs"
-                                  >
-                                    Orders
-                                  </tspan>
-                                </text>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        {/* Label for each arc */}
-                        <LabelList
-                          dataKey="value"
-                          position="outside"
-                          style={{ fontWeight: 700, fontSize: 18, fill: '#222' }}
-                        />
-                        {ongoingShowOrders.map((entry, idx) => (
-                          <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip formatter={(value, name) => [`${value} orders`, name]} />
-                    </PieChart>
-                  </div>
-                  {/* Legend at bottom, centered, like Shows & Exhibitors */}
-                  <div className="flex flex-row justify-center items-center gap-4 mt-4 flex-wrap">
-                    {ongoingShowOrders.map((entry, idx) => (
-                      <span key={entry.showId} className="flex items-center gap-2 text-xs">
-                        <span
-                          className="inline-block w-6 h-2 rounded bg-gray-200"
-                          style={{ backgroundColor: pieColors[idx % pieColors.length] }}
-                        ></span>
-                        <span className="font-medium text-gray-700">{entry.name}</span>
-                      </span>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            </div>
-            {/* Shows & Exhibitors Chart */}
-            <div className="flex flex-col gap-4">
-              <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden">
-                <div className="flex items-center justify-between px-8 pt-8 pb-4">
-                  <div>
-                    <div className="text-2xl font-extrabold text-blue-800 tracking-tight">Shows & Exhibitors</div>
-                    <div className="text-base font-medium text-blue-400">Modern visualization with day, month, or year view</div>
-                  </div>
-                  {/* Vertical legend at top right */}
-                  <div className="flex flex-col items-end gap-2">
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-1 rounded bg-blue-600 inline-block" />
-                      <span className="text-blue-600">Shows</span>
-                    </span>
-                    <span className="flex items-center gap-2">
-                      <span className="w-4 h-1 rounded bg-green-600 inline-block" />
-                      <span className="text-green-600">Exhibitors</span>
-                    </span>
-                  </div>
-                </div>
-                <div className="px-8 pb-6">
-                  <div className="bg-gray-50 rounded-xl shadow-inner p-6">
-                    <ResponsiveContainer width="100%" height={250}>
-                      <AreaChart
-                        data={filteredMonthData}
-                        margin={{ top: 30, right: 30, left: 0, bottom: 30 }}
-                      >
-                        <defs>
-                          <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
-                          </linearGradient>
-                          <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
-                            <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid vertical={false} strokeDasharray="4 4" />
-                        <XAxis
-                          dataKey="month"
-                          tickLine={false}
-                          axisLine={false}
-                          tickMargin={8}
-                          minTickGap={32}
-                          tick={{ fontSize: 14, fontWeight: 600, fill: '#222' }}
-                          tickFormatter={(value: string) => dayjs(value + '-01').format('MM-YYYY')}
-                        />
-                        <YAxis
-                          allowDecimals={false}
-                          axisLine={false}
-                          tickLine={false}
-                          tick={{ fontSize: 12, fontWeight: 500, fill: '#2563eb' }}
-                        />
-                        <Tooltip
-                          content={({ active, payload, label }) => {
-                            if (active && payload && payload.length) {
-                              return (
-                                <div className="bg-white rounded-lg shadow p-3 text-xs">
-                                  <div className="font-bold text-base mb-1">{dayjs(label + '-01').format('MMMM YYYY')}</div>
-                                  {payload.map((entry, idx) => (
-                                    <div key={idx} className="flex items-center gap-2">
-                                      <span className={entry.dataKey === 'shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                        {entry.name}:
-                                      </span>
-                                      <span className={entry.dataKey === 'shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
-                                        {entry.value}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              );
-                            }
-                            return null;
-                          }}
-                        />
-                        <Area
-                          dataKey="shows"
-                          name="Shows"
-                          type="monotone"
-                          fill="url(#showsGradient)"
-                          stroke="#2563eb"
-                          strokeWidth={2}
-                        />
-                        <Area
-                          dataKey="exhibitors"
-                          name="Exhibitors"
-                          type="monotone"
-                          fill="url(#exhibitorsGradient)"
-                          stroke="#22c55e"
-                          strokeWidth={2}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                  {/* Quick range buttons below chart */}
-                  <div className="flex gap-2 bg-white rounded-full p-1 justify-center mt-6">
-                    {[
-                      { label: '1m', value: '1m' },
-                      { label: '3m', value: '3m' },
-                      { label: '6m', value: '6m' },
-                      { label: 'Yr', value: 'yr' },
-                      { label: 'YTD', value: 'ytd' },
-                    ].map(btn => (
-                      <button
-                        key={btn.value}
-                        onClick={() => setChartRange(btn.value as typeof chartRange)}
-                        className={`px-4 py-1 rounded-full font-semibold transition
-                          ${chartRange === btn.value ? 'bg-blue-600 text-white shadow' : 'text-blue-600 hover:bg-blue-200'}
-                        `}
-                      >
-                        {btn.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </Card>
-            </div>
-          </div>
-          {/* Right: Show Details and Show Tasks - Keep this section exactly as is */}
-          <div className="w-full md:w-[35%] flex flex-col gap-4 h-full">
-            {/* Show Details Card (top) */}
-            <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 min-h-[545px]" ref={showDetailsRef}>
-              <div className="font-extrabold text-lg mb-4 text-blue-800 tracking-tight">Show Details</div>
-              <div className={`space-y-4 ${showDetailsList.length > 5 ? 'max-h-96 overflow-y-auto' : ''}`}>
-                {showDetailsList.map((show) => (
+        <div className="flex flex-col w-full gap-6 min-h-[600px]">
+          {/* Top row: Stat Cards | Pie Chart | Show Details */}
+          <div className="flex flex-col md:flex-row gap-4 w-full">
+            {/* Stat Cards (left) */}
+            <div className="w-full md:w-4/12 flex flex-col gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-1 gap-4">
+                {stats.map((stat) => (
                   <Card
-                    key={show.id}
-                    className="flex items-center justify-between p-3 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
+                    key={stat.label}
+                    className={`flex items-center min-h-[96px] gap-4 p-5 rounded-xl shadow-md border border-gray-100 bg-white hover:shadow-lg transition-shadow w-full`}
                   >
-                    <div>
-                      <span className={`font-bold text-base ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>{show.name}</span>
-                      <div className="flex items-center gap-2 text-xs font-medium text-gray-400 mt-0.5">
-                        <MapPin className="w-3 h-3 text-blue-500" />
-                        <span>Location:</span>
-                        <span className="ml-1 text-gray-600">{show.location}</span>
-                      </div>
+                    <div className={`flex items-center justify-center w-14 h-12 rounded-full ${
+                      stat.label === "Upcoming Shows" ? "bg-blue-100" :
+                      stat.label === "Closed Shows" ? "bg-gray-100" :
+                      stat.label === "Ongoing Shows" ? "bg-green-100" :
+                      stat.label === "Total Exhibitors" ? "bg-purple-100" :
+                      stat.label === "Active Locations" ? "bg-pink-100" : "bg-gray-100"
+                    }`}>
+                      {React.cloneElement(stat.icon, {
+                        className: `${stat.icon.props.className || ''} w-6 h-6`
+                      })}
                     </div>
-                    <div className="flex flex-col items-end">
-                      <div className="text-xs">
-                        <span className="text-gray-400 font-medium">Open:</span>{" "}
-                        <span className="text-black font-semibold">{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</span>
-                      </div>
-                      {dayjs(show.closeDate).isValid() && (
-                        <div className="text-xs mt-0.5">
-                          <span className="text-gray-400 font-medium">Closes:</span>{" "}
-                          <span className="text-black font-semibold">{dayjs(show.closeDate).format('MM-DD-YYYY')}</span>
-                        </div>
-                      )}
+                    <div className="w-px h-10 bg-gray-200 mx-2" />
+                    <div className="flex flex-col items-start justify-center h-full text-left">
+                      <div className={`text-2xl font-extrabold self-center ${
+                        stat.label === "Upcoming Shows" ? "text-blue-600" :
+                        stat.label === "Closed Shows" ? "text-gray-600" :
+                        stat.label === "Ongoing Shows" ? "text-green-600" :
+                        stat.label === "Total Exhibitors" ? "text-purple-600" :
+                        stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                      }`}>{stat.value}</div>
+                      <div className={`text-sm font-semibold mt-0.5 ${
+                        stat.label === "Upcoming Shows" ? "text-blue-600" :
+                        stat.label === "Closed Shows" ? "text-gray-600" :
+                        stat.label === "Ongoing Shows" ? "text-green-600" :
+                        stat.label === "Total Exhibitors" ? "text-purple-600" :
+                        stat.label === "Active Locations" ? "text-pink-600" : "text-gray-600"
+                      }`}>{stat.label}</div>
                     </div>
                   </Card>
                 ))}
               </div>
-            </Card>
-            {/* Show Tasks Card (below Show Details) */}
-            <Card className="bg-white rounded-2xl shadow-lg p-0 w-full overflow-hidden" ref={showTasksRef}>
-              <div className="flex items-center gap-2 mb-4 px-4 md:px-8 pt-8 pb-4 min-h-[90px]">
-                <ListChecks className="w-5 h-5 text-blue-600" />
-                <h2 className="text-2xl font-extrabold text-blue-800 tracking-tight">Show Tasks</h2>
-              </div>
-              <div className="px-4 md:px-8 pb-6">
-                {/* Tabs */}
-                <div className="flex gap-2 mb-6 border-b border-gray-200">
-                  {[
-                    { id: 'todo', label: 'To Do', count: showTasks.todo.length, icon: <ClipboardList className="w-4 h-4 text-blue-600" />, color: 'blue' },
-                    { id: 'inProgress', label: 'In Progress', count: showTasks.inProgress.length, icon: <Activity className="w-4 h-4 text-yellow-500" />, color: 'yellow' },
-                    { id: 'completed', label: 'Completed', count: showTasks.completed.length, icon: <CheckCircle className="w-4 h-4 text-green-600" />, color: 'green' }
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                        activeTab === tab.id
-                          ? `border-${tab.color}-600 text-${tab.color}-600`
-                          : `border-transparent text-${tab.color}-600 hover:text-${tab.color}-700 hover:border-${tab.color}-300`
-                      }`}
+            </div>
+            {/* Pie Chart (center) */}
+            <div className="w-full md:w-4/12 flex flex-col" ref={pieCardRef}>
+              <Card className="flex flex-col p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 w-full min-h-[545px] relative">
+                <div className="font-extrabold text-2xl mb-2 text-blue-800 tracking-tight">Ongoing Shows - Orders Distribution</div>
+                <div className="flex flex-1 items-center justify-center min-h-[380px]">
+                  <PieChart width={380} height={380}>
+                    <Pie
+                      data={ongoingShowOrders}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={120}
+                      outerRadius={160}
+                      labelLine={false}
                     >
-                      {tab.icon}
-                      <span className={`text-${tab.color}-600`}>{tab.label} {tab.count}</span>
-                    </button>
+                      {/* Center label for total */}
+                      <Label
+                        position="center"
+                        content={({ viewBox }) => {
+                          const total = ongoingShowOrders.reduce((acc, curr) => acc + curr.value, 0);
+                          if (viewBox && "cx" in viewBox && "cy" in viewBox) {
+                            return (
+                              <text
+                                x={viewBox.cx}
+                                y={viewBox.cy}
+                                textAnchor="middle"
+                                dominantBaseline="middle"
+                              >
+                                <tspan
+                                  x={viewBox.cx}
+                                  y={viewBox.cy}
+                                  className="fill-foreground text-2xl font-bold"
+                                >
+                                  {total}
+                                </tspan>
+                                <tspan
+                                  x={viewBox.cx}
+                                  y={(viewBox.cy || 0) + 20}
+                                  className="fill-muted-foreground text-xs"
+                                >
+                                  Orders
+                                </tspan>
+                              </text>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      {/* Label for each arc */}
+                      <LabelList
+                        dataKey="value"
+                        position="outside"
+                        style={{ fontWeight: 700, fontSize: 18, fill: '#222' }}
+                      />
+                      {ongoingShowOrders.map((entry, idx) => (
+                        <Cell key={`cell-${idx}`} fill={pieColors[idx % pieColors.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value, name) => [`${value} orders`, name]} />
+                  </PieChart>
+                </div>
+                {/* Legend at bottom, centered, like Shows & Exhibitors */}
+                <div className="flex flex-row justify-center items-center gap-4 mt-4 flex-wrap">
+                  {ongoingShowOrders.map((entry, idx) => (
+                    <span key={entry.showId} className="flex items-center gap-2 text-xs">
+                      <span
+                        className="inline-block w-6 h-2 rounded bg-gray-200"
+                        style={{ backgroundColor: pieColors[idx % pieColors.length] }}
+                      ></span>
+                      <span className="font-medium text-gray-700">{entry.name}</span>
+                    </span>
                   ))}
                 </div>
-
-                {/* Tab Content */}
-                <div className="space-y-4">
-                  {activeTab === 'todo' && (
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                      {showTasks.todo.map((task) => (
-                        <Card
-                          key={task.id}
-                          className="relative bg-white rounded-xl shadow-md p-4 flex flex-col gap-2 border-l-4 border-blue-500"
-                        >
-                          <div className="flex-1">
-                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                            <span className="block text-gray-500 text-xs font-medium mt-1">
-                              {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Customer: {task.customerName}</>}
-                            </span>
+              </Card>
+            </div>
+            {/* Show Details (right) */}
+            <div className="w-full md:w-4/12 flex flex-col gap-4 h-full">
+              <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white px-4 md:px-8 pt-8 pb-6 min-h-[545px]" ref={showDetailsRef}>
+                <div className="font-extrabold text-lg mb-4 text-blue-800 tracking-tight">Show Details</div>
+                <div className={`space-y-4 ${showDetailsList.length > 5 ? 'max-h-96 overflow-y-auto' : ''}`}> 
+                  {showDetailsList.map((show) => (
+                    <Card
+                      key={show.id}
+                      className="flex items-center justify-between p-3 rounded-xl border border-gray-100 shadow-sm bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer transition"
+                    >
+                      <div>
+                        <span className={`font-bold text-base ${show.status === "Ongoing" ? "text-green-600" : "text-blue-600"}`}>{show.name}</span>
+                        <div className="flex items-center gap-2 text-xs font-medium text-gray-400 mt-0.5">
+                          <MapPin className="w-3 h-3 text-blue-500" />
+                          <span>Location:</span>
+                          <span className="ml-1 text-gray-600">{show.location}</span>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <div className="text-xs">
+                          <span className="text-gray-400 font-medium">Open:</span>{" "}
+                          <span className="text-black font-semibold">{dayjs(show.date).isValid() ? dayjs(show.date).format('MM-DD-YYYY') : show.date}</span>
+                        </div>
+                        {dayjs(show.closeDate).isValid() && (
+                          <div className="text-xs mt-0.5">
+                            <span className="text-gray-400 font-medium">Closes:</span>{" "}
+                            <span className="text-black font-semibold">{dayjs(show.closeDate).format('MM-DD-YYYY')}</span>
                           </div>
-                          <div className="flex justify-end">
-                            <Button
-                              className="h-9 px-5 rounded-full bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-sm transition-all duration-150"
-                              onClick={() => handleAccept(task)}
-                            >
-                              Accept
-                            </Button>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-
-                  {activeTab === 'inProgress' && (
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                      {showTasks.inProgress.map((task) => (
-                        <Card
-                          key={task.id}
-                          className="relative bg-white rounded-xl shadow-md p-4 flex flex-col gap-2 border-l-4 border-yellow-400"
-                        >
-                          <div className="flex-1">
-                            <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                            <span className="block text-gray-500 text-xs font-medium mt-1">
-                              {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Customer: {task.customerName}</>}
-                            </span>
-                            <span className="text-sm text-yellow-700 font-semibold mt-2">
-                              <span className="font-bold">Accepted by:</span> {task.acceptedBy}
-                            </span>
-                          </div>
-                          <div className="flex justify-end">
-                            <Button
-                              className="h-9 px-5 rounded-full bg-yellow-400 hover:bg-yellow-500 text-white font-semibold shadow-sm transition-all duration-150"
-                              onClick={() => handleMarkCompleted(task)}
-                            >
-                              Mark as Completed
-                            </Button>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-
-                  {activeTab === 'completed' && (
-                    <div className="space-y-4 max-h-[300px] overflow-y-auto">
-                      {showTasks.completed.map((task) => (
-                        <Card
-                          key={task.id}
-                          className="relative bg-white rounded-xl shadow-md p-4 flex flex-col gap-2 border-l-4 border-green-500"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                              <span className="block text-gray-900 font-bold text-base">{task.task}</span>
-                            </div>
-                            <span className="block text-gray-500 text-xs font-medium mt-1">
-                              {task.boothZone && <>Zone: {task.boothZone} | </>}
-                              {task.customerName && <>Customer: {task.customerName}</>}
-                            </span>
-                            <span className="text-sm text-green-700 font-semibold mt-2">
-                              <span className="font-bold">Accepted by:</span> {task.acceptedBy}
-                            </span>
-                          </div>
-                          <div className="flex justify-between items-center mt-2">
-                            <span className="text-xs font-semibold text-gray-400">Due: {task.due}</span>
-                          </div>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              </Card>
+            </div>
+          </div>
+          {/* Bottom row: Shows & Exhibitors (full width) */}
+          <div className="flex flex-col gap-4 w-full mt-4">
+            <Card className="p-0 rounded-2xl shadow-lg border border-gray-100 bg-white relative overflow-hidden">
+              <div className="flex items-center justify-between px-8 pt-8 pb-4">
+                <div>
+                  <div className="text-2xl font-extrabold text-blue-800 tracking-tight">Shows & Exhibitors</div>
+                  <div className="text-base font-medium text-blue-400">Modern visualization with day, month, or year view</div>
+                </div>
+                {/* Vertical legend at top right */}
+                <div className="flex flex-col items-end gap-2">
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-1 rounded bg-blue-600 inline-block" />
+                    <span className="text-blue-600">Shows</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="w-4 h-1 rounded bg-green-600 inline-block" />
+                    <span className="text-green-600">Exhibitors</span>
+                  </span>
+                </div>
+              </div>
+              <div className="px-8 pb-6">
+                <div className="bg-gray-50 rounded-xl shadow-inner p-6">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <AreaChart
+                      data={filteredMonthData}
+                      margin={{ top: 30, right: 30, left: 0, bottom: 30 }}
+                    >
+                      <defs>
+                        <linearGradient id="showsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#2563eb" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#2563eb" stopOpacity={0.1}/>
+                        </linearGradient>
+                        <linearGradient id="exhibitorsGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8}/>
+                          <stop offset="95%" stopColor="#22c55e" stopOpacity={0.1}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid vertical={false} strokeDasharray="4 4" />
+                      <XAxis
+                        dataKey="month"
+                        tickLine={false}
+                        axisLine={false}
+                        tickMargin={8}
+                        minTickGap={32}
+                        tick={{ fontSize: 14, fontWeight: 600, fill: '#222' }}
+                        tickFormatter={(value: string) => dayjs(value + '-01').format('MM-YYYY')}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 12, fontWeight: 500, fill: '#2563eb' }}
+                      />
+                      <Tooltip
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-white rounded-lg shadow p-3 text-xs">
+                                <div className="font-bold text-base mb-1">{dayjs(label + '-01').format('MMMM YYYY')}</div>
+                                {payload.map((entry, idx) => (
+                                  <div key={idx} className="flex items-center gap-2">
+                                    <span className={entry.dataKey === 'shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                      {entry.name}:
+                                    </span>
+                                    <span className={entry.dataKey === 'shows' ? 'text-blue-600 font-semibold' : 'text-green-600 font-semibold'}>
+                                      {entry.value}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Area
+                        dataKey="shows"
+                        name="Shows"
+                        type="monotone"
+                        fill="url(#showsGradient)"
+                        stroke="#2563eb"
+                        strokeWidth={2}
+                      />
+                      <Area
+                        dataKey="exhibitors"
+                        name="Exhibitors"
+                        type="monotone"
+                        fill="url(#exhibitorsGradient)"
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+                {/* Quick range buttons below chart */}
+                <div className="flex gap-2 bg-white rounded-full p-1 justify-center mt-6">
+                  {[
+                    { label: '1m', value: '1m' },
+                    { label: '3m', value: '3m' },
+                    { label: '6m', value: '6m' },
+                    { label: 'Yr', value: 'yr' },
+                    { label: 'YTD', value: 'ytd' },
+                  ].map(btn => (
+                    <button
+                      key={btn.value}
+                      onClick={() => setChartRange(btn.value as typeof chartRange)}
+                      className={`px-4 py-1 rounded-full font-semibold transition
+                        ${chartRange === btn.value ? 'bg-blue-600 text-white shadow' : 'text-blue-600 hover:bg-blue-200'}
+                      `}
+                    >
+                      {btn.label}
+                    </button>
+                  ))}
                 </div>
               </div>
             </Card>
